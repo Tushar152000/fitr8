@@ -8,7 +8,7 @@ import { DesktopNav, MobileNav } from "./site-nav";
 
 /**
  * Sticky top bar: purple over the hero, white once scrolled. One row: logo, then on the right the
- * About us / Contact us links (md+; a menu button below md), Log in and Start for free.
+ * About us / Contact us links (md+; a menu button below md) and one "Log in / Sign up" button.
  */
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -48,25 +48,16 @@ export function SiteHeader() {
           <div className="mr-2 hidden md:block">
             <DesktopNav onBrand={!scrolled} />
           </div>
+          {/* One way in: /login signs in with Google, then sends members to their plan and new
+              people to onboarding. */}
           <Link
             href="/login"
             className={cn(
-              "hidden h-11 items-center rounded-full px-5 text-[15px] font-semibold transition-colors sm:flex",
-              scrolled
-                ? "shadow-[inset_0_0_0_1.5px_var(--color-line)] hover:bg-fitr8-soft"
-                : "shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.7)] hover:bg-white/10",
-            )}
-          >
-            Log in
-          </Link>
-          <Link
-            href="/welcome"
-            className={cn(
-              "hidden h-11 items-center rounded-full px-5 text-[15px] font-semibold shadow-hard-sm transition-[transform,box-shadow] duration-150 hover:-translate-0.5 hover:shadow-hard active:translate-0.5 active:shadow-hard-press min-[360px]:flex",
+              "flex h-11 items-center rounded-full px-5 text-[15px] font-semibold shadow-hard-sm transition-[transform,box-shadow] duration-150 hover:-translate-0.5 hover:shadow-hard active:translate-0.5 active:shadow-hard-press",
               scrolled ? "bg-fitr8 text-white" : "bg-white text-fitr8",
             )}
           >
-            Start for free
+            Log in / Sign up
           </Link>
           <MobileNav onBrand={!scrolled} />
         </div>

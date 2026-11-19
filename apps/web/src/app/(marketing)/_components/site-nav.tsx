@@ -107,13 +107,6 @@ export function MobileNav({ onBrand }: { onBrand: boolean }) {
             </li>
           ))}
         </ul>
-        <Link
-          href="/login"
-          onClick={close}
-          className="mt-3 flex h-12 items-center justify-center rounded-full text-base font-semibold shadow-[inset_0_0_0_1.5px_var(--color-line)] hover:bg-fitr8-soft sm:hidden"
-        >
-          Log in
-        </Link>
       </nav>
     </div>
   );

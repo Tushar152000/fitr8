@@ -5,13 +5,13 @@ that comes next. App screens and tokens live in [DESIGN.md](DESIGN.md); architec
 [ARCHITECTURE.md](ARCHITECTURE.md). Approved prototype of the landing page:
 [FITR8 Website artifact](https://claude.ai/artifact/MuywVVqmy7Qy7k3CCNNVRF).
 
-| Part                           | Status                                       | Where                                                   |
-| ------------------------------ | -------------------------------------------- | ------------------------------------------------------- |
-| Landing page `/`               | Built                                        | `apps/web/src/app/(marketing)/`                         |
-| Desktop app shell (lg+)        | Built                                        | `apps/web/src/components/side-nav.tsx`, `(app)/(tabs)/` |
-| Onboarding (`/welcome` → plan) | Implemented; verify end-to-end before launch | `apps/web/src/app/(welcome)/`, `(app)/onboarding/`      |
-| Privacy and Terms pages        | Built                                        | `apps/web/src/app/(marketing)/privacy/`, `terms/`       |
-| About and Contact pages        | Built                                        | `apps/web/src/app/(marketing)/about/`, `contact/`       |
+| Part                         | Status                                       | Where                                                   |
+| ---------------------------- | -------------------------------------------- | ------------------------------------------------------- |
+| Landing page `/`             | Built                                        | `apps/web/src/app/(marketing)/`                         |
+| Desktop app shell (lg+)      | Built                                        | `apps/web/src/components/side-nav.tsx`, `(app)/(tabs)/` |
+| Onboarding (`/login` → plan) | Implemented; verify end-to-end before launch | `apps/web/src/app/login/`, `(app)/onboarding/`          |
+| Privacy and Terms pages      | Built                                        | `apps/web/src/app/(marketing)/privacy/`, `terms/`       |
+| About and Contact pages      | Built                                        | `apps/web/src/app/(marketing)/about/`, `contact/`       |
 
 ## 1. Landing page
 
@@ -35,19 +35,19 @@ that comes next. App screens and tokens live in [DESIGN.md](DESIGN.md); architec
 
 ### Sections (in order)
 
-| #   | Section      | Component                         | Content and interaction                                                                                                                                                                                                                                                                                                                                                                     |
-| --- | ------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Header       | `site-header.tsx`, `site-nav.tsx` | Sticky one-row top bar: logo left; on the right About us → `/about` and Contact us → `/contact` (the current page underlined), then Log in → `/login` and Start for free → `/welcome`; purple over the hero, white with blur once scrolled. Below md the two links collapse behind a menu button into a white panel (Log in moves into it below sm). Landing sections have no header links. |
-| 2   | Hero         | `hero.tsx`                        | "Free" eyebrow, H1 "Nutrition, workouts & progress, together.", lede, Start for free + "See how it works", then `GetTheApp`: a "coming soon" pill until the apps are live, store badges after (`store-links.tsx`). Faint white FITR8 mark in the background.                                                                                                                                |
-| 2a  | Scan demo    | `scan-demo.tsx`                   | Plate photo scans on load (lilac line, 1.3 s), then 6 food chips pop in (90 ms stagger) and the result card rises. Tap a chip ↔ highlights its row. ± steppers change portions; kcal counts to the new total. The dressing is the amber "Not sure, check this" item; adjusting it flips the badge to "All checked". "Scan again" replays.                                                   |
-| 3   | Track band   | `track-band.tsx`                  | Night band, "Track [Nutrition / Workout / Progress] at one place" (word rotates every 1.8 s, `RotatingWord`), chips for every way to log.                                                                                                                                                                                                                                                   |
-| 4   | Features     | `features.tsx`                    | Vertical tablist of 4 implemented features beside the matching app screen. Auto-advances every 6 s while on screen (progress bar on the active tab); hover or focus pauses; arrow keys move.                                                                                                                                                                                                |
-| 5   | How it works | `how-it-works.tsx`                | Three numbered steps (a real sequence): Set your goal · Log in seconds · Get your next move, each with a small app preview. Cards lift with the hard shadow on hover.                                                                                                                                                                                                                       |
-| 6   | Your numbers | `target-calculator.tsx`           | Goal, sex, age, height, weight, activity → daily kcal (counts up), protein / carbs / fat bars, BMR, maintenance, water, and one line with the numbers behind the target. Validation messages under the form. "Start with these numbers" → `/welcome`.                                                                                                                                       |
-| 7   | Stats        | `stats.tsx`                       | Purple band, "…and everything in between.", 60+ exercises / 4 meal-logging methods / 7 days count up once when scrolled into view.                                                                                                                                                                                                                                                          |
-| 8   | FAQ          | `faq.tsx`                         | `#faq`. Sticky title and a "Still have questions?" card (email + Copy) beside a one-open-at-a-time accordion, animated height.                                                                                                                                                                                                                                                              |
-| 9   | Final CTA    | `final-cta.tsx`                   | "Your next meal is a good place to start." + Start for free + compact `GetTheApp` (coming-soon pill, or badges once live).                                                                                                                                                                                                                                                                  |
-| 10  | Footer       | `site-footer.tsx`                 | Wordmark, live links (About us → `/about`, Contact us → `/contact`, Privacy Policy → `/privacy`, Terms of Use → `/terms`), contact and legal line. Contact details live in `_components/contact.ts` (`CONTACT_EMAIL` = askfitr8@gmail.com, company name, address). Social links remain hidden until official profile URLs are configured.                                                   |
+| #   | Section      | Component                         | Content and interaction                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Header       | `site-header.tsx`, `site-nav.tsx` | Sticky one-row top bar: logo left; on the right About us → `/about` and Contact us → `/contact` (the current page underlined), then one "Log in / Sign up" button → `/login` (Google first; members go to their plan, new people to onboarding); purple over the hero, white with blur once scrolled. Below md the two links collapse behind a menu button into a white panel. Landing sections have no header links. |
+| 2   | Hero         | `hero.tsx`                        | "Free" eyebrow, H1 "Nutrition, workouts & progress, together.", lede, Start for free + "See how it works", then `GetTheApp`: a "coming soon" pill until the apps are live, store badges after (`store-links.tsx`). Faint white FITR8 mark in the background.                                                                                                                                                          |
+| 2a  | Scan demo    | `scan-demo.tsx`                   | Plate photo scans on load (lilac line, 1.3 s), then 6 food chips pop in (90 ms stagger) and the result card rises. Tap a chip ↔ highlights its row. ± steppers change portions; kcal counts to the new total. The dressing is the amber "Not sure, check this" item; adjusting it flips the badge to "All checked". "Scan again" replays.                                                                             |
+| 3   | Track band   | `track-band.tsx`                  | Night band, "Track [Nutrition / Workout / Progress] at one place" (word rotates every 1.8 s, `RotatingWord`), chips for every way to log.                                                                                                                                                                                                                                                                             |
+| 4   | Features     | `features.tsx`                    | Vertical tablist of 4 implemented features beside the matching app screen. Auto-advances every 6 s while on screen (progress bar on the active tab); hover or focus pauses; arrow keys move.                                                                                                                                                                                                                          |
+| 5   | How it works | `how-it-works.tsx`                | Three numbered steps (a real sequence): Set your goal · Log in seconds · Get your next move, each with a small app preview. Cards lift with the hard shadow on hover.                                                                                                                                                                                                                                                 |
+| 6   | Your numbers | `target-calculator.tsx`           | Goal, sex, age, height, weight, activity → daily kcal (counts up), protein / carbs / fat bars, BMR, maintenance, water, and one line with the numbers behind the target. Validation messages under the form. "Start with these numbers" → `/welcome`.                                                                                                                                                                 |
+| 7   | Stats        | `stats.tsx`                       | Purple band, "…and everything in between.", 60+ exercises / 4 meal-logging methods / 7 days count up once when scrolled into view.                                                                                                                                                                                                                                                                                    |
+| 8   | FAQ          | `faq.tsx`                         | `#faq`. Sticky title and a "Still have questions?" card (email + Copy) beside a one-open-at-a-time accordion, animated height.                                                                                                                                                                                                                                                                                        |
+| 9   | Final CTA    | `final-cta.tsx`                   | "Your next meal is a good place to start." + Start for free + compact `GetTheApp` (coming-soon pill, or badges once live).                                                                                                                                                                                                                                                                                            |
+| 10  | Footer       | `site-footer.tsx`                 | Wordmark, live links (About us → `/about`, Contact us → `/contact`, Privacy Policy → `/privacy`, Terms of Use → `/terms`), contact and legal line. Contact details live in `_components/contact.ts` (`CONTACT_EMAIL` = askfitr8@gmail.com, company name, address). Social links remain hidden until official profile URLs are configured.                                                                             |
 
 ### Calculator rules
 
@@ -77,7 +77,7 @@ target **1,836 kcal** (2,448 − 612, the 25% cap), P 148 g · C 197 g · F 51 g
 ### Legal pages
 
 `/privacy` and `/terms` (`(marketing)/privacy`, `/terms`, shared `LegalPage`) are linked from the
-footer, onboarding's sign-in step, `/login` and the app's login and Profile screens. The privacy
+footer, `/login` and the app's login and Profile screens. The privacy
 policy states only what the code does (see docs/STORE.md §7); update both when data handling
 changes.
 
@@ -116,44 +116,44 @@ are in DESIGN.md → "Desktop app shell".
 Built. Prototype: [FITR8 Onboarding artifact](https://claude.ai/artifact/47PvZuio6rfYMLr1o16LFp).
 One flow in the landing page's look (Plus Jakarta Sans, FITR8 purple, hard-shadow buttons) for
 every entry point. Code: `src/components/onboarding/` (shell, steps, flow, building animation),
-`src/lib/onboarding/` (draft rules, live estimate, sessionStorage handoff), pages under
-`(welcome)/welcome/` and `(app)/onboarding/`.
+`src/lib/onboarding/` (draft rules, live estimate, calculator handoff), pages under
+`(app)/onboarding/`.
 
 ### Entry points
 
-| Mode      | Starts at     | Who                                        | Steps (rail)                                                                                                |
-| --------- | ------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `welcome` | `/welcome`    | Signed out, from "Start for free"          | Your details · Your goal · About you · Food and training · Save your plan · Your daily target · Get the app |
-| `new`     | `/onboarding` | Signed in, not onboarded (e.g. via /login) | Your details · Your goal · About you · Food and training · Your daily target · Get the app                  |
-| `edit`    | `/onboarding` | Onboarded, changing the goal from Profile  | Your goal · About you · Food and training · Your daily target (then Today)                                  |
+One way in for everyone (2026-11-19): "Log in / Sign up" in the header, every "Start for free"
+(hero, calculator, final CTA) and old `/welcome` links all go to **`/login`** — "Log in or start
+for free", Google first (dev email locally). After sign-in `next` (default `/home`) sends members
+to their plan, and `/home` sends anyone not onboarded to `/onboarding`. The calculator's numbers
+survive the Google round trip in sessionStorage and prefill onboarding. There is no signed-out
+onboarding: `/welcome` and `/welcome/name` redirect to `/login`, `/welcome/done` to `/home`.
 
-Signed-in visitors to `/welcome` are sent to `/onboarding` (or `/today` if onboarded).
-`/welcome/name` redirects to `/welcome`.
+| Mode   | Starts at     | Who                                       | Steps (rail)                                                           |
+| ------ | ------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| `new`  | `/onboarding` | Signed in, not onboarded                  | Your details · Your goal · About you · Your daily target · Get the app |
+| `edit` | `/onboarding` | Onboarded, changing the goal from Profile | Your goal · About you · Your daily target (then /home)                 |
 
 ### Flow
 
-1. **Your details** (welcome and new; the app shows the same step to first-time users): first name
+1. **Your details** (new only; the app shows the same step to first-time users): first name
    and last name (required), phone number (optional; a bare 10-digit number is taken as +91, others
    need the country code; stored as E.164). Rules in `@fitr8/domain/person`; saved with
    `PATCH /api/profile/name`. Signed in, it's prefilled from the account (Google's full name split
-   into first + last). Welcome only: "Already have an account? Log in" → `/login`.
-2. **Your goal**, **About you**, **Food and training**: the same fields, options and validation
+   into first + last). Continue checks the number isn't on another account.
+2. **Your goal**, **About you** (body + food and training, two folding parts): the same fields, options and validation
    messages as the mobile app (`apps/mobile/src/app/onboarding/`) via `lib/onboarding/draft.ts`.
    Waist, neck (and hip for women) appear under "Body measurements" only when the goal aims for
    **Body fat %**, and are required then; for other goals they're neither checked nor sent.
-3. **Save your plan** (welcome only): "Continue with Google" → `/api/auth/google?returnTo=/welcome/done`
-   (dev email login locally). Answers are stashed in sessionStorage when this step opens.
-4. **Building your plan**: full-screen ring + three ticks, at least 2.6 s. Signed out it runs on
-   `/welcome/done` after sign-in (saves step 1, then `POST /api/onboarding`); signed in it saves
-   step 1, then runs in place. If saving fails, the answers go back into storage and `/onboarding` reopens with them.
-5. **Your daily target** (`/onboarding/plan?flow=…`): Realistic goal, dark target card
+3. **Building your plan**: full-screen ring + three ticks, at least 2.6 s. Saves step 1, then
+   `POST /api/onboarding`, in place.
+4. **Your daily target** (`/onboarding/plan?flow=…`): Realistic goal, dark target card
    (maintenance ± deficit, macro split), now → goal line, BMI / BMR / workouts, warnings. "Too fast
    to be safe" variant with Keep the goal / Keep the date (`POST /api/goal/option`).
-6. **Get the app** (`/onboarding/app`): before launch a "The app is almost here" card (plan saved, we'll
+5. **Get the app** (`/onboarding/app`): before launch a "The app is almost here" card (plan saved, we'll
    email you when it's live); once store URLs are set, store badges, plus "Open the FITR8 app"
    (`fitlens://today`) on phones. This is the end of onboarding: there is no "continue on the web"
    button, so new users are sent to the phone app.
-7. Signed in again later on the web → `/home` (§4).
+6. Signed in again later on the web → `/home` (§4).
 
 ### Layout
 
@@ -184,13 +184,13 @@ sessionStorage. The flow prefills those fields, marks them "From the home page" 
 
 - The mobile app's onboarding (`apps/mobile`) keeps its current look; the questions and rules
   already match.
-- `/login` is restyled to match (purple panel on desktop, "Welcome back", link to `/welcome`).
+- `/login` is restyled to match (purple panel on desktop, "Log in or start for free", two lines
+  explaining where members and new people go).
 
 ## 4. Signed-in web home (`/home`)
 
 What a returning user sees after signing in on the web: basic information, read-only, in the
-website's look (no sidebar, no logging). `/login`, `/welcome` (signed in), `/welcome/done`
-(already onboarded) and the PWA start URL all land here.
+website's look (no sidebar, no logging). `/login` (members), `/welcome/done` and the PWA start URL all land here.
 
 - **Header:** logo → `/`, name and initial.
 - **Hi, {name}** with today's date and one line: log in the app, your numbers show up here.
