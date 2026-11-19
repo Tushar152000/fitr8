@@ -57,9 +57,23 @@ PROJECT_ID=fitlens-prod BILLING_ACCOUNT=XXXXXX-XXXXXX-XXXXXX \
 
 Rotate a secret with `gcloud secrets versions add NAME --data-file=-`; the next deploy picks up `latest`.
 
+## Food database
+
+The seed loads two sets of generic foods (packaged foods come from the barcode sources):
+
+| Set                                                | Rows   | Source   | Notes                                                                                                                                                                                                                     |
+| -------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Starter foods (`seed.ts`)                          | 32     | `CUSTOM` | Hand-tuned names, aliases and units for the meal parser; win over INDB on a shared name or alias.                                                                                                                         |
+| Indian Nutrient Databank (`prisma/data/indb.json`) | ~1,005 | `INDB`   | 1,014 Indian recipes (Vijayakumar et al., _Curr Dev Nutr_ 2024), per 100 g + one serving, veg flag from the ingredients. Regenerate with `pnpm --filter @fitr8/db indb:convert <folder with INDB.xlsx and recipes.xlsx>`. |
+
+- **Licence:** INDB is published as open access, but its GitHub repository has no licence file. Get written OK for commercial use from the authors before relying on it in production.
+- **Known limit:** INDB weighs some recipes raw (poha with dry flakes) and some with all their cooking water (khichdi), so per-100 g values vary in "as eaten" density. Logging by INDB's own unit ("1 bowl") is accurate; logging by grams of a dish INDB weighed differently is not.
+- **Coach knowledge notes** (`prisma/data/knowledge/*.md`, about 30): FITR8's own science notes for the coach's `search_knowledge` tool, each with its sources. The seed upserts them and deletes notes removed from the folder. How to write one: `docs/knowledge/README.md`.
+- The seed only creates or updates `INDB` rows: a name already used by a starter food, barcode product or label scan is skipped, and INDB rows dropped from a newer file are deleted unless someone logged them.
+
 ## 3. First deploy and seed
 
-Push to `main` (or run **Deploy** manually). The workflow creates the job and service on first run. Then seed foods and exercises once (idempotent upserts):
+Push to `main` (or run **Deploy** manually). The workflow creates the job and service on first run. Then seed foods and exercises (idempotent upserts; run it again after a release that changes `packages/db/prisma/seed.ts`, `prisma/data/indb.json` or `prisma/data/knowledge/`):
 
 ```bash
 gcloud run jobs execute fitlens-migrate --project=fitlens-prod --region=asia-south1 --args=npx,prisma,db,seed --wait
@@ -83,13 +97,26 @@ The Deploy workflow sets these on every rollout (see `.github/workflows/deploy.y
 | `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`                 | secrets (R2)                                                                                                |
 | `S3_REGION=auto`, `S3_BUCKET` (repo variable), `S3_FORCE_PATH_STYLE=true` | R2                                                                                                          |
 
-Everything else in `apps/api/src/config/env.ts` keeps its default. Override it in the Cloud Run console (Edit & deploy new revision → Variables). The workflow only updates the variables above, so console-only ones such as `AI_DAILY_LIMIT`, `COACH_DAILY_LIMIT`, `SESSION_DAYS` / `MOBILE_SESSION_DAYS` / `SESSION_MAX_DAYS` (default 30, 90, 365), `AUTH_RATE_LIMIT` (default 20), `CORS_ORIGINS` and `OFF_CONTACT` survive deploys. Full list with comments: `.env.production.example`. Use a separate `AUTH_SECRET`, Google OAuth client and database per environment.
+Everything else in `apps/api/src/config/env.ts` keeps its default. Override it in the Cloud Run console (Edit & deploy new revision → Variables). The workflow only updates the variables above, so console-only ones such as `AI_PRO_DAILY_LIMIT`, `COACH_DAILY_LIMIT`, `SESSION_DAYS` / `MOBILE_SESSION_DAYS` / `SESSION_MAX_DAYS` (default 30, 90, 365), `AUTH_RATE_LIMIT` (default 20), `CORS_ORIGINS` and `OFF_CONTACT` survive deploys. Full list with comments: `.env.production.example`. Use a separate `AUTH_SECRET`, Google OAuth client and database per environment.
 
 With `APP_ENV=staging` or `production` the API refuses to boot with `AUTH_DEV_LOGIN` on, without Google credentials, or with a non-https `PUBLIC_URL`, and never reads a `.env` file.
 
 Health: startup and liveness probes hit `GET /api/health/live`; `GET /api/health` also checks the database.
 
 **Adding Redis later:** create a Redis (Upstash, or Memorystore with a VPC connector), add a `REDIS_URL` secret, and deploy a second service from the same image with command `node dist/worker.js`, `APP_ROLE=worker`, `--no-cpu-throttling --min-instances=1`.
+
+### Barcode sources
+
+A scanned barcode is looked up in FITR8's own foods first, then in every configured product database **at once** (`apps/api/src/modules/foods/barcode-sources.ts`); the most trusted full answer is saved, so each database sees each product once. Open Food Facts and UPCitemdb are on with no setup. The others switch on when their variables are set (Cloud Run console, they survive deploys):
+
+| Source                | Variables                                        | Gives                   | Notes                                                                                                                                                                                         |
+| --------------------- | ------------------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FatSecret             | `FATSECRET_CLIENT_ID`, `FATSECRET_CLIENT_SECRET` | nutrition               | Barcode lookup is a Premier feature (Premier Free for start-ups: US data, attribution). Other markets, India included, are paid. Allow the server's IPs in the FatSecret console if required. |
+| USDA FoodData Central | `USDA_FDC_API_KEY`                               | nutrition               | Free key. US branded foods: helps with imported products.                                                                                                                                     |
+| Edamam Food Database  | `EDAMAM_APP_ID`, `EDAMAM_APP_KEY`                | nutrition               | Paid plans.                                                                                                                                                                                   |
+| UPCitemdb             | on by default; `UPCITEMDB_ENABLED=false` = off   | name, brand, photo only | Free trial, about 100 lookups a day. Prefills the label scan.                                                                                                                                 |
+
+When no source has the nutrition, the app goes to "photograph the label" (prefilled with any name a source knew). A label scan whose numbers add up (energy within 15 % of 4P + 4C + 9F) is shared with everyone at once, so each product only ever needs one scan. A miss is remembered for 24 h, but only when every source answered.
 
 ## 5. Web
 

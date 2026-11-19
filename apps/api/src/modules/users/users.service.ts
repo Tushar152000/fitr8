@@ -1,10 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@fitr8/db";
-import type { PreferredNameInput, RemindersInput } from "@fitr8/contracts";
+import type { DeleteAccountInput, PreferredNameInput, RemindersInput } from "@fitr8/contracts";
 import { isWelcomeBack, shouldTouchActivity } from "@fitr8/domain/activity";
 import { localDate, mealDateProblem, parseDateOnly } from "@fitr8/domain/dates";
+import { ageFromBirthDate } from "@fitr8/domain/nutrition";
 import { PHONE_TAKEN } from "@fitr8/domain/person";
-import { AppError } from "../../common/errors.js";
+import { AppError, notFound } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { StorageService } from "../../infra/storage/storage.service.js";
 import { BillingService } from "../billing/billing.service.js";
@@ -127,6 +128,35 @@ export class UsersService {
       welcomeBack: isWelcomeBack(activity, now),
       profile,
       plan,
+    };
+  }
+
+  /**
+   * The profile facts the coach personalises with: who the user is and how they train. Null before
+   * onboarding. No contact details (email, phone) — the coach never needs them.
+   */
+  async coachProfile(userId: string, now = new Date()) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, profile: true },
+    });
+    const p = user?.profile;
+    if (!p) return null;
+    return {
+      name: user.name,
+      sex: p.sex,
+      age: ageFromBirthDate(p.birthDate, now),
+      heightCm: p.heightCm,
+      activityLevel: p.activityLevel,
+      dietType: p.dietType,
+      experience: p.experience,
+      equipment: p.equipment,
+      trainingDaysPerWeek: p.trainingDaysPerWeek,
+      sessionMinutes: p.sessionMinutes,
+      injuries: p.injuries,
+      medicalFlag: p.medicalFlag,
+      medicalNote: p.medicalFlag ? p.medicalNote : null,
+      timezone: p.timezone,
     };
   }
 
@@ -258,8 +288,31 @@ export class UsersService {
    * Removes the user and everything tied to it (all relations cascade), then their photos in
    * storage. A storage failure is logged, never blocks the deletion: the rows are already gone.
    */
-  async deleteAccount(userId: string) {
-    await this.prisma.user.delete({ where: { id: userId } });
+  /**
+   * Deletes the user and everything they own. Any reasons or feedback are kept in the same
+   * transaction, with no link to the user: only how many days the account existed.
+   */
+  async deleteAccount(userId: string, { reasons, feedback }: DeleteAccountInput = { reasons: [] }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true },
+    });
+    if (!user) throw notFound("User");
+    const said = reasons.length > 0 || Boolean(feedback);
+    await this.prisma.$transaction([
+      ...(said
+        ? [
+            this.prisma.accountDeletionFeedback.create({
+              data: {
+                reasons,
+                feedback: feedback || null,
+                accountAgeDays: Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
+              },
+            }),
+          ]
+        : []),
+      this.prisma.user.delete({ where: { id: userId } }),
+    ]);
     await this.storage
       .deleteUserPhotos(userId)
       .catch((err) =>

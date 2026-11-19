@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { Camera, ChevronLeft, Images } from "lucide-react-native";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AiLimitSheet, type ScanUsage } from "@/components/log/ai-limit-sheet";
@@ -11,6 +11,7 @@ import { api, ApiError } from "@/lib/api";
 import { choiceParams, dayFromParam, mealFromParam } from "@/lib/meal-param";
 import { compressPhoto, uploadPhoto } from "@/lib/photo";
 import { palettes, radius } from "@/lib/theme";
+import { handlePremiumError } from "@/lib/premium";
 
 /** The camera stays dark in both schemes, so its colours are fixed (the light palette's). */
 const cam = palettes.light;
@@ -26,6 +27,13 @@ export default function LabelCamera() {
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  // First visit: show the system camera prompt straight away (the in-screen button stays as the
+  // fallback). Not again once the user has answered.
+  useEffect(() => {
+    if (permission && !permission.granted && permission.status === "undetermined" && permission.canAskAgain) {
+      void requestPermission();
+    }
+  }, [permission, requestPermission]);
   const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState<"idle" | "uploading" | "reading">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +53,7 @@ export default function LabelCamera() {
       router.replace({ pathname: "/log/label/[id]", params: { id: scan.id, ...choice } });
     } catch (e) {
       setPhase("idle");
+      if (handlePremiumError(e, choice)) return;
       if (e instanceof ApiError && e.status === 429) {
         setLimit((e.details as ScanUsage | undefined) ?? null);
         setLimitOpen(true);

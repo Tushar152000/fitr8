@@ -1,20 +1,21 @@
 import { CameraView, scanFromURLAsync, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
-import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { Barcode, Camera, Images, Keyboard, X } from "lucide-react-native";
+import { router, useIsFocused } from "expo-router";
+import { Barcode, Camera, Crown, Images, Keyboard, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AiLimitSheet, type ScanUsage } from "@/components/log/ai-limit-sheet";
-import { ModeTabs } from "@/components/log/mode-tabs";
 import { MealWhen } from "@/components/log/meal-when";
 import { Button, Text } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
-import { normalizeBarcode } from "@/lib/barcode";
+import { decideRead, leadingRead, normalizeBarcode, READ_WINDOW_MS, type Read } from "@/lib/barcode";
 import { useMealChoice } from "@/lib/meal-param";
+import { handlePremiumError, openPremium, usePremium } from "@/lib/premium";
 import { compressPhoto, uploadPhoto } from "@/lib/photo";
 import { palettes, radius } from "@/lib/theme";
+import { useQuery } from "@tanstack/react-query";
+import { usageQuery } from "@/lib/queries";
 
 /** The camera stays dark in both schemes, so its colours are fixed (the light palette's). */
 const cam = palettes.light;
@@ -43,17 +44,25 @@ async function barcodeInPhoto(uri: string): Promise<string | null> {
 }
 
 /**
- * Screen 7: one shutter, two paths. A packaged food's barcode (seen live, or found in the photo)
- * opens the product to pick a portion — exact label values, no AI scan used. Anything else goes
- * camera → compress → signed upload → AI meal → confirm.
+ * Screen 7: one camera, no modes. Point it at a packaged food's barcode and the product opens by
+ * itself (read twice in a row, no shutter): exact label values, no AI scan used. A barcode found in
+ * a photo works too. Anything else is a meal: shutter → compress → signed upload → AI → confirm.
  */
 export default function CameraScreen() {
-  const { mealType, setMealType, date, setDate, dateBody, params } = useMealChoice();
+  const { mealType, setMealType, date, dateBody, params } = useMealChoice();
+  // For the locked sheet's free path: type this meal instead, same slot and day.
+  const logContext = { meal: mealType, date: date ?? undefined };
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  // First visit: show the system camera prompt straight away (the in-screen button stays as the
+  // fallback). Not again once the user has answered.
+  useEffect(() => {
+    if (permission && !permission.granted && permission.status === "undetermined" && permission.canAskAgain) {
+      void requestPermission();
+    }
+  }, [permission, requestPermission]);
   const [ready, setReady] = useState(false);
-  const [missing, setMissing] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState<ScanUsage | null>(null);
@@ -61,9 +70,17 @@ export default function CameraScreen() {
   // A barcode the camera can see right now; cleared shortly after it leaves the frame.
   const [seen, setSeen] = useState<string | null>(null);
   const seenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // A photo taken before a meal was picked: read as soon as the user picks one.
-  const [held, setHeld] = useState<Photo | null>(null);
   const busy = phase !== "idle";
+  // Auto-open bookkeeping (refs: they change on every camera frame, nothing renders from them).
+  const reads = useRef<Read[]>([]);
+  const opened = useRef<string | null>(null);
+  // The camera keeps running under the product screen: only read barcodes while this screen shows.
+  const focused = useIsFocused();
+  // Free plan: barcode and photo scanning open the Premium screen instead.
+  const premium = usePremium();
+  const barcodeLocked = premium.locked("barcode");
+  const photoLocked = premium.locked("photo_scan");
+  const scans = useQuery({ ...usageQuery, enabled: premium.isPremium });
 
   useEffect(
     () => () => {
@@ -75,23 +92,40 @@ export default function CameraScreen() {
   function onBarcode(result: BarcodeScanningResult) {
     const code = normalizeBarcode(result.data);
     if (!code) return;
-    setSeen((prev) => {
-      if (prev !== code) Vibration.vibrate(30);
-      return code;
-    });
     if (seenTimer.current) clearTimeout(seenTimer.current);
-    seenTimer.current = setTimeout(() => setSeen(null), SEEN_FOR_MS);
+    seenTimer.current = setTimeout(() => {
+      setSeen(null);
+      // Gone from the frame: the same product can open again next time it's pointed at.
+      opened.current = null;
+      reads.current = [];
+    }, SEEN_FOR_MS);
+
+    // Auto-open on a clear vote, once per time it's in frame (coming back from the product screen
+    // with the pack still in view doesn't reopen it).
+    if (opened.current) return;
+    const now = Date.now();
+    reads.current = [...reads.current.filter((r) => now - r.at < READ_WINDOW_MS), { code, at: now }];
+    // Show (and let the shutter open) the most-read code, not whatever the last frame said.
+    setSeen(leadingRead(reads.current));
+    const winner = decideRead(reads.current);
+    if (winner) {
+      opened.current = winner;
+      reads.current = [];
+      Vibration.vibrate(40);
+      openProduct(winner);
+    }
   }
 
   /** The barcode path: the product screen asks for the meal and the portion. */
   function openProduct(code: string) {
     setPhase("idle");
-    setHeld(null);
+    if (barcodeLocked) return openPremium("barcode", logContext);
     router.push({ pathname: "/log/barcode/[code]", params: { code, ...params } });
   }
 
   function fail(e: unknown) {
     setPhase("idle");
+    if (handlePremiumError(e, logContext)) return;
     if (e instanceof ApiError && e.status === 429) {
       setLimit((e.details as ScanUsage | undefined) ?? null);
       setLimitOpen(true);
@@ -100,33 +134,22 @@ export default function CameraScreen() {
     setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
   }
 
-  /**
-   * Barcode in the photo → product; otherwise the AI reads the plate. The meal is always the user's
-   * choice: without one the photo is held and read as soon as they pick.
-   */
+  /** Barcode in the photo → product; otherwise the AI reads the plate for the chosen meal. */
   async function route(photo: Photo) {
     setError(null);
     setPhase("checking");
     const code = await barcodeInPhoto(photo.uri);
     if (code) return openProduct(code);
-    setPhase("idle");
-    if (!mealType) {
-      setHeld(photo);
-      setMissing(true);
-      return;
+    if (photoLocked) {
+      setPhase("idle");
+      return openPremium("photo_scan", logContext);
     }
-    await submit(photo, mealType);
-  }
-
-  async function submit(photo: Photo, meal: NonNullable<typeof mealType>) {
-    setHeld(null);
-    setError(null);
     setPhase("uploading");
     try {
       const key = await uploadPhoto(await compressPhoto(photo));
       setPhase("analysing");
       const log = await api<{ id: string }>("/api/meals", {
-        json: { source: "PHOTO", mealType: meal, photoKey: key, ...dateBody },
+        json: { source: "PHOTO", mealType, photoKey: key, ...dateBody },
       });
       router.replace(`/log/${log.id}`);
     } catch (e) {
@@ -137,6 +160,7 @@ export default function CameraScreen() {
   async function shoot() {
     // A barcode in view wins: no photo, no upload, no scan used.
     if (seen) return openProduct(seen);
+    if (photoLocked) return openPremium("photo_scan", logContext);
     if (!camera.current || !ready) return;
     try {
       const photo = await camera.current.takePictureAsync({ quality: 0.9 });
@@ -147,6 +171,7 @@ export default function CameraScreen() {
   }
 
   async function pickFromGallery() {
+    if (photoLocked && barcodeLocked) return openPremium("photo_scan", logContext);
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
     const asset = result.canceled ? null : result.assets[0];
     if (asset) await route(asset);
@@ -164,26 +189,23 @@ export default function CameraScreen() {
         >
           <X size={26} color={cam.white} />
         </Pressable>
-        <Text weight={600} color={cam.white} style={{ flex: 1 }}>
-          Snap your meal
-        </Text>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text weight={600} color={cam.white}>
+            Snap your meal
+          </Text>
+          {premium.isPremium && scans.data && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Crown size={12} color={cam.brandGlow} />
+              <Text size={12} weight={600} color="rgba(255,255,255,0.75)" tabular>
+                {scans.data.left} of {scans.data.limit} photo scans left today
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={{ paddingTop: 8, paddingBottom: 12 }}>
-        <MealWhen
-          tone="dark"
-          gutter={20}
-          mealType={mealType}
-          onMealType={(m) => {
-            setMealType(m);
-            setMissing(false);
-            if (held && m) void submit(held, m);
-          }}
-          date={date}
-          onDate={setDate}
-          missing={missing}
-          showDay={false}
-        />
+        <MealWhen tone="dark" gutter={20} mealType={mealType} onMealType={setMealType} date={date} />
       </View>
 
       <View style={styles.viewfinder}>
@@ -194,7 +216,7 @@ export default function CameraScreen() {
             facing="back"
             onCameraReady={() => setReady(true)}
             barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
-            onBarcodeScanned={busy || held ? undefined : onBarcode}
+            onBarcodeScanned={busy || !focused ? undefined : onBarcode}
           />
         ) : (
           <View style={styles.center}>
@@ -214,21 +236,30 @@ export default function CameraScreen() {
             )}
           </View>
         )}
-        {held && <Image source={{ uri: held.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />}
         <Corners color={seen ? cam.proteinSoft : undefined} />
-        <View
-          style={[styles.hint, { pointerEvents: "none" }, seen && { backgroundColor: cam.protein }]}
-          accessibilityLiveRegion="polite"
-        >
-          {seen && <Barcode size={16} color={cam.white} />}
-          <Text weight={600} size={13} color={cam.white} tabular>
-            {held
-              ? "Pick a meal above to read this photo"
-              : seen
-                ? `Barcode found · ${seen}`
-                : "Snap your plate, or point at a barcode"}
-          </Text>
-        </View>
+        {photoLocked && barcodeLocked ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scanning is part of FITR8 Premium. See Premium"
+            onPress={() => openPremium("photo_scan", logContext)}
+            style={[styles.hint, { backgroundColor: cam.brand }]}
+          >
+            <Crown size={16} color={cam.white} />
+            <Text weight={600} size={13} color={cam.white}>
+              Photo and barcode scanning are Premium · Try free
+            </Text>
+          </Pressable>
+        ) : (
+          <View
+            style={[styles.hint, { pointerEvents: "none" }, seen && { backgroundColor: cam.protein }]}
+            accessibilityLiveRegion="polite"
+          >
+            {seen && <Barcode size={16} color={cam.white} />}
+            <Text weight={600} size={13} color={cam.white} tabular>
+              {seen ? `Barcode found · opening ${seen}` : "Point at a barcode, or snap your plate"}
+            </Text>
+          </View>
+        )}
         {busy && (
           <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: "rgba(23,24,28,0.75)" }]}>
             <ActivityIndicator color={cam.white} size="large" />
@@ -249,15 +280,7 @@ export default function CameraScreen() {
         </Text>
       )}
 
-      {held && !busy && (
-        <View style={{ marginHorizontal: 20, marginTop: 12 }}>
-          <Button variant="ghostDark" onPress={() => setHeld(null)}>
-            Retake
-          </Button>
-        </View>
-      )}
-
-      <View style={styles.controls}>
+      <View style={[styles.controls, { paddingBottom: Math.max(28, insets.bottom + 16) }]}>
         <SideButton label="Gallery" icon={Images} onPress={pickFromGallery} disabled={busy} />
         <View style={{ alignItems: "center", gap: 6 }}>
           <Pressable
@@ -265,11 +288,11 @@ export default function CameraScreen() {
             accessibilityLabel={seen ? `Look up barcode ${seen}` : "Take photo"}
             accessibilityHint={seen ? "Opens the product to pick how much you had" : undefined}
             onPress={shoot}
-            disabled={busy || Boolean(held) || !granted || (!ready && !seen)}
+            disabled={busy || !granted || (!ready && !seen)}
             style={[
               styles.shutter,
               seen && { borderColor: "rgba(221,235,227,0.6)" },
-              (busy || held || !granted) && { opacity: 0.5 },
+              (busy || !granted) && { opacity: 0.5 },
             ]}
           >
             {({ pressed }) => (
@@ -289,10 +312,6 @@ export default function CameraScreen() {
           </Text>
         </View>
         <SideButton label="Type" icon={Keyboard} onPress={() => router.replace({ pathname: "/log/type", params })} />
-      </View>
-
-      <View style={{ paddingTop: 20, paddingBottom: Math.max(20, insets.bottom) }}>
-        <ModeTabs current="photo" params={params} />
       </View>
 
       <AiLimitSheet open={limitOpen} onClose={() => setLimitOpen(false)} params={params} usage={limit} />

@@ -116,17 +116,11 @@ export const EnvSchema = z
     ANTHROPIC_API_KEY: optional,
     OPENAI_API_KEY: optional,
     // Models are chosen in code (modules/ai/models.ts), never from env.
-    /** Free photo scans per user per local day (typed meals and not-food photos never count). */
-    AI_DAILY_LIMIT: z.coerce.number().int().positive().default(3),
-    /** Coach messages per user per local day. */
+    /** Premium coach messages per user per local day. */
     COACH_DAILY_LIMIT: z.coerce.number().int().positive().default(40),
 
-    /** Pro photo scans per user per local day: fair use (docs/PREMIUM.md). */
-    AI_PRO_DAILY_LIMIT: z.coerce.number().int().positive().default(30),
-    /** Free coach messages per user per local day once the paywall is on (COACH_DAILY_LIMIT is Pro's). */
-    COACH_FREE_DAILY_LIMIT: z.coerce.number().int().positive().default(5),
-    /** Turn on Pro gating (free limits, label scans for Pro). Off: everyone keeps today's limits. */
-    PAYWALL_ENABLED: flag,
+    /** Premium photo scans (meals and labels) per user per local day: fair use (docs/PREMIUM.md). */
+    AI_PRO_DAILY_LIMIT: z.coerce.number().int().positive().default(10),
     /** Exact Authorization header value set on the RevenueCat webhook. */
     REVENUECAT_WEBHOOK_AUTH: optional,
     /** RevenueCat secret API key (sk_…): reads a customer's current state after a webhook or purchase. */
@@ -153,6 +147,26 @@ export const EnvSchema = z
     CONTACT_TO: z.string().email().default("askfitr8@gmail.com"),
     /** Contact-form messages per IP per hour, on top of the per-minute sign-in rate limit. */
     CONTACT_HOURLY_LIMIT: z.coerce.number().int().positive().default(5),
+    /**
+     * Extra barcode sources, tried alongside Open Food Facts when a product isn't in our database.
+     * Each is off until its key is set (docs/DEPLOY.md "Barcode sources").
+     */
+    /** USDA FoodData Central (free key, api.data.gov): US branded foods by GTIN/UPC. */
+    USDA_FDC_API_KEY: optional,
+    /** FatSecret Platform OAuth2 client (Premier, or Premier Free with attribution): barcode scope. */
+    FATSECRET_CLIENT_ID: optional,
+    FATSECRET_CLIENT_SECRET: optional,
+    /** Edamam Food Database API: UPC/EAN lookup. */
+    EDAMAM_APP_ID: optional,
+    EDAMAM_APP_KEY: optional,
+    /**
+     * UPCitemdb free trial (no key, ~100 lookups/day): product name and photo only, no nutrition.
+     * On by default; set "false" to turn it off (e.g. if its quota or data become a problem).
+     */
+    UPCITEMDB_ENABLED: z
+      .string()
+      .optional()
+      .transform((v) => (v ? v === "true" || v === "1" : true)),
   })
   // Resolve environment-dependent defaults, then validate the result.
   .transform((env) => {
@@ -236,17 +250,6 @@ export const EnvSchema = z
         code: "custom",
         path: ["AUTH_COOKIE_DOMAIN"],
         message: `required when the web (${webHost}) and the API (${apiHost}) are different hosts, so the web can read the session`,
-      });
-    }
-    if (
-      isDeployed(env) &&
-      env.PAYWALL_ENABLED &&
-      !(env.REVENUECAT_WEBHOOK_AUTH && env.REVENUECAT_SECRET_KEY)
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["REVENUECAT_WEBHOOK_AUTH"],
-        message: `required in ${env.APP_ENV} with PAYWALL_ENABLED: set REVENUECAT_WEBHOOK_AUTH and REVENUECAT_SECRET_KEY`,
       });
     }
     if (env.SESSION_DAYS > env.SESSION_MAX_DAYS || env.MOBILE_SESSION_DAYS > env.SESSION_MAX_DAYS) {

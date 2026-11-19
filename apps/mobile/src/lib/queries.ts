@@ -1,4 +1,11 @@
-import type { BillingDto, ProgressDto, ReminderListDto, SavedMealsDto } from "@fitr8/contracts";
+import type {
+  BillingDto,
+  CoachMemoryView,
+  ProgressDto,
+  ReminderListDto,
+  SavedMealsDto,
+  UsageDto,
+} from "@fitr8/contracts";
 import { api } from "./api";
 import type { Day, Energy, TodayWorkout, WaterDay } from "./types";
 
@@ -31,3 +38,12 @@ export const remindersQuery = {
   queryKey: ["reminders"],
   queryFn: () => api<ReminderListDto>("/api/reminders"),
 };
+
+/** What the coach remembers about the user (GET /api/coach/memories). */
+export const coachMemoriesQuery = {
+  queryKey: ["coach", "memories"],
+  queryFn: () => api<CoachMemoryView[]>("/api/coach/memories"),
+};
+
+/** GET /api/usage: photo scans used and left today. */
+export const usageQuery = { queryKey: ["usage"], queryFn: () => api<UsageDto>("/api/usage") };

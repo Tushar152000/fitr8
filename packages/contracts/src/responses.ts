@@ -43,7 +43,15 @@ export type GoalType = OnboardingInput["goal"]["type"];
 export type MealStatus = "PENDING" | "ANALYZING" | "READY" | "CONFIRMED" | "FAILED";
 export type MealSource = "PHOTO" | "TEXT";
 export type FoodSource =
-  "IFCT" | "INDB" | "USDA" | "CUSTOM" | "AI_ESTIMATE" | "OPEN_FOOD_FACTS" | "LABEL_SCAN";
+  | "IFCT"
+  | "INDB"
+  | "USDA"
+  | "CUSTOM"
+  | "AI_ESTIMATE"
+  | "OPEN_FOOD_FACTS"
+  | "LABEL_SCAN"
+  | "FATSECRET"
+  | "EDAMAM";
 
 export interface Macros {
   kcal: number;
@@ -285,8 +293,11 @@ export interface UsageDto {
   left: number;
   resetsAt: string;
   plan: "FREE" | "PRO";
-  /** False until Pro can be bought: show no upgrade prompts. */
-  paywall: boolean;
+  /**
+   * Meals logged by typing (source TEXT) on the user's local today and this calendar month, for
+   * the Premium banner and Profile card. Only on GET /api/usage, not in a 429's details.
+   */
+  typedMeals?: { today: number; thisMonth: number };
 }
 
 /** One entry of GET /api/meals/usuals. */
@@ -437,6 +448,17 @@ export interface FoodSearchDto {
 export interface BarcodeProductDto {
   code: string;
   food: FoodDto | null;
+}
+
+/**
+ * The `details` of GET /api/foods/barcode/:code's 404. `name`/`brand`/`imageUrl` are present when
+ * a product database knew the product but not its nutrition: the app prefills the label scan.
+ */
+export interface BarcodeNotFoundDetails {
+  code: string;
+  name?: string;
+  brand?: string | null;
+  imageUrl?: string | null;
 }
 
 /** GET /api/foods/label/:id — the values read from a label photo, for the user to check. */

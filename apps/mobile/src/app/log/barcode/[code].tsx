@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import type { BarcodeProductDto, FoodDto } from "@fitr8/contracts";
+import type { BarcodeNotFoundDetails, BarcodeProductDto, FoodDto } from "@fitr8/contracts";
 import { ProductSkeleton } from "@/components/skeletons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { BadgeCheck, Camera, Package, SearchX } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { BackHeader } from "@/components/back-header";
 import { Button, Card, FieldError, Screen, Segmented, Stepper, Text } from "@/components/ui";
@@ -16,6 +16,10 @@ import { choiceParams, dayFromParam, mealFromParam, useMealChoice } from "@/lib/
 import { refreshDay } from "@/lib/query";
 import { showDay } from "@/lib/view-day";
 import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { openPremium, premiumFeatureOf, usePremium } from "@/lib/premium";
+
+/** Most grams/ml one item can log (QuickAddSchema). */
+const MAX_GRAMS = 5000;
 
 type Reason = "unknown" | "invalid" | "unreachable";
 
@@ -28,7 +32,15 @@ export default function ProductRoute() {
     retry: false,
   });
 
-  if (product.isPending) {
+  // Barcode scanning is Premium for free users: go back and show the locked sheet instead.
+  const premiumFeature = premiumFeatureOf(product.error);
+  useEffect(() => {
+    if (!premiumFeature) return;
+    router.back();
+    openPremium(premiumFeature, { meal: params.meal, date: params.date });
+  }, [premiumFeature, params.meal, params.date]);
+
+  if (product.isPending || premiumFeature) {
     return (
       <Screen>
         <BackHeader />
@@ -40,8 +52,12 @@ export default function ProductRoute() {
     const err = product.error;
     const status = err instanceof ApiError ? err.status : 0;
     const reason: Reason = status === 400 ? "invalid" : status === 404 || !err ? "unknown" : "unreachable";
+    // A product database may know the product without its nutrition: use that to prefill.
+    const known =
+      err instanceof ApiError && status === 404 ? (err.details as BarcodeNotFoundDetails | undefined) : undefined;
     return (
       <NotFound
+        known={known?.name ? { name: known.name, brand: known.brand ?? null, imageUrl: known.imageUrl ?? null } : null}
         code={params.code}
         choice={choiceParams(mealFromParam(params.meal), dayFromParam(params.date))}
         reason={reason}
@@ -55,8 +71,7 @@ export default function ProductRoute() {
 function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
   const c = useColors();
   const styles = useStyles();
-  const { mealType, setMealType, date, setDate, dateBody } = useMealChoice();
-  const [missing, setMissing] = useState(false);
+  const { mealType, setMealType, date, dateBody } = useMealChoice();
   const hasServing = Boolean(food.servingSizeG);
   const measure = food.isLiquid ? "ml" : "g";
   const [mode, setMode] = useState<"SERVINGS" | "GRAMS">(hasServing ? "SERVINGS" : "GRAMS");
@@ -66,13 +81,14 @@ function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const amountG = mode === "SERVINGS" && food.servingSizeG ? servings * food.servingSizeG : grams;
+  // The API takes at most 100 servings and 5000 g per item: the steppers stop there.
+  const maxServings = food.servingSizeG ? Math.min(100, Math.floor((MAX_GRAMS / food.servingSizeG) * 2) / 2) : 100;
   const k = amountG / 100;
   const fromOff = food.source === "OPEN_FOOD_FACTS";
   // Stored names carry the brand / barcode to stay unique; the brand is shown separately.
   const displayName = food.name.replace(/ · \d+$/, "").replace(food.brand ? ` (${food.brand})` : /$^/, "");
 
   async function add() {
-    if (!mealType) return setMissing(true);
     setBusy(true);
     setError(null);
     try {
@@ -124,7 +140,7 @@ function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
           </View>
           {error && <FieldError>{error}</FieldError>}
           <Button onPress={add} loading={busy}>
-            {mealType ? `Add to ${MEAL_LABEL[mealType].toLowerCase()}` : "Add to a meal"}
+            {`Add to ${MEAL_LABEL[mealType].toLowerCase()}`}
           </Button>
         </>
       }
@@ -172,7 +188,13 @@ function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
             <Segmented
               label="Amount in"
               value={mode}
-              onChange={setMode}
+              onChange={(next) => {
+                // Keep the amount when switching: 1.5 servings of 30 g ↔ 45 g.
+                if (next === "GRAMS" && mode === "SERVINGS") setGrams(Math.min(MAX_GRAMS, Math.max(5, amountG)));
+                if (next === "SERVINGS" && mode === "GRAMS" && food.servingSizeG)
+                  setServings(Math.min(maxServings, Math.max(0.5, Math.round((grams / food.servingSizeG) * 2) / 2)));
+                setMode(next);
+              }}
               options={[
                 { value: "SERVINGS", label: "Servings" },
                 { value: "GRAMS", label: food.isLiquid ? "Millilitres" : "Grams" },
@@ -181,13 +203,21 @@ function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
           )}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             {mode === "SERVINGS" ? (
-              <Stepper label="Servings" value={servings} step={0.5} min={0.5} onChange={setServings} />
+              <Stepper
+                label="Servings"
+                value={servings}
+                step={0.5}
+                min={0.5}
+                max={maxServings}
+                onChange={setServings}
+              />
             ) : (
               <Stepper
                 label={food.isLiquid ? "Millilitres" : "Grams"}
                 value={grams}
                 step={5}
                 min={5}
+                max={MAX_GRAMS}
                 onChange={setGrams}
               />
             )}
@@ -197,16 +227,7 @@ function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
           </View>
         </Card>
 
-        <MealWhen
-          mealType={mealType}
-          onMealType={(m) => {
-            setMealType(m);
-            setMissing(false);
-          }}
-          date={date}
-          onDate={setDate}
-          missing={missing}
-        />
+        <MealWhen mealType={mealType} onMealType={setMealType} date={date} />
 
         <View style={styles.table} accessibilityLabel={`Nutrition per 100 ${measure} and for your amount`}>
           <View style={styles.tr}>
@@ -273,24 +294,32 @@ const TIPS = [
 
 /** Design 7e: unknown (or invalid) barcode → photograph the label, or type the meal. */
 function NotFound({
+  known,
   code,
   choice,
   reason,
 }: {
+  /** What a product database knew without the nutrition. */
+  known: { name: string; brand: string | null; imageUrl: string | null } | null;
   code: string;
   /** Meal and day picked so far, carried to the label or typing screen. */
   choice: { meal?: string; date?: string };
   reason: Reason;
 }) {
+  const labelLocked = usePremium().locked("label_scan");
   const c = useColors();
   const styles = useStyles();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(
+    known ? (known.brand && !known.name.includes(known.brand) ? `${known.name} (${known.brand})` : known.name) : "",
+  );
   const title =
     reason === "invalid"
       ? "That barcode didn't read right"
       : reason === "unreachable"
         ? "We couldn't check this product"
-        : "We don't know this product yet";
+        : known
+          ? "We know it, but not its nutrition"
+          : "We don't know this product yet";
 
   return (
     <Screen
@@ -299,10 +328,12 @@ function NotFound({
           <Button
             icon={Camera}
             onPress={() =>
-              router.push({
-                pathname: "/log/label",
-                params: { ...choice, barcode: code, ...(name.trim() ? { name: name.trim() } : {}) },
-              })
+              labelLocked
+                ? openPremium("label_scan", choice)
+                : router.push({
+                    pathname: "/log/label",
+                    params: { ...choice, barcode: code, ...(name.trim() ? { name: name.trim() } : {}) },
+                  })
             }
           >
             Photograph the label
@@ -326,7 +357,9 @@ function NotFound({
             ? "Scan it again, or photograph the nutrition label instead."
             : reason === "unreachable"
               ? "The product database didn't answer. Photograph the label, or try again in a minute."
-              : "Photograph its nutrition label once and it's saved for next time."}
+              : known
+                ? `${known.name}${known.brand ? ` · ${known.brand}` : ""}. Photograph its nutrition label once and it's saved for everyone.`
+                : "Photograph its nutrition label once and it's saved for everyone."}
         </Text>
         {reason !== "invalid" && (
           <Text size={13} color={c.ink3} tabular>

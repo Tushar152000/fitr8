@@ -4,27 +4,42 @@ import { Image } from "expo-image";
 import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { BellRing, ChevronRight, Crown, Download, Flame, LogOut, Pencil, Trash2 } from "lucide-react-native";
+import {
+  BellRing,
+  Camera,
+  ChevronRight,
+  Crown,
+  Download,
+  Flame,
+  LogOut,
+  MessageCircle,
+  Pencil,
+  ScanBarcode,
+  Trash2,
+} from "lucide-react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { Linking, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Sheet } from "@/components/sheet";
-import { Button, FieldError, Screen, Segmented, Switch, Text } from "@/components/ui";
+import { Button, Chip, FieldError, Screen, Segmented, Switch, Text } from "@/components/ui";
 import { api, apiText } from "@/lib/api";
 import { useAuth, useMe } from "@/lib/auth";
 import { formatInt, mealTitle } from "@/lib/format";
-import { manageSubscriptionUrl, purchasesAvailable } from "@/lib/purchases";
-import { billingQuery, dayQuery, remindersQuery, waterQuery } from "@/lib/queries";
+import { manageSubscriptionUrl } from "@/lib/purchases";
+import { billingQuery, dayQuery, remindersQuery, usageQuery, waterQuery } from "@/lib/queries";
 import {
   ensureNotificationPermission,
   remindersAvailable,
   sendReminderConfirmation,
   syncWaterReminders,
 } from "@/lib/reminders";
+import { confirmAction } from "@/lib/confirm";
+import { LIST_PRICE, openPaywall } from "@/lib/premium";
 import { queryClient } from "@/lib/query";
 import { fonts, makeStyles, radius, useAppearance, useColors, type AppearancePreference } from "@/lib/theme";
 import type { PlanResponse } from "@/lib/types-plan";
-import type { UsageDto } from "@fitr8/contracts";
+import type { DeleteReason, UsageDto } from "@fitr8/contracts";
 import { openLegal } from "@/lib/legal";
+import { PremiumBadge } from "@/components/premium-badge";
 
 const GOAL_LABEL = { FAT_LOSS: "Lose fat", MUSCLE_GAIN: "Build muscle", RECOMPOSITION: "Recomposition" } as const;
 const DIET_LABEL = { VEG: "Veg", NON_VEG: "Non-veg", EGGETARIAN: "Eggetarian", VEGAN: "Vegan" } as const;
@@ -49,7 +64,7 @@ export default function ProfileScreen() {
   const me = useMe();
   const { signOut } = useAuth();
   const plan = useQuery({ queryKey: ["plan"], queryFn: () => api<PlanResponse>("/api/plan") });
-  const usage = useQuery({ queryKey: ["usage"], queryFn: () => api<UsageDto>("/api/usage") });
+  const usage = useQuery(usageQuery);
   const day = useQuery(dayQuery);
   // Also keeps this phone's scheduled reminders in step (tabs layout shares the query).
   const reminders = useQuery(remindersQuery);
@@ -92,11 +107,15 @@ export default function ProfileScreen() {
             {[me.name, me.lastName].filter(Boolean).join(" ") || "Your profile"}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <View style={styles.planPill}>
-              <Text weight={600} size={13} color={c.ink2}>
-                {usage.data?.plan === "PRO" ? "FITR8 Pro" : "Free plan"}
-              </Text>
-            </View>
+            {usage.data?.plan === "PRO" ? (
+              <PremiumBadge label="FITR8 Premium" size="md" />
+            ) : (
+              <View style={styles.planPill}>
+                <Text weight={600} size={13} color={c.ink2}>
+                  Free plan
+                </Text>
+              </View>
+            )}
             {streak > 0 && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <Flame size={16} color={c.brandGlow} fill={c.brandGlow} />
@@ -108,6 +127,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
+
+      {usage.data && <PlanCard usage={usage.data} />}
 
       {plan.isPending ? (
         <GoalCardSkeleton />
@@ -187,8 +208,6 @@ export default function ProfileScreen() {
         <AppearancePicker />
       </Group>
 
-      {usage.data && <PlanCard usage={usage.data} />}
-
       <Group title="Your data">
         <ExportRow />
       </Group>
@@ -197,7 +216,7 @@ export default function ProfileScreen() {
         Sign out
       </Button>
 
-      <DangerZone onDeleted={signOut} />
+      <DangerZone onDeleted={signOut} onSignOut={signOut} />
 
       <Text size={12} color={c.ink3} center>
         {me.email} · FITR8 gives general fitness guidance, not medical advice.
@@ -392,66 +411,131 @@ const formatNext = (d: Date) => {
   return today ? `today, ${time}` : `${new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(d)}, ${time}`;
 };
 
-/** Plan card: scans left today, and FITR8 Pro (upgrade, or renewal + manage). */
+/**
+ * Design 14a: the plan card, right under the name. Free: what typing already gives, what Premium
+ * adds (with this month's typed meals when there are enough to matter), one button to the plans.
+ * Premium: which plan, when it renews, and where to manage it.
+ */
 function PlanCard({ usage }: { usage: UsageDto }) {
   const c = useColors();
   const styles = useStyles();
-  const billing = useQuery({ ...billingQuery, enabled: usage.plan === "PRO" });
-  const pips = Math.min(usage.limit, 10);
-  const usedPips = Math.min(pips, Math.round((usage.used / usage.limit) * pips));
   const pro = usage.plan === "PRO";
-  const until = billing.data?.proUntil
-    ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(
-        new Date(billing.data.proUntil),
-      )
+  const billing = useQuery({ ...billingQuery, enabled: pro });
+  const [ending, setEnding] = useState(false);
+  const b = billing.data;
+  const until = b?.proUntil
+    ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(b.proUntil))
     : null;
-  return (
-    <View style={styles.planCard} accessibilityLabel="Your plan">
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          {pro && <Crown size={16} color={c.brandText} />}
-          <Text weight={600}>{pro ? "FITR8 Pro" : "Free plan"}</Text>
+
+  /** A test purchase (store billing not connected yet): back to Free, to try the free plan again. */
+  async function endTest() {
+    if (!(await confirmAction("End test Premium?", "You'll go back to the free plan.", "End Premium"))) return;
+    setEnding(true);
+    try {
+      await api("/api/billing/test-purchase", { method: "DELETE" });
+      await queryClient.invalidateQueries();
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  if (pro) {
+    const period = b?.period === "year" ? "Yearly" : b?.period === "month" ? "Monthly" : null;
+    const renewal = b?.lifetime
+      ? "Lifetime access"
+      : until
+        ? b?.willRenew
+          ? `renews ${until}`
+          : `until ${until}`
+        : null;
+    return (
+      <View style={[styles.planCard, styles.premiumCard]} accessibilityLabel="Your plan">
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <PremiumBadge label="Premium" size="md" />
+          <Text size={13} weight={600} color={c.ink3} tabular>
+            {usage.left} of {usage.limit} photo scans left today
+          </Text>
         </View>
-        <Text weight={600} size={13} color={c.ink3} tabular>
-          {usage.left} of {usage.limit} photo scans left today
+        <Text weight={700} size={16}>
+          {["Premium", period, renewal].filter(Boolean).join(" · ")}
+        </Text>
+        <Text size={13} color={c.ink2}>
+          Photo, barcode and label scanning, the AI Coach (40 messages a day) and unlimited reminders.
+        </Text>
+        {b?.store === "TEST" ? (
+          <Button variant="secondary" loading={ending} onPress={endTest}>
+            End test Premium
+          </Button>
+        ) : (
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => Linking.openURL(manageSubscriptionUrl)}
+            style={{ minHeight: 44, justifyContent: "center" }}
+          >
+            <Text weight={600} color={c.brandText}>
+              Manage subscription ›
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  const month = usage.typedMeals?.thisMonth ?? 0;
+  return (
+    <View style={[styles.planCard, styles.premiumCard]} accessibilityLabel="Your plan">
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Text size={13} weight={600} color={c.ink3}>
+          Your plan
+        </Text>
+        <View style={styles.planPill}>
+          <Text weight={600} size={12} color={c.ink2}>
+            Free
+          </Text>
+        </View>
+      </View>
+      <View style={{ gap: 4 }}>
+        <Text weight={700} size={18}>
+          Typing meals is free, always.
+        </Text>
+        <Text size={14} color={c.ink2}>
+          Premium adds faster ways to log and a coach that knows your day.
         </Text>
       </View>
-      <View style={{ flexDirection: "row", gap: 6 }} aria-hidden>
-        {Array.from({ length: pips }, (_, i) => (
-          <View
-            key={i}
-            style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: i < usedPips ? c.brand : c.track }}
-          />
+      {month >= 5 && (
+        <View style={styles.usageStrip}>
+          <Text size={13} color={c.ink2} tabular>
+            This month you typed {month} meals. With Premium, most of them take one photo.
+          </Text>
+        </View>
+      )}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        {(
+          [
+            [Camera, "Snap a plate", "10 photos a day"],
+            [ScanBarcode, "Scan packs", "Barcode and label"],
+            [MessageCircle, "Ask the coach", "Food and training"],
+          ] as const
+        ).map(([Icon, title, sub]) => (
+          <View key={title} style={styles.tile}>
+            <View style={styles.tileIcon}>
+              <Icon size={16} color={c.brandText} />
+            </View>
+            <Text size={13} weight={700}>
+              {title}
+            </Text>
+            <Text size={12} color={c.ink3}>
+              {sub}
+            </Text>
+          </View>
         ))}
       </View>
-      {pro ? (
-        <>
-          {until && (
-            <Text size={13} color={c.ink3}>
-              {billing.data?.lifetime
-                ? "Lifetime access."
-                : billing.data?.willRenew
-                  ? `Renews ${until}.`
-                  : `Pro until ${until}; won't renew.`}
-            </Text>
-          )}
-          <Button variant="secondary" onPress={() => Linking.openURL(manageSubscriptionUrl)}>
-            Manage subscription
-          </Button>
-        </>
-      ) : (
-        <>
-          <Text size={13} color={c.ink3}>
-            Typing meals and relogging usuals are always free.
-          </Text>
-          {/* Paywall off: free users already have today's limits, so there is nothing to sell yet. */}
-          {usage.paywall && purchasesAvailable && (
-            <Button variant="strong" icon={Crown} onPress={() => router.push("/pro")}>
-              Go Pro
-            </Button>
-          )}
-        </>
-      )}
+      <Button icon={Crown} onPress={() => openPaywall("profile")}>
+        See what Premium adds
+      </Button>
+      <Text size={12} color={c.ink3} center>
+        From {LIST_PRICE.perMonth} a month, billed yearly. Cancel anytime.
+      </Text>
     </View>
   );
 }
@@ -504,26 +588,65 @@ function ExportRow() {
   );
 }
 
-/** Delete account (danger text), with a typed confirmation. */
-function DangerZone({ onDeleted }: { onDeleted: () => void }) {
+const LEAVE_REASONS: { value: DeleteReason; label: string }[] = [
+  { value: "logging_effort", label: "Logging takes too long" },
+  { value: "inaccurate", label: "Numbers felt wrong" },
+  { value: "price", label: "Too expensive" },
+  { value: "goal_reached", label: "I reached my goal" },
+  { value: "privacy", label: "Privacy worries" },
+  { value: "other_app", label: "Using another app" },
+  { value: "other", label: "Something else" },
+];
+
+/**
+ * Delete account, deliberately slow: 1) what goes, a billing warning, an optional "why" (reasons and a
+ * note, stored without the user) and "Sign out instead"; 2) type DELETE; 3) a last system alert.
+ */
+function DangerZone({ onDeleted, onSignOut }: { onDeleted: () => void; onSignOut: () => void }) {
   const c = useColors();
   const styles = useStyles();
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<"why" | "confirm">("why");
+  const [reasons, setReasons] = useState<DeleteReason[]>([]);
+  const [feedback, setFeedback] = useState("");
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setStep("why");
+    setTyped("");
+    setError(null);
+  };
+  const toggle = (r: DeleteReason) => setReasons((all) => (all.includes(r) ? all.filter((x) => x !== r) : [...all, r]));
 
   async function remove() {
     setBusy(true);
     setError(null);
     try {
-      await api("/api/account", { method: "DELETE" });
+      await api("/api/account", {
+        method: "DELETE",
+        json: { reasons, ...(feedback.trim() ? { feedback: feedback.trim() } : {}) },
+      });
       queryClient.clear();
       onDeleted();
     } catch {
       setError("Couldn't delete your account. Try again.");
       setBusy(false);
     }
+  }
+
+  /** The last stop: a system alert, so it can't be a stray tap. */
+  function confirmLast() {
+    if (Platform.OS === "web") {
+      if (globalThis.confirm?.("Delete your FITR8 account for good? This can't be undone.")) void remove();
+      return;
+    }
+    Alert.alert("Delete for good?", "Your account and all your data go now. This can't be undone.", [
+      { text: "Keep my account", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => void remove() },
+    ]);
   }
 
   return (
@@ -538,27 +661,82 @@ function DangerZone({ onDeleted }: { onDeleted: () => void }) {
           Delete account
         </Text>
       </Pressable>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Delete your account?">
-        <Text color={c.ink2}>
-          This deletes your account, meals, weigh-ins and plan for good. Type DELETE to confirm.
-        </Text>
-        <TextInput
-          accessibilityLabel="Type DELETE to confirm"
-          value={typed}
-          onChangeText={setTyped}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          placeholder="DELETE"
-          placeholderTextColor={c.ink3}
-          style={styles.confirm}
-        />
-        {error && <FieldError>{error}</FieldError>}
-        <Button onPress={remove} loading={busy} disabled={typed.trim().toUpperCase() !== "DELETE"}>
-          Delete my account
-        </Button>
-        <Button variant="secondary" onPress={() => setOpen(false)}>
-          Keep my account
-        </Button>
+      <Sheet open={open} onClose={close} title={step === "why" ? "Before you go" : "Delete your account?"}>
+        {step === "why" ? (
+          <>
+            <Text color={c.ink2}>
+              Deleting removes your meals, weigh-ins, workouts, streak, saved meals and plan for good. We can&apos;t
+              bring them back. You can download a copy first from &ldquo;Your data&rdquo;.
+            </Text>
+            <Text size={13} color={c.cautionText}>
+              Paying for FITR8 Premium through the App Store or Google Play? Cancel it there too: deleting your account
+              doesn&apos;t stop the store billing you.
+            </Text>
+            <View style={{ gap: 8 }}>
+              <Text weight={600}>Why are you leaving? (optional)</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {LEAVE_REASONS.map((r) => (
+                  <Chip key={r.value} selected={reasons.includes(r.value)} onPress={() => toggle(r.value)}>
+                    {r.label}
+                  </Chip>
+                ))}
+              </View>
+              <TextInput
+                accessibilityLabel="What could we do better? (optional)"
+                value={feedback}
+                onChangeText={setFeedback}
+                placeholder="What could we do better? (optional)"
+                placeholderTextColor={c.ink3}
+                multiline
+                maxLength={1000}
+                style={[styles.confirm, { height: 96, paddingTop: 12, textAlignVertical: "top" }]}
+              />
+              <Text size={12} color={c.ink3}>
+                Your answer is kept without your name or email, only to make FITR8 better.
+              </Text>
+            </View>
+            <Button variant="secondary" onPress={() => setStep("confirm")}>
+              Continue to delete
+            </Button>
+            <Button
+              onPress={() => {
+                close();
+                onSignOut();
+              }}
+            >
+              Just sign out instead
+            </Button>
+            <Button variant="secondary" onPress={close}>
+              Keep my account
+            </Button>
+          </>
+        ) : (
+          <>
+            <Text color={c.ink2}>Type DELETE to confirm. This deletes everything now, for good.</Text>
+            <TextInput
+              accessibilityLabel="Type DELETE to confirm"
+              value={typed}
+              onChangeText={setTyped}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder="DELETE"
+              placeholderTextColor={c.ink3}
+              style={styles.confirm}
+            />
+            {error && <FieldError>{error}</FieldError>}
+            <Button
+              variant="danger"
+              onPress={confirmLast}
+              loading={busy}
+              disabled={typed.trim().toUpperCase() !== "DELETE"}
+            >
+              Delete my account
+            </Button>
+            <Button variant="secondary" onPress={close} disabled={busy}>
+              Keep my account
+            </Button>
+          </>
+        )}
       </Sheet>
     </>
   );
@@ -597,6 +775,17 @@ const useStyles = makeStyles((c) => ({
     paddingVertical: 10,
   },
   planCard: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16 },
+  premiumCard: { borderWidth: 1, borderColor: c.premiumLine },
+  usageStrip: { backgroundColor: c.brandSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  tile: { flex: 1, gap: 4, padding: 10, borderRadius: 14, backgroundColor: c.sunken },
+  tileIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: c.brandSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   confirm: {
     height: 52,
     borderWidth: 1,

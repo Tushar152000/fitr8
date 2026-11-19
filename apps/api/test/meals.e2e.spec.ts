@@ -12,7 +12,7 @@ const today = () => new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.
 describe("meals", () => {
   let t: TestApp;
   beforeAll(async () => {
-    t = await createTestApp();
+    t = await createTestApp({ premium: true });
   });
   afterEach(() => vi.restoreAllMocks());
   afterAll(() => t.close());
@@ -72,11 +72,11 @@ describe("meals", () => {
     const res = await agent.get("/api/usage").expect(200);
     expect(res.body).toEqual({
       used: 0,
-      limit: 3,
-      left: 3,
+      limit: 10,
+      left: 10,
       resetsAt: expect.any(String),
-      plan: "FREE",
-      paywall: false,
+      plan: "PRO",
+      typedMeals: { today: 0, thisMonth: 0 },
     });
   });
 
@@ -100,6 +100,11 @@ describe("meals", () => {
     expect(calls).toMatchObject([
       { type: "MEAL_TEXT", success: true, countsAsScan: false, provider: "mock" },
     ]);
+    // Counted as a typed meal (the Premium banner and Profile card read this).
+    expect((await agent.get("/api/usage").expect(200)).body.typedMeals).toEqual({
+      today: 1,
+      thisMonth: 1,
+    });
   });
 
   it("creates an empty manual meal with no AI call", async () => {
@@ -150,7 +155,7 @@ describe("meals", () => {
       expect(res.body.items).toHaveLength(4);
       // Every item of the plate is a seeded food, so all are priced from the database, not the model.
       expect(res.body.items.filter((i: { approximate: boolean }) => i.approximate)).toEqual([]);
-      expect((await agent.get("/api/usage").expect(200)).body).toMatchObject({ used: 1, left: 2 });
+      expect((await agent.get("/api/usage").expect(200)).body).toMatchObject({ used: 1, left: 9 });
 
       const one = await agent.get(`/api/meals/${res.body.id}`).expect(200);
       expect(one.body.photoUrl).toEqual(expect.stringContaining(photoKey));
@@ -178,7 +183,7 @@ describe("meals", () => {
     it("stops at the daily photo limit with the usage in details", async () => {
       const { userId, agent } = await user();
       await t.prisma.aiCall.createMany({
-        data: Array.from({ length: 3 }, () => ({
+        data: Array.from({ length: 10 }, () => ({
           userId,
           type: "MEAL_PHOTO" as const,
           provider: "mock",
@@ -193,8 +198,8 @@ describe("meals", () => {
         .send({ source: "PHOTO", mealType: "LUNCH", photoKey: `meals/${userId}/x.jpg` })
         .expect(429);
       expect(res.body).toMatchObject({
-        error: "You've used today's 3 free photo scans.",
-        details: { used: 3, limit: 3, left: 0 },
+        error: "You've used today's 10 photo scans. They reset at midnight.",
+        details: { used: 10, limit: 10, left: 0 },
       });
     });
   });
@@ -229,6 +234,16 @@ describe("meals", () => {
       items: [{ name: "roti", edited: true }],
     });
     expect(confirmed.body.totalKcal).toBeCloseTo(confirmed.body.items[0].kcal, 1);
+
+    // Moved to another slot after logging; without mealType the slot stays.
+    const moved = await owner.agent
+      .put(`/api/meals/${meal.id}`)
+      .send({ items, mealType: "DINNER" })
+      .expect(200);
+    expect(moved.body.mealType).toBe("DINNER");
+    await owner.agent.put(`/api/meals/${meal.id}`).send({ items, mealType: "BRUNCH" }).expect(400);
+    const kept = await owner.agent.put(`/api/meals/${meal.id}`).send({ items }).expect(200);
+    expect(kept.body.mealType).toBe("DINNER");
 
     await stranger.agent.delete(`/api/meals/${meal.id}`).expect(404);
     await owner.agent.delete(`/api/meals/${meal.id}`).expect(204);
