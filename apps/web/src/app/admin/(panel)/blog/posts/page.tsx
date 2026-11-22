@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import type { BlogAdminPostPageDto } from "@fitr8/contracts";
 import { PostTable } from "@/components/admin/post-table";
+import { ImportPostButton } from "@/components/admin/import-post";
 import { inputClass, PageHead, smallButton } from "@/components/admin/ui";
 import { blogServerApi, requireStaff } from "@/lib/admin/server";
 import { cn } from "@/lib/cn";
@@ -45,6 +46,7 @@ export default async function AdminPosts({ searchParams }: PageProps<"/admin/blo
       <PageHead
         title="Posts"
         lead={me.staff.role === "AUTHOR" ? "Posts you have written." : undefined}
+        actions={me.sections.blog.manageContent ? <ImportPostButton /> : undefined}
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <nav className="flex gap-1 rounded-button bg-chip p-1" aria-label="Status">

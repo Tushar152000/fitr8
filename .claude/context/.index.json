@@ -189,9 +189,12 @@
   }
  },
  "web": {
-  "syncedAt": "2026-11-22T18:16:02.060Z",
-  "head": "6dfa963",
+  "syncedAt": "2026-11-22T19:16:54.120Z",
+  "head": "afe27d1",
   "files": {
+   "apps/web/src/components/admin/import-post.tsx": "a824aaf410de",
+   "apps/web/src/lib/admin/import.test.ts": "329b578743f2",
+   "apps/web/src/lib/admin/import.ts": "affd42d71354",
    "apps/web/AGENTS.md": "8a38a9be445f",
    "apps/web/CLAUDE.md": "c140473a3a5f",
    "apps/web/Dockerfile": "6aa8ecf428aa",
@@ -310,7 +313,7 @@
    "apps/web/src/app/admin/(panel)/blog/page.tsx": "d7e4e2ed846c",
    "apps/web/src/app/admin/(panel)/blog/posts/[id]/page.tsx": "0d3de4647d6d",
    "apps/web/src/app/admin/(panel)/blog/posts/[id]/preview/page.tsx": "3313f8be2648",
-   "apps/web/src/app/admin/(panel)/blog/posts/page.tsx": "863896aa8636",
+   "apps/web/src/app/admin/(panel)/blog/posts/page.tsx": "e2883b95a477",
    "apps/web/src/app/admin/(panel)/blog/profile/page.tsx": "5579141b9dd4",
    "apps/web/src/app/admin/(panel)/blog/redirects/page.tsx": "373d74a922ab",
    "apps/web/src/app/admin/(panel)/blog/tags/page.tsx": "ae07f220ba7e",
