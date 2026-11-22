@@ -47,6 +47,25 @@ they can do on the blog (`@fitr8/domain/blog` `blogCan`, enforced by the API):
 - **Images:** `/admin/blog/media` or from the editor. The browser PUTs straight to storage with a 5-minute
   signed URL; the API serves them publicly. JPEG/PNG/WebP/GIF/AVIF, 10 MB. No SVG (scriptable).
 
+## Importing a post
+
+A post can be prepared as files and imported in one step: **Blog → Posts → Import post** (editors and
+admins), select every file of the post at once, **Import as draft**, review, **Publish**.
+
+```
+content/blog/<slug>/
+  post.json      title, slug, excerpt, metaTitle, metaDescription, focusKeyword, featured,
+                 category (name), tags (names), faq [{question, answer}],
+                 cover {file, alt}, ogImage {file, alt}, body (default "article.html")
+  article.html   the body; images as <img src="photo.jpg" alt="…"> (file names in this folder)
+  *.jpg|png…     every image the body, cover or ogImage names
+```
+
+The importer (`apps/web/src/lib/admin/import.ts`, tested; UI `components/admin/import-post.tsx`) lists
+missing files before uploading, uploads each image once, points the body's `src` at the uploads,
+reuses or creates the category and tags by name, and creates the post as a draft. A slug that's taken
+leaves the draft with an error to fix there. Example: `content/blog/protein-for-indian-vegetarians/`.
+
 ## SEO
 
 | What                 | Where                                                                                                                                                             |

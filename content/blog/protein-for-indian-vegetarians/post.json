@@ -1,0 +1,38 @@
+{
+  "title": "Protein for Indian vegetarians: how much you need and how to get it",
+  "slug": "protein-for-indian-vegetarians",
+  "excerpt": "Most vegetarian days land around 55 g of protein. Here is how much you actually need, which Indian foods carry it, and simple swaps that add about 30 g a day.",
+  "metaTitle": "Protein for Indian Vegetarians: How Much You Need",
+  "metaDescription": "Protein for Indian vegetarians, explained: how much you need if you train, the best veg sources from dal to paneer, and swaps that add 30 g a day.",
+  "focusKeyword": "protein for Indian vegetarians",
+  "featured": true,
+  "category": "Nutrition",
+  "tags": ["Protein", "Vegetarian", "Indian food"],
+  "cover": {
+    "file": "dal.jpg",
+    "alt": "A bowl of dal tadka garnished with dried red chillies and coriander, with onion and lime on the side"
+  },
+  "ogImage": {
+    "file": "social-card.png",
+    "alt": "Protein for Indian vegetarians: FITR8 Blog title card with a plate of dal, paneer and curd"
+  },
+  "body": "article.html",
+  "faq": [
+    {
+      "question": "Is dal enough protein for vegetarians?",
+      "answer": "Dal helps, but one katori gives about 9 g of protein. Most people who strength train need 90–130 g a day, so combine dal with paneer, curd, milk, soya or eggs across the day."
+    },
+    {
+      "question": "How much protein does a 60 kg vegetarian need?",
+      "answer": "About 50 g a day to avoid deficiency (ICMR-NIN), about 96 g if you strength train (1.6 g per kg), and about 108 g while losing fat (1.8 g per kg)."
+    },
+    {
+      "question": "Do vegetarians need protein powder?",
+      "answer": "No. Protein powder is a convenience, not a necessity. Paneer, curd, milk, dals, soya and tofu can cover your needs; a scoop of whey, soy or pea protein simply makes it easier on busy days."
+    },
+    {
+      "question": "Is a high-protein diet bad for the kidneys?",
+      "answer": "Research shows no harm to the kidneys in healthy people. If you have kidney disease or your doctor has asked you to limit protein, follow their advice."
+    }
+  ]
+}
