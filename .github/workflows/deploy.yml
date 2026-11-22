@@ -159,7 +159,8 @@ jobs:
           REVENUECAT: ${{ vars.REVENUECAT_ENABLED }}
           SMTP_USER: ${{ vars.SMTP_USER }}
           SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
-          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+          # A repository variable, or a secret of the same name (either works).
+          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS || secrets.ADMIN_EMAILS }}
         run: |
           envs="APP_ENV=production,APP_ROLE=api,DATABASE_POOL_MAX=5,AI_PROVIDER=$AI_PROVIDER"
           envs+=",PUBLIC_URL=${{ vars.PUBLIC_URL }},API_PUBLIC_URL=${{ vars.API_PUBLIC_URL }}"
