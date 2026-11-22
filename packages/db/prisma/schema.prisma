@@ -112,6 +112,8 @@ model User {
   image         String?
   /// Last app use (GET /me, throttled to hourly). 90+ days old → "welcome back" check-in (@fitr8/domain/activity).
   lastActiveAt  DateTime?
+  /// When the one-time welcome email (sent on account creation) went out. Set before sending, cleared if the send fails.
+  welcomeEmailSentAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

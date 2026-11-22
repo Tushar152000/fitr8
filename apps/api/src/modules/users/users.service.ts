@@ -7,8 +7,10 @@ import { ageFromBirthDate } from "@fitr8/domain/nutrition";
 import { PHONE_TAKEN } from "@fitr8/domain/person";
 import { AppError, notFound } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
+import { JobQueue } from "../../infra/queue/job-queue.service.js";
 import { StorageService } from "../../infra/storage/storage.service.js";
 import { BillingService } from "../billing/billing.service.js";
+import { WELCOME_EMAIL_QUEUE, type WelcomeEmailData } from "./welcome-email.js";
 
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 
@@ -34,6 +36,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly billing: BillingService,
+    private readonly jobs: JobQueue,
   ) {}
 
   async timezone(userId: string): Promise<string> {
@@ -71,7 +74,10 @@ export class UsersService {
     return user?.id ?? null;
   }
 
-  /** A new account. Throws Prisma P2002 if the email was taken meanwhile (the caller retries). */
+  /**
+   * A new account, and its welcome email queued. Throws Prisma P2002 if the email was taken
+   * meanwhile (the caller retries).
+   */
   async create(input: NewUser): Promise<string> {
     const user = await this.prisma.user.create({
       data: {
@@ -82,7 +88,18 @@ export class UsersService {
       },
       select: { id: true },
     });
+    this.queueWelcomeEmail(user.id);
     return user.id;
+  }
+
+  /**
+   * Queues the one-time welcome email (`WelcomeEmailJob`). Never awaited and never fails sign-in:
+   * without Redis the job runs inline in the background.
+   */
+  private queueWelcomeEmail(userId: string) {
+    this.jobs
+      .enqueue<WelcomeEmailData>(WELCOME_EMAIL_QUEUE, { userId })
+      .catch((err: unknown) => this.logger.warn({ err, userId }, "welcome email not sent"));
   }
 
   /** Fills name, avatar and email verification from a sign-in where they're still empty; never overwrites. */
@@ -158,6 +175,34 @@ export class UsersService {
       medicalNote: p.medicalFlag ? p.medicalNote : null,
       timezone: p.timezone,
     };
+  }
+
+  /**
+   * Claims the one-time welcome email: true for exactly one caller per user, and only while the
+   * user has an email. Returns where to send it, or null when it was already sent (or can't be).
+   */
+  async claimWelcomeEmail(
+    userId: string,
+    now = new Date(),
+  ): Promise<{ email: string; name: string | null } | null> {
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: userId, welcomeEmailSentAt: null, email: { not: null } },
+      data: { welcomeEmailSentAt: now },
+    });
+    if (!count) return null;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+    return user?.email ? { email: user.email, name: user.name } : null;
+  }
+
+  /** Gives the claim back after a failed send so a retry can try again. */
+  async releaseWelcomeEmail(userId: string) {
+    await this.prisma.user.updateMany({
+      where: { id: userId },
+      data: { welcomeEmailSentAt: null },
+    });
   }
 
   /** The user is here now: ends a pending "welcome back" (answered, or "Not now"). */
