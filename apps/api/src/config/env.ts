@@ -129,15 +129,18 @@ export const EnvSchema = z
     REVENUECAT_ENTITLEMENT: z.string().default("pro"),
 
     /**
-     * FITR8 admin (/admin): Google accounts (comma separated) that are always ADMIN staff. They add
+     * FITR8 admin (/admin): Google accounts (comma, semicolon or space separated) that are always
+     * ADMIN staff. In production it comes from the GitHub repo variable ADMIN_EMAILS. They add
      * the rest of the team (editors, authors) in /admin/team.
      */
     ADMIN_EMAILS: z
       .string()
       .default("")
+      // Commas, semicolons or spaces: the deploy workflow passes it with ";" because commas
+      // separate gcloud's --update-env-vars list.
       .transform((v) =>
         v
-          .split(",")
+          .split(/[,;\s]+/)
           .map((s) => s.trim().toLowerCase())
           .filter(Boolean),
       ),

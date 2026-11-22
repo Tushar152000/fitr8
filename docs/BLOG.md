@@ -67,7 +67,7 @@ they can do on the blog (`@fitr8/domain/blog` `blogCan`, enforced by the API):
 ## Setup
 
 1. Migration: `20261122120000_admin_blog` (new tables only; safe to deploy before the code).
-2. API env: `ADMIN_EMAILS` (the first admins of the whole admin).
+2. GitHub repo variable `ADMIN_EMAILS` (the first admins of the whole admin; the deploy passes it to the API).
 3. Web env: `NEXT_PUBLIC_SITE_URL=https://www.fitr8.com` (build time; locally `PUBLIC_URL`).
 4. Storage: the bucket already accepts browser PUTs for meal photos; blog uploads use the same CORS.
 5. Sign in at `/admin/login`, invite the team at `/admin/team`, add categories at `/admin/blog/categories`, write.

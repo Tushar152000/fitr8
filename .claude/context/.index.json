@@ -1,7 +1,7 @@
 {
  "api": {
-  "syncedAt": "2026-11-22T18:16:02.035Z",
-  "head": "6dfa963",
+  "syncedAt": "2026-11-22T18:49:13.652Z",
+  "head": "a7ce22e",
   "files": {
    "apps/api/.oxlintrc.json": "c46d7bfdcb62",
    "apps/api/Dockerfile": "5008ec25a6d3",
@@ -19,8 +19,8 @@
    "apps/api/src/common/http/zod.ts": "5916ad1165c9",
    "apps/api/src/config/config.module.ts": "9469c7457cc3",
    "apps/api/src/config/dotenv.ts": "9b22547b8571",
-   "apps/api/src/config/env.spec.ts": "5df54cf52be7",
-   "apps/api/src/config/env.ts": "566e01888d57",
+   "apps/api/src/config/env.spec.ts": "7dca986c3cb8",
+   "apps/api/src/config/env.ts": "b09830c728a0",
    "apps/api/src/infra/infra.module.ts": "0e1535ff9609",
    "apps/api/src/infra/mail/mail.module.ts": "ff34e3444dc3",
    "apps/api/src/infra/mail/mailer.ts": "0a312afac89c",
@@ -684,14 +684,14 @@
   }
  },
  "infra": {
-  "syncedAt": "2026-11-22T18:16:02.100Z",
-  "head": "6dfa963",
+  "syncedAt": "2026-11-22T18:49:13.662Z",
+  "head": "a7ce22e",
   "files": {
    ".env.example": "42506fe3fcde",
-   ".env.production.example": "c55e6252b2bb",
+   ".env.production.example": "bd14e92dcb3b",
    ".github/dependabot.yml": "1c8fd42f4644",
    ".github/workflows/ci.yml": "04026a5c3ce9",
-   ".github/workflows/deploy.yml": "46af069c9bd6",
+   ".github/workflows/deploy.yml": "8aa7c99ba00c",
    ".github/workflows/mobile-release.yml": "3c0c1ba5c223",
    "apps/api/Dockerfile": "5008ec25a6d3",
    "apps/mobile/app.json": "3aa07f52f671",
@@ -701,7 +701,7 @@
    "infra/gcp/api-domain.sh": "0778edd156f5",
    "infra/gcp/setup.sh": "3802671fd790",
    "infra/owner-setup.sh": "0080a7fd166f",
-   "infra/release-check.sh": "736b01557cae",
+   "infra/release-check.sh": "e40b63dddaee",
    "package.json": "0d3fe3a53e37",
    "pnpm-workspace.yaml": "533bd9a79bf0",
    "scripts/lib/android.mjs": "721c30903488",
