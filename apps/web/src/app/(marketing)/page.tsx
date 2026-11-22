@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Faq } from "./_components/faq";
 import { Features } from "./_components/features";
 import { FinalCta } from "./_components/final-cta";
+import { FromTheBlog } from "./_components/from-the-blog";
 import { Hero } from "./_components/hero";
 import { HowItWorks } from "./_components/how-it-works";
 import { SiteFooter } from "./_components/site-footer";
@@ -28,6 +29,7 @@ export default function LandingPage() {
         <HowItWorks />
         <TargetCalculator />
         <Stats />
+        <FromTheBlog />
         <Faq />
         <FinalCta />
       </main>

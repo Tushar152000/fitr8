@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CONTACT_ADDRESS, CONTACT_EMAIL } from "./contact";
 
 const COMPANY_LINKS = [
+  { label: "Blog", href: "/blog" },
   { label: "About us", href: "/about" },
   { label: "Contact us", href: "/contact" },
   { label: "Privacy Policy", href: "/privacy" },

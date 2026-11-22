@@ -7,12 +7,14 @@ import { AllExceptionsFilter } from "./common/http/exception.filter.js";
 import { isStrictRateLimited } from "./common/http/rate-limit.js";
 import { ConfigModule, ENV, type Env } from "./config/config.module.js";
 import { InfraModule } from "./infra/infra.module.js";
+import { AdminModule } from "./modules/admin/admin.module.js";
 import { AiModule } from "./modules/ai/ai.module.js";
 import { CoachModule } from "./modules/coach/coach.module.js";
 import { ContactModule } from "./modules/contact/contact.module.js";
 import { AuthGuard } from "./modules/auth/auth.guard.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { BillingModule } from "./modules/billing/billing.module.js";
+import { BlogModule } from "./modules/blog/blog.module.js";
 import { OriginGuard } from "./modules/auth/origin.guard.js";
 import { FoodsModule } from "./modules/foods/foods.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
@@ -86,6 +88,8 @@ import { WorkoutsModule } from "./modules/workouts/workouts.module.js";
     RemindersModule,
     CoachModule,
     ContactModule,
+    AdminModule,
+    BlogModule,
   ],
   // Guards run in this order: rate limit → CSRF origin check → session.
   providers: [

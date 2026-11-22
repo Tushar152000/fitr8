@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 
 /** Header links: their own pages. The one matching the current path is marked current. */
 const NAV_LINKS = [
+  { href: "/blog", label: "Blog" },
   { href: "/about", label: "About us" },
   { href: "/contact", label: "Contact us" },
 ] as const;
@@ -23,7 +24,9 @@ function NavAnchor({
   className: string;
   onClick?: () => void;
 }) {
-  const active = usePathname() === link.href;
+  const pathname = usePathname();
+  // Blog posts and archives live under /blog/…, so the Blog link stays current there too.
+  const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
   return (
     <Link
       href={link.href}
