@@ -71,6 +71,8 @@ if [ "$HAVE_GH" = 1 ]; then
   done
   if [ -n "$(var ADMIN_EMAILS)" ]; then
     ok "ADMIN_EMAILS set (first /admin admins)"
+  elif gh secret list --repo "$REPO" --json name --jq '.[].name' 2>/dev/null | grep -qx ADMIN_EMAILS; then
+    ok "ADMIN_EMAILS set as a secret (first /admin admins)"
   else
     warn "ADMIN_EMAILS not set: nobody can open /admin unless it is set on the Cloud Run service"
   fi
