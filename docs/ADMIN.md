@@ -24,7 +24,8 @@ Staff sign in with their normal Google account; that creates an ordinary FITR8 u
 
 - Rules are pure functions: `@fitr8/domain/staff` (`staffCan`: the team) and each section's own map
   (`@fitr8/domain/blog` `blogCan`). The API enforces them; the web only hides what you can't do.
-- **First admins:** `ADMIN_EMAILS` on the API (comma separated Google emails). They become (and stay)
+- **First admins:** `ADMIN_EMAILS` (Google emails, comma separated). In production set it as a GitHub repo
+  variable (Settings → Secrets and variables → Actions → Variables); the next deploy passes it to the API. They become (and stay)
   ADMIN on first visit; the UI can't demote or remove them ("Set in ADMIN_EMAILS").
 - **Inviting:** `/admin/team` → email + role. The row shows "Invited" until that account first opens
   `/admin`, then links to it. The last other admin can't be removed or demoted.

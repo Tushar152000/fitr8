@@ -69,6 +69,11 @@ if [ "$HAVE_GH" = 1 ]; then
     value="$(var "$v")"
     if [ -n "$value" ]; then ok "$v = $value"; else warn "$v not set (default applies)"; fi
   done
+  if [ -n "$(var ADMIN_EMAILS)" ]; then
+    ok "ADMIN_EMAILS set (first /admin admins)"
+  else
+    warn "ADMIN_EMAILS not set: nobody can open /admin unless it is set on the Cloud Run service"
+  fi
   section "GitHub repository secrets (names only)"
   secrets="$(gh secret list --repo "$REPO" --json name --jq '.[].name' 2>/dev/null)"
   for s in VERCEL_TOKEN EXPO_TOKEN; do

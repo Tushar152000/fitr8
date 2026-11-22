@@ -95,7 +95,7 @@ S3/R2/MinIO client. Presigned PUT 300 s, binds ContentType only (no size limit).
 Runtime `NODE_ENV APP_ENV APP_ROLE(all) PORT(4000) LOG_LEVEL PUBLIC_URL(web origin) API_PUBLIC_URL(default PUBLIC_URL) AUTH_COOKIE_DOMAIN CORS_ORIGINS` ("" = unset for the new two) · Data `DATABASE_URL(req) DATABASE_POOL_MAX(10) REDIS_URL` · Auth `AUTH_SECRET(req ≥32) AUTH_GOOGLE_ID/SECRET APPLE_CLIENT_ID/TEAM_ID/KEY_ID/PRIVATE_KEY AUTH_DEV_LOGIN SESSION_DAYS MOBILE_SESSION_DAYS SESSION_MAX_DAYS AUTH_RATE_LIMIT` · Storage `S3_*` · AI `AI_PROVIDER ANTHROPIC_API_KEY OPENAI_API_KEY AI_DAILY_LIMIT(3) COACH_DAILY_LIMIT(40) AI_PRO_DAILY_LIMIT(10)` · Billing `PAYWALL_ENABLED REVENUECAT_WEBHOOK_AUTH REVENUECAT_SECRET_KEY REVENUECAT_ENTITLEMENT(pro)` · `OFF_CONTACT` · Contact form `SMTP_HOST SMTP_PORT(465; 465 = TLS) SMTP_USER SMTP_PASS` (all three of host/user/pass or none, always checked) `SMTP_FROM(default SMTP_USER) CONTACT_TO(askfitr8@gmail.com) CONTACT_HOURLY_LIMIT(5)`.
 Deployed refuses: dev login on, missing Google creds, partial Apple config, non-https `PUBLIC_URL`/`API_PUBLIC_URL`. Always refuses: web and API on different hosts without `AUTH_COOKIE_DOMAIN`, or a domain not covering both.
 
-Admin: `ADMIN_EMAILS` (comma list, lower-cased; `env.ts:135`).
+Admin: `ADMIN_EMAILS` (split on commas, semicolons or spaces, lower-cased; `env.ts:135`; tested in `env.spec.ts`).
 
 ## Layering reality
 

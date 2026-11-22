@@ -75,6 +75,20 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...base, AUTH_DEV_LOGIN: "false" }).AUTH_DEV_LOGIN).toBe(false);
   });
 
+  it("reads ADMIN_EMAILS separated by commas, semicolons or spaces, lower-cased", () => {
+    expect(parseEnv(base).ADMIN_EMAILS).toEqual([]);
+    expect(parseEnv({ ...base, ADMIN_EMAILS: "A@x.com, b@y.com" }).ADMIN_EMAILS).toEqual([
+      "a@x.com",
+      "b@y.com",
+    ]);
+    // The deploy workflow turns commas into ";" (gcloud's env list is comma separated).
+    expect(parseEnv({ ...base, ADMIN_EMAILS: "a@x.com;b@y.com; c@z.com" }).ADMIN_EMAILS).toEqual([
+      "a@x.com",
+      "b@y.com",
+      "c@z.com",
+    ]);
+  });
+
   it("keeps dev sign-in off by default when deployed", () => {
     expect(parseEnv(deployed)).toMatchObject({ APP_ENV: "production", AUTH_DEV_LOGIN: false });
     expect(parseEnv({ ...deployed, APP_ENV: "staging" }).APP_ENV).toBe("staging");
