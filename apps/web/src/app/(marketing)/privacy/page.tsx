@@ -14,7 +14,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="13 November 2026"
+      updated="24 November 2026"
       intro={
         <p className="!mt-0 !text-lg">
           FITR8 helps you track food, water, workouts and fitness progress. Some of this information
@@ -56,6 +56,27 @@ export default function PrivacyPage() {
         <li>
           Injuries or medical information you choose to tell us, including information relevant to
           safer goal calculations.
+        </li>
+      </ul>
+      <h3>Apple Health and Health Connect (only if you connect them)</h3>
+      <ul>
+        <li>
+          If you connect Apple Health (iPhone) or Health Connect (Android), FITR8 reads the types
+          you allow: activity (steps, distance, floors, calories burned, exercise and workouts),
+          heart (heart rate, resting heart rate, heart-rate variability), blood oxygen, respiratory
+          rate, body temperature, blood pressure, blood glucose, VO2 max, body measurements (weight,
+          height, body fat, lean, bone and water mass, BMI, waist) and sleep.
+        </li>
+        <li>
+          We store these readings in your FITR8 account to show your steps, heart rate, BMI, blood
+          oxygen, sleep and a recovery estimate, and to tailor your training and coach answers.
+          FITR8 only reads this data; it never writes to Apple Health or Health Connect.
+        </li>
+        <li>
+          Health app data is never sold, never used for advertising or tracking, and never sent to
+          analytics. You can disconnect at any time in Profile → Health apps, and choose “Disconnect
+          and delete synced data” to delete everything FITR8 stored from it. Deleting your account
+          deletes it too.
         </li>
       </ul>
       <h3>Information you create in FITR8</h3>
@@ -196,6 +217,10 @@ export default function PrivacyPage() {
           <b>Export:</b> the current in-product CSV export includes confirmed meal items and
           weigh-ins. It does not currently include every category of account information or every
           log. Contact us if you need help with another request.
+        </li>
+        <li>
+          <b>Health app data:</b> Profile → Health apps → “Disconnect and delete synced data”
+          deletes every reading FITR8 saved from Apple Health or Health Connect.
         </li>
         <li>
           <b>Delete:</b> you can request account deletion from Profile. The account’s database

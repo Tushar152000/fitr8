@@ -16,6 +16,7 @@ import {
   fuelStatus,
   nextTarget,
   pickSnack,
+  scheduleKey,
   WeekPlanSchema,
   type AdjustedSession,
   type Energy,
@@ -23,14 +24,18 @@ import {
   type PlanDay,
   type Prescription,
   type SetLog,
+  type StrengthTemplate,
 } from "@fitr8/domain/training";
 import { AppError } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { UsualsService } from "../meals/usuals.service.js";
 import { TargetsService } from "../plan/targets.service.js";
 import { UsersService } from "../users/users.service.js";
+import { TrainingPlanner } from "./training-planner.js";
 
 const DAY = 86_400_000;
+/** A training week's strength days; null = none (use the onboarding split), undefined = look it up. */
+type PlanInputSchedule = { weekday: number; template: StrengthTemplate }[] | null;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 /** What a WorkoutLog.sets JSON holds: the sets done and the prescription they were done against. */
@@ -97,7 +102,16 @@ export class WorkoutsService {
     private readonly targets: TargetsService,
     private readonly usuals: UsualsService,
     private readonly users: UsersService,
+    private readonly planner: TrainingPlanner,
   ) {}
+
+  /**
+   * Strength days from the user's training week (Workout tab), or undefined without a training
+   * profile (then the split comes from onboarding's training days, as before).
+   */
+  private async trainingSchedule(userId: string, monday: Date) {
+    return (await this.planner.week(userId, monday))?.week.schedule;
+  }
 
   /** Whether `date` has a session in its week's plan (the plan is generated on first use). Water uses this. */
   async isTrainingDay(userId: string, date: Date): Promise<boolean> {
@@ -127,9 +141,13 @@ export class WorkoutsService {
   }
 
   /** Build and save a new version of this week's plan. */
-  async generateWeek(userId: string, today: Date) {
+  async generateWeek(userId: string, today: Date, schedule?: PlanInputSchedule) {
     const monday = weekStart(today);
-    const week = buildWeek(await this.planInputs(userId, monday, today));
+    const week = buildWeek({
+      ...(await this.planInputs(userId, monday, today)),
+      schedule:
+        schedule === null ? undefined : (schedule ?? (await this.trainingSchedule(userId, monday))),
+    });
     const latest = await this.prisma.workoutPlan.findFirst({
       where: { userId, weekStart: monday },
       orderBy: { version: "desc" },
@@ -146,13 +164,24 @@ export class WorkoutsService {
     });
   }
 
-  /** This week's latest plan, generated on first use. */
+  /**
+   * This week's latest plan, generated on first use, and rebuilt as a new version when the
+   * training week's gym days changed (so gym sessions always sit on the Workout tab's gym days).
+   */
   async getOrCreateWeek(userId: string, today: Date) {
-    const existing = await this.prisma.workoutPlan.findFirst({
-      where: { userId, weekStart: weekStart(today) },
-      orderBy: { version: "desc" },
-    });
-    const row = existing ?? (await this.generateWeek(userId, today));
+    const monday = weekStart(today);
+    const [existing, schedule] = await Promise.all([
+      this.prisma.workoutPlan.findFirst({
+        where: { userId, weekStart: monday },
+        orderBy: { version: "desc" },
+      }),
+      this.trainingSchedule(userId, monday),
+    ]);
+    const expected = schedule ? scheduleKey(schedule) : undefined;
+    const current = existing ? WeekPlanSchema.parse(existing.plan) : null;
+    if (existing && current && current.scheduleKey === expected)
+      return { row: existing, week: current };
+    const row = await this.generateWeek(userId, today, schedule ?? null);
     return { row, week: WeekPlanSchema.parse(row.plan) };
   }
 
@@ -337,7 +366,8 @@ export class WorkoutsService {
   private async planInputs(userId: string, monday: Date, today: Date) {
     const [{ plan, profile, metric }, target, pastWeeks, history] = await Promise.all([
       this.targets.computePlan(userId),
-      this.targets.currentTarget(userId, today),
+      // targetForDay: a week that starts before the user onboarded (their first week) uses the first plan.
+      this.targets.targetForDay(userId, today),
       this.prisma.workoutPlan.findMany({
         where: { userId, weekStart: { lt: monday } },
         distinct: ["weekStart"],

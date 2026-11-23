@@ -25,7 +25,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins: Plugin[] = [
     // React Native Firebase v27 is Swift Package Manager only: iOS needs dynamic frameworks even
     // before Firebase is configured, because the native modules are always linked.
-    ["expo-build-properties", { ios: { useFrameworks: "dynamic" } }],
+    // Health Connect needs Android 8 (API 26) or newer.
+    ["expo-build-properties", { ios: { useFrameworks: "dynamic" }, android: { minSdkVersion: 26 } }],
     ...(firebase
       ? ([
           "@react-native-firebase/app",

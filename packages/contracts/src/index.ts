@@ -9,5 +9,7 @@ export * from "./ai.js";
 export * from "./coach.js";
 export * from "./admin.js";
 export * from "./blog.js";
+export * from "./training.js";
+export * from "./health.js";
 export * from "./responses.js";
 export type * from "./analytics.js";

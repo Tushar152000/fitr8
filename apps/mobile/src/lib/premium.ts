@@ -30,6 +30,8 @@ export function isLocked(billing: BillingDto | undefined, feature: PremiumFeatur
       return l.coach === 0;
     case "reminders":
       return count >= l.reminders;
+    case "workouts":
+      return !l.workouts;
   }
 }
 
@@ -66,6 +68,7 @@ export const FEATURE_LABEL: Record<PremiumFeature, FeatureLabel> = {
   label_scan: "label",
   coach: "coach",
   reminders: "reminders",
+  workouts: "workouts",
 };
 
 /** Opens the Premium screen (14c). Never call it for a Premium user: they get Manage subscription. */
@@ -104,6 +107,8 @@ export function useLockedSheet() {
  */
 export function openPremium(feature: PremiumFeature, context: LogContext = {}) {
   if (feature === "reminders") return openPaywall("locked_reminders");
+  // The Workout tab explains Premium itself (16a); a 402 elsewhere goes straight to the plans.
+  if (feature === "workouts") return openPaywall("workout_tab");
   setLocked({ feature, context });
 }
 

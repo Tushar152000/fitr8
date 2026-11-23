@@ -142,6 +142,10 @@ function Routes() {
         <Stack.Screen name="coach" />
         <Stack.Screen name="coach-memory" />
         <Stack.Screen name="reminders" />
+        <Stack.Screen name="workout-session" />
+        <Stack.Screen name="training/[date]" />
+        <Stack.Screen name="training/setup" />
+        <Stack.Screen name="health" />
         <Stack.Screen name="pro" options={modalMotion} />
       </Stack.Protected>
       {/* First-time setup, and where an onboarded user edits their goal (pushed from Profile). */}

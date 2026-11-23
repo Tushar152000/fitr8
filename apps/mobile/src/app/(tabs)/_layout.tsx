@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import { useEffect } from "react";
 import { ReminderPrompt } from "@/components/reminder-prompt";
 import { TabBar } from "@/components/tab-bar";
+import { useHealthSync } from "@/lib/health/use-health-sync";
 import { remindersQuery } from "@/lib/queries";
 import { syncCustomReminders } from "@/lib/reminders";
 import { tabMotion } from "@/lib/motion";
@@ -10,6 +11,7 @@ import { tabMotion } from "@/lib/motion";
 /** Today, Workout, [camera], [coach], Profile. Camera and coach are buttons that open stacks (tab-bar.tsx). */
 export default function TabsLayout() {
   useReminderSync();
+  useHealthSync();
   return (
     <>
       <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, ...tabMotion }}>

@@ -107,6 +107,7 @@ Keep this table aligned with `/privacy`. Nothing is used for tracking or adverti
 | Name, email, user id (Google/Apple)                                                      | Yes       | Yes            | App functionality, account management |
 | Phone number (optional, onboarding step 1)                                               | Yes       | Yes            | App functionality, account management |
 | Health & fitness (body stats, goal, food, water, workouts, medical flag + optional note) | Yes       | Yes            | App functionality                     |
+| Apple Health / Health Connect records the user allows (docs/HEALTH.md list)              | Yes       | Yes            | App functionality                     |
 | Photos (meals, labels; only ones the user takes or picks)                                | Yes       | Yes            | App functionality                     |
 | Other user content (typed meals, coach messages)                                         | Yes       | Yes            | App functionality                     |
 | Location, contacts, microphone, ads id                                                   | No        | –              | –                                     |
@@ -125,6 +126,8 @@ the row is "No".
   service providers process data to run the service. Confirm the final provider list and the
   applicable store disclosure answers against the actual production configuration before release.
 - Apple App Privacy: "Data Linked to You" for the rows above; **Data Used to Track You: none**.
+
+Health apps: Play **Health apps declaration** and HealthKit review notes are in `docs/HEALTH.md`.
 
 ## 8. Before submitting
 

@@ -60,6 +60,8 @@ export interface BillingDto {
     barcode: boolean;
     /** Custom reminders the user can keep. */
     reminders: number;
+    /** The Workout tab (weekly plan, run/yoga days, training logs). */
+    workouts: boolean;
   };
 }
 
@@ -68,7 +70,8 @@ export const TestPurchaseSchema = z.object({ period: z.enum(["month", "year"]) }
 export type TestPurchaseInput = z.infer<typeof TestPurchaseSchema>;
 
 /** Premium features (docs/PREMIUM.md); the app opens the Premium screen for each. */
-export type PremiumFeature = "photo_scan" | "label_scan" | "barcode" | "coach" | "reminders";
+export type PremiumFeature =
+  "photo_scan" | "label_scan" | "barcode" | "coach" | "reminders" | "workouts";
 
 /** `details` of a 402 from any route a free user can't use: open the Premium screen for `feature`. */
 export interface ProRequiredDetails {

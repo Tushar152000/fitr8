@@ -62,6 +62,17 @@ const light = {
   onStrong: "#ffffff",
   /** Behind bottom sheets and dialogs. */
   scrim: "rgba(23,24,28,0.45)",
+  /** Workout day types (always shown with a text label too, never colour alone). Text-safe on surface. */
+  dayGym: "#6a3fd8",
+  dayGymSoft: "#efe8fd",
+  dayRun: "#1f6fb8",
+  dayRunSoft: "#e1eefa",
+  dayYoga: "#1d7a45",
+  dayYogaSoft: "#dcf3e4",
+  dayWalk: "#8a5a0c",
+  dayWalkSoft: "#fbefd6",
+  dayRest: "#6b6d7a",
+  dayRestSoft: "#ececf2",
   /** Always white: text/icons on brand, panel, photos and the camera. */
   white: "#ffffff",
 } as const;
@@ -107,6 +118,16 @@ const dark: Colors = {
   strongHover: "#d4d6e0",
   onStrong: "#151724",
   scrim: "rgba(0,0,0,0.6)",
+  dayGym: "#b9a3ff",
+  dayGymSoft: "#221b38",
+  dayRun: "#6aa9f0",
+  dayRunSoft: "#172b45",
+  dayYoga: "#4ade80",
+  dayYogaSoft: "#10291b",
+  dayWalk: "#f0b454",
+  dayWalkSoft: "#2e2410",
+  dayRest: "#aba6b5",
+  dayRestSoft: "#1d1a24",
   white: "#ffffff",
 };
 

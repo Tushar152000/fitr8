@@ -82,6 +82,26 @@ export class TargetsService {
     return { target, plan };
   }
 
+  /**
+   * Height (profile) and the latest weigh-in on or before a date, for BMI and burn estimates.
+   * Nulls before onboarding.
+   */
+  async bodyBasics(userId: string, onOrBefore?: Date) {
+    const [profile, metric] = await Promise.all([
+      this.prisma.profile.findUnique({ where: { userId }, select: { heightCm: true } }),
+      this.prisma.bodyMetric.findFirst({
+        where: { userId, ...(onOrBefore && { date: { lte: onOrBefore } }) },
+        orderBy: { date: "desc" },
+        select: { weightKg: true, date: true },
+      }),
+    ]);
+    return {
+      heightCm: profile?.heightCm ?? null,
+      weightKg: metric?.weightKg ?? null,
+      weightDate: metric?.date ?? null,
+    };
+  }
+
   /** The target in effect on a (local, UTC-midnight) date, or null before onboarding. */
   currentTarget(userId: string, onDate = new Date()) {
     return this.prisma.dailyTarget.findFirst({

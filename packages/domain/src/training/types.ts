@@ -79,6 +79,8 @@ export const WeekPlanSchema = z.object({
   cardio: z.string(),
   notes: z.array(z.string()),
   days: z.array(PlanDaySchema),
+  /** Set when built from a training week's strength days (`scheduleKey`); absent for the old split. */
+  scheduleKey: z.string().optional(),
 });
 export type WeekPlan = z.infer<typeof WeekPlanSchema>;
 

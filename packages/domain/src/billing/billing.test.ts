@@ -23,6 +23,7 @@ describe("dailyLimits", () => {
       labelScans: true,
       barcode: true,
       reminders: 50,
+      workouts: true,
     });
   });
   it("leaves AI, barcode and extra reminders to Premium on the free plan", () => {
@@ -32,6 +33,7 @@ describe("dailyLimits", () => {
       labelScans: false,
       barcode: false,
       reminders: 3,
+      workouts: false,
     });
   });
 });

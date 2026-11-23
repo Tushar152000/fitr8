@@ -5,6 +5,7 @@ import { ANTHROPIC } from "../ai/anthropic.client.js";
 import { AI_MODELS } from "../ai/models.js";
 import { OPENAI } from "../ai/openai.client.js";
 import { FoodsModule } from "../foods/foods.module.js";
+import { HealthDataModule } from "../health-data/health-data.module.js";
 import { MealsModule } from "../meals/meals.module.js";
 import { PlanModule } from "../plan/plan.module.js";
 import { ProgressModule } from "../progress/progress.module.js";
@@ -25,7 +26,15 @@ import { TurnLock } from "./turn-lock.js";
 
 /** The AI coach: an agent loop (Claude or OpenAI) whose tools are the other modules' application services. */
 @Module({
-  imports: [ProgressModule, WorkoutsModule, WaterModule, MealsModule, FoodsModule, PlanModule],
+  imports: [
+    ProgressModule,
+    WorkoutsModule,
+    WaterModule,
+    MealsModule,
+    FoodsModule,
+    PlanModule,
+    HealthDataModule,
+  ],
   controllers: [CoachController],
   providers: [
     CoachService,

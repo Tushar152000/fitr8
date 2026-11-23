@@ -1,4 +1,5 @@
 import type { Slot } from "./types.js";
+import type { StrengthTemplate } from "./week.js";
 
 export interface DayTemplate {
   name: string;
@@ -88,6 +89,31 @@ export function splitFor(daysPerWeek: number, forceFullBody = false): Split {
     { ...LEGS, name: "Legs B", variant: 1 },
   ];
   return { name: "Push / pull / legs", weekdays: WEEKDAYS[n], days: ppl.slice(0, n) };
+}
+
+/** The strength days a training week can ask for (week.ts `StrengthTemplate`). */
+export const STRENGTH_TEMPLATES: Record<StrengthTemplate, DayTemplate> = {
+  upper_a: { ...UPPER, name: "Upper body A", variant: 0 },
+  upper_b: { ...UPPER, name: "Upper body B", variant: 1 },
+  lower_a: { ...LOWER, name: "Lower body A", variant: 0 },
+  lower_b: { ...LOWER, name: "Lower body B", variant: 1 },
+  full_a: { ...FULL_A, name: "Full body A", variant: 0 },
+  full_b: { ...FULL_A, name: "Full body B", variant: 1 },
+};
+
+/**
+ * A split from a training week's strength days (weekday 0 = Monday), so gym sessions sit on the
+ * same days as the Workout tab's week.
+ */
+export function splitFromSchedule(
+  schedule: { weekday: number; template: StrengthTemplate }[],
+): Split {
+  const days = [...schedule].sort((a, b) => a.weekday - b.weekday);
+  return {
+    name: "Your training week",
+    weekdays: days.map((d) => d.weekday),
+    days: days.map((d) => STRENGTH_TEMPLATES[d.template]),
+  };
 }
 
 /** Spec §3: 30 min → 4 exercises, 45 → 6, 60 → 7, longer → 8. */

@@ -31,6 +31,8 @@ import type { Day } from "@/lib/types";
 import { usePremiumIntro } from "@/lib/premium";
 import { PremiumBadge } from "@/components/premium-badge";
 import { PremiumBanner } from "@/components/premium/home-banner";
+import { HealthTodayCard } from "@/components/health/today-card";
+import { WorkoutUnlockBanner } from "@/components/workout/unlock-banner";
 
 function greeting(hour: number) {
   if (hour < 5) return "Up late";
@@ -304,6 +306,10 @@ function DayContent({ day, pastDay }: { day: Day; pastDay: string | null }) {
           </Button>
         )}
       </View>
+
+      {/* Design 16: workouts for free users, under the meals. Then the health apps' numbers. */}
+      {!pastDay && <WorkoutUnlockBanner />}
+      {!pastDay && <HealthTodayCard />}
     </>
   );
 }

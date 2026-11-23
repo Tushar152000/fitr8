@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Crown,
   Database,
+  Dumbbell,
   Keyboard,
   MessageCircle,
   RefreshCw,
@@ -50,6 +51,8 @@ const SOURCES: PaywallSource[] = [
   "locked_label",
   "locked_coach",
   "locked_reminders",
+  "locked_workouts",
+  "workout_tab",
 ];
 
 /** "What you get": one row open at a time, the first open by default. */
@@ -87,6 +90,15 @@ const FEATURES: { key: string; icon: LucideIcon; title: string; line: string; de
     example: "“520 kcal left, what should I eat?”",
   },
   {
+    key: "workouts",
+    icon: Dumbbell,
+    title: "Your AI workout coach",
+    line: "A weekly plan for gym, running or yoga",
+    detail:
+      "Built around your calories and goal, adjusted to what you eat and how you slept. Log sets in seconds and see what each day burns.",
+    example: "Mon upper body · Tue easy run · Wed yoga",
+  },
+  {
     key: "reminders",
     icon: Bell,
     title: "Unlimited reminders",
@@ -105,6 +117,8 @@ const TIERS: { label: string; free: boolean | string; premium: boolean | string 
   { label: "Barcode scanning", free: false, premium: true },
   { label: "Nutrition label reading", free: false, premium: true },
   { label: "AI Coach", free: false, premium: true },
+  { label: "Weekly workout plan", free: false, premium: true },
+  { label: "Apple Health / Health Connect", free: true, premium: true },
   { label: "Reminders", free: "3", premium: "Unlimited" },
 ];
 
@@ -132,7 +146,9 @@ export default function ProScreen() {
   const plans = useQuery({ queryKey: ["pro-plans"], queryFn: proPlans, enabled: purchasesAvailable });
   const billing = useQuery(billingQuery);
   const [picked, setPicked] = useState<Period>("year");
-  const [open, setOpen] = useState<string>(FEATURES[0]!.key);
+  const [open, setOpen] = useState<string>(
+    source === "workout_tab" || source === "locked_workouts" ? "workouts" : FEATURES[0]!.key,
+  );
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
   const [error, setError] = useState<string | null>(null);
 

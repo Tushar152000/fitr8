@@ -85,7 +85,8 @@ export class BillingService {
 
   async billing(userId: string): Promise<BillingDto> {
     const row = await this.entitlement(userId);
-    const { plan, scans, coach, labelScans, barcode, reminders } = await this.limits(userId);
+    const { plan, scans, coach, labelScans, barcode, reminders, workouts } =
+      await this.limits(userId);
     return {
       plan,
       testPurchases: this.testPurchases,
@@ -94,7 +95,7 @@ export class BillingService {
       willRenew: plan === "PRO" && (row?.willRenew ?? false),
       store: row?.store ?? null,
       period: plan === "PRO" ? periodOf(row?.productId) : null,
-      limits: { scans, coach, labelScans, barcode, reminders },
+      limits: { scans, coach, labelScans, barcode, reminders, workouts },
     };
   }
 

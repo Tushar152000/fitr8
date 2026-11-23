@@ -2,7 +2,7 @@
   "expo": {
     "name": "FITR8",
     "slug": "fitlens",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fitlens",
@@ -14,7 +14,8 @@
       "icon": "./assets/images/icon.png",
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "infoPlist": {}
     },
     "android": {
       "package": "com.fitr8.app",
@@ -25,7 +26,33 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "blockedPermissions": ["android.permission.RECORD_AUDIO", "com.google.android.gms.permission.AD_ID"],
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_FLOORS_CLIMBED",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_BASAL_METABOLIC_RATE",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_BODY_TEMPERATURE",
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.READ_BLOOD_GLUCOSE",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_BONE_MASS",
+        "android.permission.health.READ_BODY_WATER_MASS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_ELEVATION_GAINED"
+      ]
     },
     "web": {
       "output": "static",
@@ -64,6 +91,15 @@
         {
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#8116E0"
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "FITR8 reads your steps, heart rate, sleep, blood oxygen, body measurements and workouts from Apple Health to show them in the app, estimate your recovery and tailor your training. FITR8 never writes to Apple Health and never uses this data for advertising.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
         }
       ]
     ],

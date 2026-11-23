@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
   BellRing,
+  HeartPulse,
   Camera,
   ChevronRight,
   Crown,
@@ -202,6 +203,15 @@ export default function ProfileScreen() {
           onPress={() => router.push("/reminders")}
         />
         <Reminders lunch={profile.remindLunch} dinner={profile.remindDinner} water={profile.remindWater ?? false} />
+      </Group>
+
+      <Group title="Health apps">
+        <LinkRow
+          label={Platform.OS === "ios" ? "Apple Health" : "Health Connect"}
+          sub="Steps, heart rate, BMI, blood oxygen, sleep and recovery"
+          icon={<HeartPulse size={20} color={c.brandText} />}
+          onPress={() => router.push("/health")}
+        />
       </Group>
 
       <Group title="Appearance">

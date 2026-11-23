@@ -1,7 +1,7 @@
 import { caloriePhase, deficitFraction, doseFor, isDeloadWeek } from "./dose.js";
 import { optionsFor } from "./library.js";
 import { nextTarget, roundToStep, startingLoad } from "./progression.js";
-import { exercisesFor, REST_SEC, splitFor } from "./split.js";
+import { exercisesFor, REST_SEC, splitFor, splitFromSchedule } from "./split.js";
 import {
   WeekPlanSchema,
   type Equipment,
@@ -11,6 +11,7 @@ import {
   type Prescription,
   type WeekPlan,
 } from "./types.js";
+import type { StrengthTemplate } from "./week.js";
 
 export interface PlanInput {
   /** Monday of the week, UTC midnight. */
@@ -29,6 +30,11 @@ export interface PlanInput {
   tdee: number;
   /** Past sessions per exercise slug, newest first. */
   history?: Record<string, ExerciseSession[]>;
+  /**
+   * Strength days from the user's training week (Workout tab). When set, it replaces the split
+   * from `daysPerWeek`; an empty list means a week with no gym days.
+   */
+  schedule?: { weekday: number; template: StrengthTemplate }[];
 }
 
 const DAY = 86_400_000;
@@ -43,7 +49,9 @@ export function buildWeek(input: PlanInput): WeekPlan {
   const experience: Experience = restricted ? "BEGINNER" : input.experience;
   const dose = doseFor(phase, deficit, experience);
   const deload = isDeloadWeek(input.weekIndex, dose.deloadEvery);
-  const split = splitFor(input.daysPerWeek, restricted);
+  const split = input.schedule
+    ? splitFromSchedule(input.schedule)
+    : splitFor(input.daysPerWeek, restricted);
 
   let count = exercisesFor(input.sessionMinutes);
   if (dose.lowVolume) count = Math.max(4, count - 1);
@@ -113,7 +121,16 @@ export function buildWeek(input: PlanInput): WeekPlan {
     cardio: dose.cardio,
     notes,
     days,
+    ...(input.schedule && { scheduleKey: scheduleKey(input.schedule) }),
   });
+}
+
+/** Identifies a strength schedule, so a stored plan can be checked against the current week. */
+export function scheduleKey(schedule: { weekday: number; template: StrengthTemplate }[]): string {
+  return [...schedule]
+    .sort((a, b) => a.weekday - b.weekday)
+    .map((d) => `${d.weekday}:${d.template}`)
+    .join(",");
 }
 
 function prescribe(

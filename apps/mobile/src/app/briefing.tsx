@@ -94,7 +94,13 @@ function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Ene
 
   const low = data.fuel.low;
   return (
-    <Screen footer={<Button onPress={() => router.navigate("/workout")}>Start workout</Button>}>
+    <Screen
+      footer={
+        <Button onPress={() => (router.canGoBack() ? router.back() : router.navigate("/workout-session"))}>
+          Start workout
+        </Button>
+      }
+    >
       <BackHeader />
       <View style={{ gap: 16, opacity: switching ? 0.6 : 1 }}>
         <View>

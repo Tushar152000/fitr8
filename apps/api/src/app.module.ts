@@ -18,6 +18,7 @@ import { BlogModule } from "./modules/blog/blog.module.js";
 import { OriginGuard } from "./modules/auth/origin.guard.js";
 import { FoodsModule } from "./modules/foods/foods.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
+import { HealthDataModule } from "./modules/health-data/health-data.module.js";
 import { MealsModule } from "./modules/meals/meals.module.js";
 import { PlanModule } from "./modules/plan/plan.module.js";
 import { ProgressModule } from "./modules/progress/progress.module.js";
@@ -78,6 +79,7 @@ import { WorkoutsModule } from "./modules/workouts/workouts.module.js";
     BillingModule,
     UsersModule,
     HealthModule,
+    HealthDataModule,
     // Feature contexts (docs/ARCHITECTURE.md §3.2).
     PlanModule,
     MealsModule,

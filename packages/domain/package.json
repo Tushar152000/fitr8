@@ -53,6 +53,10 @@
     "./staff": {
       "types": "./dist/staff.d.ts",
       "default": "./dist/staff.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "default": "./dist/health.js"
     }
   },
   "files": [

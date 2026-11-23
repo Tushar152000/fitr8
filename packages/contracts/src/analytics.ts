@@ -9,7 +9,8 @@
 export type MealLogMethod = "photo" | "type" | "barcode" | "label" | "usual" | "saved";
 
 /** Premium features as analytics labels. */
-export type PremiumFeatureLabel = "photo" | "barcode" | "label" | "coach" | "reminders";
+export type PremiumFeatureLabel =
+  "photo" | "barcode" | "label" | "coach" | "reminders" | "workouts";
 
 /** Where the Premium screen was opened from. */
 export type PaywallSource =
@@ -20,7 +21,9 @@ export type PaywallSource =
   | "locked_barcode"
   | "locked_label"
   | "locked_coach"
-  | "locked_reminders";
+  | "locked_reminders"
+  | "locked_workouts"
+  | "workout_tab";
 
 export interface AnalyticsEvents {
   /** Signed in (any provider). New accounts also send `onboarding_complete` once. */
@@ -53,6 +56,24 @@ export interface AnalyticsEvents {
   purchase_succeeded: { plan: "yearly" | "monthly"; source: PaywallSource };
   purchase_failed: { plan: "yearly" | "monthly"; source: PaywallSource; error_code: string };
   purchase_cancelled: { plan: "yearly" | "monthly"; source: PaywallSource };
+  /** Workout unlock banner on Today (free users, design 16): shown once a day, tapped. */
+  workout_banner_shown: Record<string, never>;
+  workout_banner_tapped: Record<string, never>;
+  /** A free user saw the locked Workout tab (16a), from the banner or the tab bar. */
+  workout_locked_viewed: { source: "banner" | "tab" };
+  /** Training set up or changed (16b). `types` = the picked types joined by commas. */
+  training_profile_saved: { types: string; days: number; minutes: number };
+  /** A day opened on the week (16c/16d). */
+  training_day_opened: { type: string; weekday: string };
+  /**
+   * A session started (focus mode, run/yoga timer) or logged. Minutes only: the spec's
+   * `kcal_estimate` is left out because kcal is a health value (never sent).
+   */
+  training_session_started: { type: string; minutes: number };
+  training_session_logged: { type: string; minutes: number };
+  /** Apple Health / Health Connect connected or disconnected. Never any health values. */
+  health_connected: { platform: "apple_health" | "health_connect" };
+  health_disconnected: { platform: "apple_health" | "health_connect"; deleted_data: boolean };
   /** Landing page calorie calculator submitted (web). */
   calculator_used: Record<string, never>;
   /** "Get the app" store badge tapped (web). */

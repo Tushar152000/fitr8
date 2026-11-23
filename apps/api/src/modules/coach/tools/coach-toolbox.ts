@@ -7,6 +7,8 @@ import { HistoryService } from "../../progress/history.service.js";
 import { ProgressService } from "../../progress/progress.service.js";
 import { CheckinsService } from "../../progress/checkins.service.js";
 import { WorkoutsService } from "../../workouts/workouts.service.js";
+import { TrainingService } from "../../workouts/training.service.js";
+import { HealthDataService } from "../../health-data/health-data.service.js";
 import { WaterService } from "../../water/water.service.js";
 import { MealsService } from "../../meals/meals.service.js";
 import { FoodsService } from "../../foods/foods.service.js";
@@ -65,6 +67,8 @@ export class CoachToolbox {
     private readonly memory: CoachMemoryService,
     private readonly knowledge: KnowledgeService,
     private readonly pastChats: PastChatsService,
+    private readonly training: TrainingService,
+    private readonly health: HealthDataService,
   ) {}
 
   /** `conversationId` is the chat in progress (null before it exists); past-chat search skips it. */
@@ -110,6 +114,27 @@ export class CoachToolbox {
           "Today's planned session (exercises, sets, reps, loads) with the app's daily adjustments and coach notes, or that it's a rest day. Pass the user's energy if they mentioned it.",
         input: z.object({ energy: z.enum(["great", "ok", "tired"]).optional() }),
         run: async ({ energy }) => forModel(await this.workouts.getToday(userId, energy)),
+      }),
+      defineTool({
+        name: "get_training_week",
+        label: "Checking your training week",
+        description:
+          "The user's training week from the Workout tab: each day's session type (gym, run, intervals, yoga, walk, cycle, rest), title, minutes, estimated kcal burned, effort, status (done, missed, today, planned), what they logged, and today's recovery. Errors if they haven't set up training yet.",
+        input: z.object({}),
+        run: async () => forModel(await this.training.week(userId)),
+      }),
+      defineTool({
+        name: "get_health_summary",
+        label: "Reading your health data",
+        description:
+          "Data from Apple Health / Health Connect for a day (default today): steps, heart rate (avg, min, max, resting), SpO2, BMI, last night's sleep (asleep, deep, REM) and a recovery score with its reasons. Nulls mean no data; connected=false means no health app is linked.",
+        input: z.object({
+          date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional(),
+        }),
+        run: async ({ date }) => forModel(await this.health.summary(userId, date)),
       }),
       defineTool({
         name: "search_foods",

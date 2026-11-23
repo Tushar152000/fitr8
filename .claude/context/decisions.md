@@ -41,3 +41,7 @@ Record decisions as `YYYY-MM-DD — decision — why`. Move a question to Decide
 - Production console config: which of Apple keys, RevenueCat keys, `PAYWALL_ENABLED`, `REDIS_URL`, `CORS_ORIGINS` are set on Cloud Run? Are RevenueCat keys in EAS env for `preview`?
 - Sandbox purchases granting Pro in production: acceptable?
 - Docs vs code: update docs to match code, or bring code back to ARCHITECTURE rules (e.g. module table ownership)?
+
+- 2026-11-24 — Workout tab is Premium as a whole (spec "Workout unlock" assumption); `/api/workouts/*` stays open for briefing/coach. Training profile and logs are kept when Premium lapses.
+- 2026-11-24 — Apple Health / Health Connect: free; read-only; the phone sends every record of the allowed types and the API stores all of it; the app shows only steps, heart rate, BMI, SpO2, sleep, recovery. Not read: reproductive/sexual health, nutrition, hydration, routes (store-review and double-count reasons).
+- 2026-11-24 — Analytics: the spec's `kcal_estimate` is not sent (kcal is a health value).

@@ -50,6 +50,52 @@ export function startOfLocalDay(timezone = "Asia/Kolkata", at = new Date()): Dat
   return new Date(guess - (shown - guess));
 }
 
+/** Minutes `timezone` is ahead of UTC at instant `at` (IST → 330). */
+export function tzOffsetMinutes(timezone: string, at: Date): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  const shown = Date.UTC(
+    +parts.year,
+    +parts.month - 1,
+    +parts.day,
+    +parts.hour,
+    +parts.minute,
+    +parts.second,
+  );
+  return Math.round((shown - Math.floor(at.getTime() / 1000) * 1000) / 60_000);
+}
+
+/**
+ * The UTC instant of local midnight at the start of the calendar date `ymd` in `timezone`
+ * (DST-safe: re-checks the offset at the result). Bounds a user's local day for timestamps.
+ */
+export function zonedMidnight(ymd: string, timezone: string): Date {
+  const guess = Date.parse(`${ymd}T00:00:00.000Z`);
+  let at = guess - tzOffsetMinutes(timezone, new Date(guess)) * 60_000;
+  at = guess - tzOffsetMinutes(timezone, new Date(at)) * 60_000;
+  return new Date(at);
+}
+
+/** YYYY-MM-DD of a UTC-midnight date-only value. */
+export const ymdOf = (d: Date) => d.toISOString().slice(0, 10);
+
+/** The local calendar date (YYYY-MM-DD) of instant `at` in `timezone`. */
+export function localYmd(timezone: string, at: Date): string {
+  return ymdOf(localDate(timezone, at));
+}
+
 /** How many days back a forgotten meal can still be logged (today plus this many earlier days). */
 export const MEAL_BACKFILL_DAYS = 7;
 

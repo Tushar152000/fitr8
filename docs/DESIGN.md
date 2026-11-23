@@ -346,6 +346,39 @@ Quiet confirmation of the plan, never a different look, and never a worse free a
 - **Right after buying:** the Premium screen lists "What you just unlocked"; scanning, coach and
   reminders rows end in "Try it ›" and open that feature.
 
+## Workout unlock and the week (designs 16–16d, 2026-11-24)
+
+Spec: "Workout unlock: banner → features → your week". Code: `apps/mobile/src/app/(tabs)/workout.tsx`,
+`components/workout/{unlock-banner,locked,setup,week}.tsx`, `app/training/{[date],setup}.tsx`,
+`app/workout-session.tsx` (focus mode 15b). Day-type colours are palette tokens `dayGym/Run/Yoga/
+Walk/Rest` (+`Soft`), spec values in dark, darker text-safe values in light; always with a label.
+
+- **16 Today banner** (free only, under the meals): first 7 days daily, then every other day unless
+  tapped (`lib/workout-banner.ts`). Whole card → Workout tab.
+- **16a locked tab**: the user's goal · weight · activity on a locked sample week, 2×2 features,
+  "Unlock with Premium · from ₹125/month" → paywall `source=workout_tab` (opens on the workouts row),
+  "Already Premium? Set up your plan" → restore + refresh.
+- **16b setup**: read-only goal/weight/activity; types (multi), days 3–6, 30/45/60 min, live summary,
+  "Build my week" → `POST /api/training/profile`. Editable later from the week's settings button.
+- **16c week**: header, recovery advice (when Apple Health / Health Connect says so), 3 stats
+  (sessions, ~burn, ≈ fat kg 2 dp), 7-day strip (dot + label, ✓ when done, hollow when missed),
+  selected-day card (badge, title, why, time · burns about · effort, 2–4 steps, CTA by type), coach
+  note, and "don't eat burned calories back". Week arrows: back up to a year, one week ahead.
+- **16d day**: proportional session bar, steps, run tips, guided timer (block, time left, next;
+  timestamp-based, vibrates on block change), "I already … · log it" sheet (minutes, optional km).
+  Logging replaces the estimate; remove to undo.
+- Rules (templates, never two hard days in a row, ≤1 intervals, beginners walk/run, MET kcal):
+  `packages/domain/src/training/week.ts`, tested over every combination.
+
+## Health apps (2026-11-24)
+
+Today shows a "Connect Apple Health / Health Connect" row (hideable) until connected, then a
+"Health" section with six tiles: Steps (with goal bar), Heart rate (resting, avg), BMI (category),
+Blood oxygen, Sleep, Recovery (/100 + level). The Health screen (`app/health.tsx`, Profile → Health
+apps) has the explainer before the system prompt, the tiles, recovery reasons, last night's stages,
+a 7-day steps chart, sync now, choose what's shared, disconnect, disconnect and delete. Each tile
+shows "No data yet" rather than guessing. Details: docs/HEALTH.md.
+
 ## Workout coach engine (calorie-aware)
 
 The plan is built by deterministic rules in `src/lib/training/` (unit-tested like `src/lib/nutrition`). An LLM may only vary exercise choice inside a slot and write the one-line coach notes; it never sets sets, reps or loads.

@@ -138,6 +138,12 @@ model User {
   savedMeals    SavedMeal[]
   reminders     Reminder[]
   staffMember   StaffMember?
+  trainingProfile   TrainingProfile?
+  trainingWeeks     TrainingWeek[]
+  trainingLogs      TrainingLog[]
+  healthConnections HealthConnection[]
+  healthSamples     HealthSample[]
+  healthDaily       HealthDaily[]
 
   @@map("users")
 }
@@ -538,6 +544,77 @@ model WorkoutLog {
   @@index([userId, date])
   @@index([planId])
   @@map("workout_logs")
+}
+
+// ---------- Training week (Workout tab, Premium; workouts module) ----------
+
+enum TrainingType {
+  GYM
+  RUN
+  YOGA
+  WALK
+  HOME
+  CYCLE
+}
+
+enum TrainingSessionType {
+  GYM
+  RUN
+  HIIT
+  YOGA
+  WALK
+  CYCLE
+}
+
+/// 16b answers. Kept when Premium lapses so the user can resume.
+model TrainingProfile {
+  userId         String         @id
+  types          TrainingType[]
+  daysPerWeek    Int
+  sessionMinutes Int
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("training_profiles")
+}
+
+/// The week as built (@fitr8/domain/training `buildTrainingWeek`), rebuilt when `inputsKey` changes
+/// (profile, goal, weight, experience …) or for a new Monday.
+model TrainingWeek {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime @db.Date
+  inputsKey String
+  plan      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@map("training_weeks")
+}
+
+/// A session done (one per type per day; logging again replaces it).
+model TrainingLog {
+  id         String              @id @default(cuid())
+  userId     String
+  date       DateTime            @db.Date
+  type       TrainingSessionType
+  minutes    Int
+  distanceKm Float?
+  kcal       Int
+  exercises  Json?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, type])
+  @@index([userId, date])
+  @@map("training_logs")
 }
 
 model Checkin {
@@ -966,4 +1043,68 @@ model BlogMedia {
 
   @@index([uploadedById])
   @@map("blog_media")
+}
+
+// ---------- Apple Health / Health Connect (health-data module) ----------
+
+enum HealthPlatform {
+  APPLE_HEALTH
+  HEALTH_CONNECT
+}
+
+/// The user connected a platform on a phone. Deleted on disconnect.
+model HealthConnection {
+  userId      String
+  platform    HealthPlatform
+  /// What the platform reported as allowed (Health Connect) or what was asked for (iPhone hides it).
+  permissions String[]       @default([])
+  connectedAt DateTime       @default(now())
+  lastSyncAt  DateTime?
+  updatedAt   DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, platform])
+  @@map("health_connections")
+}
+
+/// Every record the phone read, normalised (`type`, `value`, `unit`) with the rest of the record in
+/// `data`. Upserted by (user, platform, externalId), so re-syncing an overlap is harmless.
+model HealthSample {
+  id         BigInt         @id @default(autoincrement())
+  userId     String
+  platform   HealthPlatform
+  externalId String
+  type       String
+  startAt    DateTime
+  endAt      DateTime
+  value      Float?
+  unit       String?
+  origin     String?
+  device     String?
+  data       Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, externalId])
+  @@index([userId, type, startAt])
+  @@map("health_samples")
+}
+
+/// Daily totals the platform de-duplicated (steps from phone + watch counted once), per local day.
+model HealthDaily {
+  userId    String
+  platform  HealthPlatform
+  date      DateTime       @db.Date
+  metric    String
+  value     Float
+  updatedAt DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, platform, date, metric])
+  @@index([userId, metric, date])
+  @@map("health_daily")
 }

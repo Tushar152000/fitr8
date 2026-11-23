@@ -7,3 +7,4 @@ export * from "./plan.js";
 export * from "./adjust.js";
 export * from "./fuel.js";
 export * from "./checkin.js";
+export * from "./week.js";

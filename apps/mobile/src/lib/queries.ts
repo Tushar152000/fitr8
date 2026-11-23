@@ -1,5 +1,9 @@
 import type {
   BillingDto,
+  HealthStatusDto,
+  HealthSummaryDto,
+  TrainingStateDto,
+  TrainingWeekDto,
   CoachMemoryView,
   ProgressDto,
   ReminderListDto,
@@ -47,3 +51,27 @@ export const coachMemoriesQuery = {
 
 /** GET /api/usage: photo scans used and left today. */
 export const usageQuery = { queryKey: ["usage"], queryFn: () => api<UsageDto>("/api/usage") };
+
+/** GET /api/training: training profile and setup defaults (Premium). */
+export const trainingStateQuery = {
+  queryKey: ["training", "state"],
+  queryFn: () => api<TrainingStateDto>("/api/training"),
+};
+
+/** GET /api/training/week: the week containing `start` (null = this week). */
+export const trainingWeekQuery = (start: string | null = null) => ({
+  queryKey: ["training", "week", start ?? "current"],
+  queryFn: () => api<TrainingWeekDto>(start ? `/api/training/week?start=${start}` : "/api/training/week"),
+});
+
+/** GET /api/health-data: connected health apps (Apple Health / Health Connect). */
+export const healthStatusQuery = {
+  queryKey: ["health", "status"],
+  queryFn: () => api<HealthStatusDto>("/api/health-data"),
+};
+
+/** GET /api/health-data/summary: steps, heart rate, BMI, SpO2, sleep and recovery today. */
+export const healthSummaryQuery = {
+  queryKey: ["health", "summary"],
+  queryFn: () => api<HealthSummaryDto>("/api/health-data/summary"),
+};

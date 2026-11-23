@@ -28,6 +28,7 @@ export const PREMIUM_FEATURES = [
   "barcode",
   "coach",
   "reminders",
+  "workouts",
 ] as const;
 export type PremiumFeature = (typeof PREMIUM_FEATURES)[number];
 
@@ -53,6 +54,8 @@ export interface DailyLimits {
   barcode: boolean;
   /** Custom reminders the user can keep. */
   reminders: number;
+  /** The Workout tab: weekly plan, run/yoga days, training logs (/api/training). */
+  workouts: boolean;
 }
 
 /**
@@ -67,8 +70,16 @@ export function dailyLimits(plan: Plan, cfg: LimitConfig): DailyLimits {
         labelScans: true,
         barcode: true,
         reminders: PREMIUM_REMINDERS,
+        workouts: true,
       }
-    : { scans: 0, coach: 0, labelScans: false, barcode: false, reminders: FREE_REMINDERS };
+    : {
+        scans: 0,
+        coach: 0,
+        labelScans: false,
+        barcode: false,
+        reminders: FREE_REMINDERS,
+        workouts: false,
+      };
 }
 
 /** Days of Premium a test purchase gives (until store billing is connected). */

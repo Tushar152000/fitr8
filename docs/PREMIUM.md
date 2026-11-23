@@ -13,7 +13,7 @@ Essential fitness tracking for everyone.
 - **Workout:** log sets, reps and weights, unlimited workout history, personal records (PRs)
 - **Progress:** weight, body progress and water tracking
 - **Reminders:** water and meal reminders, plus up to 3 of your own
-- **Health apps:** connect Apple Health or Google Fit
+- **Health apps:** connect Apple Health or Health Connect (steps, heart rate, BMI, SpO2, sleep, recovery)
 
 ### FITR8 Premium · ₹149/month or ₹1,499/year
 
@@ -32,16 +32,16 @@ Cancel anytime; trial eligibility and renewal terms apply.
 
 ## Rules (what the code enforces)
 
-| What                          | Free                                   | Premium                     |
-| ----------------------------- | -------------------------------------- | --------------------------- |
-| AI photo scans (meal + label) | none                                   | 10 a day                    |
-| Barcode scanning              | none                                   | ✓                           |
-| AI Coach messages             | none                                   | 40 a day                    |
-| Personalised workout plan     | none                                   | ✓                           |
-| Custom reminders              | 3                                      | unlimited (fair-use cap 50) |
-| Weekly / monthly reports      | basic week view                        | detailed                    |
-| Data export                   | simple CSV of your data (a user right) | + formatted reports         |
-| Health app connection         | ✓                                      | ✓ + insights                |
+| What                                        | Free                                   | Premium                     |
+| ------------------------------------------- | -------------------------------------- | --------------------------- |
+| AI photo scans (meal + label)               | none                                   | 10 a day                    |
+| Barcode scanning                            | none                                   | ✓                           |
+| AI Coach messages                           | none                                   | 40 a day                    |
+| Workout tab (weekly plan, runs, yoga, logs) | locked (16a)                           | ✓                           |
+| Custom reminders                            | 3                                      | unlimited (fair-use cap 50) |
+| Weekly / monthly reports                    | basic week view                        | detailed                    |
+| Data export                                 | simple CSV of your data (a user right) | + formatted reports         |
+| Health app connection                       | ✓                                      | ✓ + insights                |
 
 - **Every Premium feature opens the same Premium screen** when a free user taps it (barcode,
   photo scan, coach, workout plan, 4th reminder, insights, reports). After buying, it unlocks at once.
@@ -66,12 +66,13 @@ Cancel anytime; trial eligibility and renewal terms apply.
 
 ## Not built yet (to tackle one by one)
 
+- [x] **Workout tab is Premium** (2026-11-24, spec "Workout unlock" 16–16d): free users see the
+      locked tab (16a) and the Today banner (16); `/api/training/*` returns 402 `workouts`.
+      `/api/workouts/*` (gym session engine) stays open for the briefing and the coach.
 - [ ] **Log your own workout** for free users: pick exercises and enter sets, without the Premium plan.
-      Until this exists, the workout plan stays open to free users.
 - [ ] **Workout history** screen (unlimited, all past sessions).
 - [ ] **Personal records (PRs)** per exercise.
-- [ ] **Apple Health and Google Fit** connection (Health Connect on Android; Google Fit's API is being
-      retired). See the health integration plan.
+- [x] **Apple Health and Health Connect** connection (free): docs/HEALTH.md.
 - [ ] **Health insights** from that data (Premium).
 - [ ] **Detailed weekly reports** and **monthly progress reports** (Premium): define contents first.
 - [ ] **Formatted report export** (Premium), beside the free CSV.
