@@ -22,7 +22,7 @@ import { track } from "@/lib/analytics";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, useMe } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import type { PlanResponse } from "@/lib/types-plan";
 
 type Profile = NonNullable<ReturnType<typeof useMe>["profile"]>;
@@ -339,7 +339,7 @@ function WelcomeBackForm({
             value={draft.injuries}
             onChangeText={(v) => set("injuries", v)}
             placeholder="e.g. left knee, lower back"
-            placeholderTextColor={`${c.ink3}99`}
+            placeholderTextColor={fade(c.ink3, 0.6)}
             style={styles.textInput}
           />
         </View>

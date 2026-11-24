@@ -10,7 +10,8 @@ import * as SecureStore from "expo-secure-store";
 import { Camera, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
-import { Button, Text } from "@/components/ui";
+import { Text } from "@/components/ui";
+import { SmallCta } from "./small-cta";
 import { track } from "@/lib/analytics";
 import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
@@ -118,19 +119,16 @@ export function PremiumBanner() {
         ))}
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Button
-            onPress={() => {
-              track("premium_banner_tapped", { meals_typed_today: typed });
-              openPaywall("home_banner");
-            }}
-          >
-            See Premium
-          </Button>
-        </View>
-        <Text size={13} color={c.ink3} tabular>
+        <Text size={13} color={c.ink3} tabular style={{ flex: 1 }}>
           From {LIST_PRICE.perMonth} a month
         </Text>
+        <SmallCta
+          label="See Premium"
+          onPress={() => {
+            track("premium_banner_tapped", { meals_typed_today: typed });
+            openPaywall("home_banner");
+          }}
+        />
       </View>
     </Animated.View>
   );

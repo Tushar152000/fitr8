@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { TextInput, View } from "react-native";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { FieldError } from "./field-error";
 import { Text } from "./text";
 
@@ -66,7 +66,7 @@ export function DateField({
         value={parts[key]}
         onChangeText={(v) => update(key, v)}
         placeholder={placeholder}
-        placeholderTextColor={`${c.ink3}99`}
+        placeholderTextColor={fade(c.ink3, 0.6)}
         keyboardType="number-pad"
         maxLength={key === "y" ? 4 : 2}
         style={styles.input}

@@ -1,41 +1,37 @@
 /**
- * FITR8 tokens from docs/DESIGN.md (light keeps step with apps/web/src/app/globals.css).
+ * FITR8 colour system v2 (2026-11-25, "Fitr8 / Color" semantic tokens): neutral canvas, near-black
+ * inverse surfaces, olive accent (#718B00) with a lime highlight (#C2E04A), blue for links/info and
+ * aqua for hydration. Each key below names the design token it aliases.
  *
  * Two palettes with the same keys. Components read the active one with `useColors()` (or build
  * styles with `makeStyles`), never by importing a palette directly, so the whole app follows the
  * phone's appearance or the user's choice in Profile (lib/appearance.tsx).
  *
- * Dark palette rules (see docs/DESIGN.md "Dark mode"):
- * - Not an inversion. Neutrals keep the light palette's cool blue-violet hue (~235°), so the brand
- *   purple stays the one warm-leaning accent. The ground is true black (#000, darkest possible and
- *   kind to OLED batteries); cards sit just above it so edges still read.
- * - Elevation is lightness: ground < surface < sunken (wells, pressed rows) < panel (feature cards).
- * - Saturated colours shift lighter and slightly desaturated so they read on dark without vibrating;
- *   every text pair keeps WCAG AA (>= 4.5:1), most >= 7:1.
- * - Ink is off-white (#eceef5), not pure white, to avoid glare on large text.
- * - `brand` stays a fill (white text on it >= 5:1); accent TEXT on dark surfaces uses `brandText`.
+ * The design system defines light only; dark is derived: true-black ground, surfaces lifted by
+ * lightness, off-white text at the same alpha steps, and accent TEXT in lime (olive is too dark to
+ * read on black). Macro and workout-day colours are data colours the system doesn't cover yet.
  */
 const light = {
-  ground: "#f6f6f8",
+  ground: "#f4f3f9",
   surface: "#ffffff",
-  sunken: "#f0f0f5",
+  sunken: "#ecebf1",
   /** Raised control on a chip/track (selected segment): white in light, lifted grey in dark. */
   raised: "#ffffff",
-  track: "#ececf2",
-  line: "#e3e3ea",
-  lineStrong: "#d4d4de",
-  ink: "#151724",
-  ink2: "#4a4c5a",
-  ink3: "#6b6d7a",
-  brand: "#8116e0",
-  brandHover: "#6a0fbd",
-  brandGlow: "#a855f7",
+  track: "#ececec",
+  line: "rgba(0,0,0,0.06)",
+  lineStrong: "rgba(0,0,0,0.2)",
+  ink: "#0e0e0e",
+  ink2: "rgba(14,14,14,0.55)",
+  ink3: "rgba(14,14,14,0.4)",
+  brand: "#718b00",
+  brandHover: "#5c7200",
+  brandGlow: "#c2e04a",
   /** Brand-coloured text and icons on ground/surface (links, selected states). */
-  brandText: "#8116e0",
+  brandText: "#718b00",
   /** Tinted brand background (selected chips, highlights). */
-  brandSoft: "#f1e6fd",
+  brandSoft: "rgba(113,139,0,0.12)",
   /** Border of Premium cards and banners. */
-  premiumLine: "#dcc4f8",
+  premiumLine: "rgba(113,139,0,0.35)",
   protein: "#2f6b4f",
   proteinSoft: "#ddebe3",
   carbs: "#e3a13b",
@@ -48,20 +44,20 @@ const light = {
   dangerHover: "#a33024",
   /** Text on a `danger` fill. */
   onDanger: "#ffffff",
-  water: "#2f6f9f", // water card and bar; text-safe on ground and surface
-  waterSoft: "#dde9f2",
-  chip: "#ebebf1",
-  dash: "#c4c4d0",
+  water: "#2f97c1", // water card and bar; text-safe on ground and surface
+  waterSoft: "#e3f4fa",
+  chip: "#ececec",
+  dash: "rgba(0,0,0,0.2)",
   /** The dark feature card ("dark card" in the design) and dark screens. White text on it. */
-  panel: "#151724",
+  panel: "#0c0c0c",
   /** Hairline around `panel` (invisible in light, separates it from the ground in dark). */
   panelLine: "rgba(255,255,255,0)",
   /** Strong button: the highest-contrast fill against the ground, and its text. */
-  strong: "#151724",
-  strongHover: "#2c2e34",
+  strong: "#0c0c0c",
+  strongHover: "#262626",
   onStrong: "#ffffff",
   /** Behind bottom sheets and dialogs. */
-  scrim: "rgba(23,24,28,0.45)",
+  scrim: "rgba(0,0,0,0.5)",
   /** Workout day types (always shown with a text label too, never colour alone). Text-safe on surface. */
   dayGym: "#6a3fd8",
   dayGymSoft: "#efe8fd",
@@ -73,6 +69,22 @@ const light = {
   dayWalkSoft: "#fbefd6",
   dayRest: "#6b6d7a",
   dayRestSoft: "#ececf2",
+  /** Home v2 accent (olive): links on Home cards and the camera button's glow. Text-safe on surface. */
+  accentText: "#718b00",
+  accent: "#718b00",
+  /** accent/highlight (lime): icon highlights, selected marks on dark. Not for text on light. */
+  highlight: "#c2e04a",
+  /** text/link and data/info (blue). */
+  link: "#0077ff",
+  /** data/hydration-1..3 (aqua, dark → light). */
+  hydration1: "#2f97c1",
+  hydration2: "#35cefe",
+  hydration3: "#a6dded",
+  /** bg/glass, bg/glass-strong: translucent fills on inverse (dark) surfaces. */
+  glass: "rgba(255,255,255,0.08)",
+  glassStrong: "rgba(255,255,255,0.12)",
+  /** text/on-inverse-secondary. */
+  onInverse2: "rgba(255,255,255,0.6)",
   /** Always white: text/icons on brand, panel, photos and the camera. */
   white: "#ffffff",
 } as const;
@@ -82,21 +94,21 @@ export type ColorScheme = "light" | "dark";
 
 const dark: Colors = {
   ground: "#000000",
-  surface: "#0f1015",
-  sunken: "#17181f",
-  raised: "#2c2d38",
-  track: "#1c1d25",
-  line: "#1f2029",
-  lineStrong: "#2e2f3a",
-  ink: "#eceef5",
-  ink2: "#b6b8c7",
-  ink3: "#9092a3",
-  brand: "#8b3ff0",
-  brandHover: "#7a2fd8",
-  brandGlow: "#b98af8",
-  brandText: "#c09cfa",
-  brandSoft: "#1e1433",
-  premiumLine: "#3d3266",
+  surface: "#121212",
+  sunken: "#1c1c1c",
+  raised: "#2a2a2a",
+  track: "#262626",
+  line: "rgba(255,255,255,0.08)",
+  lineStrong: "rgba(255,255,255,0.2)",
+  ink: "#f4f3f9",
+  ink2: "rgba(244,243,249,0.62)",
+  ink3: "rgba(244,243,249,0.45)",
+  brand: "#718b00",
+  brandHover: "#84a200",
+  brandGlow: "#c2e04a",
+  brandText: "#c2e04a",
+  brandSoft: "rgba(194,224,74,0.14)",
+  premiumLine: "rgba(194,224,74,0.3)",
   protein: "#5fc490",
   proteinSoft: "#0e2417",
   carbs: "#e8ad52",
@@ -108,15 +120,15 @@ const dark: Colors = {
   danger: "#f07a6d",
   dangerHover: "#e0675a",
   onDanger: "#151724",
-  water: "#6eb1e0",
-  waterSoft: "#0c1c2a",
-  chip: "#1a1b23",
-  dash: "#3a3b47",
-  panel: "#1b1530",
+  water: "#35cefe",
+  waterSoft: "rgba(53,206,254,0.14)",
+  chip: "#1f1f1f",
+  dash: "rgba(255,255,255,0.2)",
+  panel: "#161616",
   panelLine: "rgba(255,255,255,0.08)",
-  strong: "#eceef5",
-  strongHover: "#d4d6e0",
-  onStrong: "#151724",
+  strong: "#f4f3f9",
+  strongHover: "#dadada",
+  onStrong: "#0e0e0e",
   scrim: "rgba(0,0,0,0.6)",
   dayGym: "#b9a3ff",
   dayGymSoft: "#221b38",
@@ -128,10 +140,36 @@ const dark: Colors = {
   dayWalkSoft: "#2e2410",
   dayRest: "#aba6b5",
   dayRestSoft: "#1d1a24",
+  accentText: "#c2e04a",
+  accent: "#718b00",
+  highlight: "#c2e04a",
+  link: "#4da3ff",
+  hydration1: "#2f97c1",
+  hydration2: "#35cefe",
+  hydration3: "#a6dded",
+  glass: "rgba(255,255,255,0.08)",
+  glassStrong: "rgba(255,255,255,0.12)",
+  onInverse2: "rgba(255,255,255,0.6)",
   white: "#ffffff",
 };
 
 export const palettes: Record<ColorScheme, Colors> = { light, dark };
+
+/**
+ * A token at a lower opacity: `fade(c.ink3, 0.6)`. Works for "#rrggbb" and "rgba(...)" tokens alike
+ * (several tokens are alpha colours), so never append hex alpha digits to a token string.
+ */
+export function fade(color: string, alpha: number): string {
+  const rgba = /^rgba?\(([^)]+)\)$/i.exec(color);
+  if (rgba) {
+    const [r, g, b, a = "1"] = rgba[1]!.split(",").map((x) => x.trim());
+    return `rgba(${r},${g},${b},${+(Number(a) * alpha).toFixed(3)})`;
+  }
+  const hex = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!hex) return color;
+  const n = parseInt(hex[1]!, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
 
 export const radius = { input: 14, button: 16, card: 20, sheet: 28 } as const;
 
@@ -150,16 +188,16 @@ export const fonts = {
   sans700: "Figtree_700Bold",
 } as const;
 
-/** Flat design: the camera FAB is the only real shadow; `seg` lifts the selected segment. */
+/** Flat design: the camera button is the only real shadow; `seg` lifts the selected segment. */
 export type Shadows = { readonly fab: { boxShadow: string }; readonly seg: { boxShadow: string } };
 const shadowSets: Record<ColorScheme, Shadows> = {
   light: {
-    fab: { boxShadow: "0 6px 16px rgba(129, 22, 224, 0.35)" },
-    seg: { boxShadow: "0 1px 2px rgba(21, 23, 36, 0.12)" },
+    fab: { boxShadow: "0 8px 18px rgba(20, 24, 0, 0.32)" },
+    seg: { boxShadow: "0 1px 2px rgba(14, 14, 14, 0.12)" },
   },
   dark: {
-    // Shadows barely read on dark; a softer brand glow keeps the FAB lifted.
-    fab: { boxShadow: "0 6px 18px rgba(139, 63, 240, 0.30)" },
+    // Shadows barely read on dark; a soft lime glow keeps the FAB lifted.
+    fab: { boxShadow: "0 6px 18px rgba(194, 224, 74, 0.18)" },
     seg: { boxShadow: "0 1px 2px rgba(0, 0, 0, 0.5)" },
   },
 };

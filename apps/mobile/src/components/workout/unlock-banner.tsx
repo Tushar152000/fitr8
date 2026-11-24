@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { Check, Dumbbell, Lock } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Check, Crown, Dumbbell } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -9,9 +10,11 @@ import { Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
+import { COACH_HERO } from "@/lib/gradients";
 import { appear } from "@/lib/motion";
 import { billingQuery } from "@/lib/queries";
 import { makeStyles, radius, useColors } from "@/lib/theme";
+import { SmallCta } from "@/components/premium/small-cta";
 import { NEW_WORKOUT_BANNER, workoutBannerVisible, type WorkoutBannerState } from "@/lib/workout-banner";
 
 const KEY = (userId: string) => `fitr8.workout.banner.${userId}`;
@@ -78,65 +81,63 @@ export function WorkoutUnlockBanner() {
           if (state) void write(me.id, { ...state.s, firstSeen: state.s.firstSeen ?? state.today, tapped: true });
           router.navigate({ pathname: "/workout", params: { source: "banner" } });
         }}
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
+        style={({ pressed }) => pressed && { transform: [{ scale: 0.99 }] }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text size={12} weight={700} color={c.brandText} style={{ flex: 1 }}>
-            New · Workouts
-          </Text>
-          <View style={styles.lock}>
-            <Lock size={12} color={c.cautionText} />
-            <Text size={12} weight={700} color={c.cautionText}>
-              Premium
+        <LinearGradient {...COACH_HERO} style={styles.card}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text size={12} weight={700} color={c.highlight} style={{ flex: 1 }}>
+              New · Workouts
             </Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-          <View style={styles.icon}>
-            <Dumbbell size={20} color={c.white} />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text weight={700} size={17}>
-              Your AI workout coach
-            </Text>
-            <Text size={14} color={c.ink2}>
-              A weekly plan for gym, running or yoga, built around your calories and goal.
-            </Text>
-          </View>
-        </View>
-        <View style={{ gap: 6 }}>
-          {TICKS.map((t) => (
-            <View key={t} style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-              <Check size={16} color={c.protein} strokeWidth={2.5} />
-              <Text size={14}>{t}</Text>
+            <View style={styles.lock}>
+              <Crown size={12} color={c.highlight} />
+              <Text size={12} weight={700} color="#ffffff">
+                Premium
+              </Text>
             </View>
-          ))}
-        </View>
-        <View style={styles.cta}>
-          <Text weight={600} color={c.white}>
-            Unlock workouts →
-          </Text>
-        </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+            <View style={styles.icon}>
+              <Dumbbell size={20} color={c.highlight} />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text weight={700} size={17} color="#ffffff">
+                Your AI workout coach
+              </Text>
+              <Text size={14} color="rgba(255,255,255,0.7)">
+                A weekly plan for gym, running or yoga, built around your calories and goal.
+              </Text>
+            </View>
+          </View>
+          <View style={{ gap: 8 }}>
+            {TICKS.map((t) => (
+              <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                <View style={styles.tick}>
+                  <Check size={12} color="#0e0e0e" strokeWidth={3} />
+                </View>
+                <Text size={14} color="rgba(255,255,255,0.88)">
+                  {t}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {/* Visual only: the whole card is the button. */}
+          <SmallCta label="Unlock workouts" tone="light" />
+        </LinearGradient>
       </Pressable>
     </Animated.View>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  card: {
-    gap: 14,
-    padding: 16,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: c.premiumLine,
-    backgroundColor: c.surface,
-  },
+  card: { gap: 14, padding: 16, borderRadius: radius.card, overflow: "hidden" },
   lock: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: 999,
-    backgroundColor: c.cautionSoft,
+    backgroundColor: c.glassStrong,
+    borderWidth: 1,
+    borderColor: "rgba(194,224,74,0.4)", // accent/highlight
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
@@ -144,14 +145,17 @@ const useStyles = makeStyles((c) => ({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: c.brand,
+    backgroundColor: c.glassStrong,
+    borderWidth: 1,
+    borderColor: "rgba(194,224,74,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
-  cta: {
-    height: 48,
-    borderRadius: radius.button,
-    backgroundColor: c.brand,
+  tick: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: c.highlight,
     alignItems: "center",
     justifyContent: "center",
   },

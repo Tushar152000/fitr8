@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TextInput, View, type TextInputProps } from "react-native";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { FieldError } from "./field-error";
 import { Text } from "./text";
 
@@ -36,7 +36,7 @@ export function NumberField({
           keyboardType={keyboardType}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholderTextColor={`${c.ink3}99`}
+          placeholderTextColor={fade(c.ink3, 0.6)}
           style={styles.input}
           {...props}
         />

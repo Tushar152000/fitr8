@@ -24,7 +24,7 @@ export function LogoMark({ size = 32 }: { size?: number; onDark?: boolean }) {
   );
 }
 
-/** Mark + live wordmark: "FIT" in ink (white on dark), "R8" in brand purple. */
+/** Mark + live wordmark: "FIT" in ink (white on dark), "R8" in the accent (olive; lime on dark). */
 export function Logo({ size = 32, onDark = false }: { size?: number; onDark?: boolean }) {
   const c = useColors();
   const fontSize = Math.round(size * 0.7);
