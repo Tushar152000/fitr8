@@ -1,13 +1,21 @@
 import { cn } from "@/lib/cn";
 
-// The FITR8 mark from Figma (node 3788:3999), 19.1 × 18.02 units.
-export const MARK_PATHS = [
-  "M9.34499 8.20513C10.053 8.15165 11.3305 8.18998 12.0866 8.19005L17.3715 8.19142C16.9786 10.3199 16.4415 12.6055 15.9964 14.7441L11.9224 14.7394C11.2924 14.7387 10.1694 14.7039 9.58177 14.7531C9.29751 14.7762 9.01759 14.8347 8.74771 14.9273C7.82001 15.2494 7.22942 15.8698 6.81205 16.7354C6.6231 17.2117 6.59902 17.5247 6.54485 18.0234L0 18.0227C0.137717 12.6658 3.96877 8.55263 9.34499 8.20513Z",
-  "M0.00759415 0C2.13514 0.0329772 4.35339 0.00157058 6.48703 0.00153714L19.1009 0C18.7855 1.76759 18.3193 3.67943 17.9582 5.4599C17.8722 5.80108 17.8043 6.19784 17.7368 6.54698C15.3172 6.57538 12.8334 6.54675 10.4082 6.54812L7.8361 6.54919C6.85891 6.54919 5.99041 6.59561 5.03127 6.36852C3.89088 6.09727 2.8448 5.52375 2.00281 4.70825C0.6929 3.43689 0.0348498 1.81385 0.00759415 0Z",
-];
+/**
+ * The FITR8 mark (2026-11-24): a white angled stroke and a lime square, 718 × 711 units, drawn from
+ * the brand master (public/brand/mark-full.svg). Same paths as apps/mobile ui/logo.tsx.
+ */
+export const MARK_STROKE =
+  "M42 0L672 0Q718 0 718 46L718 184Q718 224 678 224L429 224Q426 224 428.1 226.1L681.2 479.2Q718 516 718 568L718 671Q718 711 678 711L560 711Q512 711 478.1 677.1L29.7 228.7Q0 199 0 157L0 42Q0 0 42 0Z";
+export const MARK_SQUARE =
+  "M40 488L184 488Q224 488 224 528L224 671Q224 711 184 711L40 711Q0 711 0 671L0 528Q0 488 40 488Z";
+export const MARK_LIME = "#BED465";
+export const MARK_TILE = "#000000";
+
+/** The mark at 50% of a 512 tile, centred. */
+const TILE_TRANSFORM = "translate(128 129.25) scale(0.35655)";
 
 /**
- * App icon: the white FITR8 mark on a purple tile (docs/DESIGN.md → Brand; same artwork as
+ * App icon: the mark on a black tile (docs/DESIGN.md → Brand; same artwork as
  * public/brand/mark.svg). Use 24–40 px in the UI.
  */
 export function LogoMark({
@@ -29,12 +37,10 @@ export function LogoMark({
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      <rect width="512" height="512" rx="116" className="fill-brand" />
-      {/* Mark at 54% of the tile width, centred. */}
-      <g transform="translate(117.76 125.56) scale(14.4747)" fill="#fff">
-        {MARK_PATHS.map((d) => (
-          <path key={d} d={d} />
-        ))}
+      <rect width="512" height="512" rx="116" fill={MARK_TILE} />
+      <g transform={TILE_TRANSFORM}>
+        <path d={MARK_STROKE} fill="#fff" />
+        <path d={MARK_SQUARE} fill={MARK_LIME} />
       </g>
     </svg>
   );
@@ -64,13 +70,12 @@ export function Logo({
   );
 }
 
-/** The bare mark (no tile) in `currentColor`, e.g. white on the purple landing hero. */
+/** The bare mark (no tile) in `currentColor`, e.g. a faint watermark on the landing hero. */
 export function BareMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 19.1 18.02" className={cn("shrink-0 fill-current", className)} aria-hidden>
-      {MARK_PATHS.map((d) => (
-        <path key={d} d={d} />
-      ))}
+    <svg viewBox="0 0 718 711" className={cn("shrink-0 fill-current", className)} aria-hidden>
+      <path d={MARK_STROKE} />
+      <path d={MARK_SQUARE} />
     </svg>
   );
 }

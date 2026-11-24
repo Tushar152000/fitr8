@@ -6,19 +6,23 @@ come from the FITR8 Figma file ("Ganesh's Work"). This file is the build contrac
 
 ## Brand: logo and app icon
 
-The mark is the **FITR8 mark** (Figma node `3788:3999`): two stacked white strokes forming an "F",
-on a brand-purple tile (#8116E0, radius 116/512), mark at 54% of the tile width. Wordmark "FITR8":
-"FIT" in ink, "R8" in brand purple.
+The mark (2026-11-24): a white angled stroke with a lime square (`#BED465`) on black, redrawn as a
+vector from the owner's artwork (master `apps/web/public/brand/mark-full.svg`, 718 × 711 units;
+paths in `apps/web/src/components/logo.tsx` and `apps/mobile/src/components/ui/logo.tsx`). App
+icons: full-bleed black with the mark at 45% of the width; rounded tiles (radius 116/512) at 50%;
+favicons at 66%; Android adaptive foreground and maskable at 42% (inside the safe zone); splash
+on black. Wordmark "FITR8": "FIT" in ink, "R8" in brand purple (the app UI stays purple).
 
-| File                                        | Use                                                             |
-| ------------------------------------------- | --------------------------------------------------------------- |
-| `src/app/favicon.ico`                       | 16/32/48 px favicon (small-size variant: mark at 66%)           |
-| `src/app/icon.svg`                          | SVG favicon for modern browsers (small-size variant)            |
-| `src/app/apple-icon.png`                    | 180 px iOS home-screen icon, full-bleed (iOS rounds it)         |
-| `src/app/manifest.ts`                       | PWA manifest; theme #8116E0, background #F6F6F8, start `/today` |
-| `public/icons/icon-192.png`, `icon-512.png` | PWA icons (rounded tile)                                        |
-| `public/icons/icon-maskable-512.png`        | Android maskable icon (mark at 42%, inside the 80% safe zone)   |
-| `public/brand/mark.svg`                     | Master icon, 512 px                                             |
+| File                                        | Use                                                                                       |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `src/app/favicon.ico`                       | 16/32/48 px favicon (small-size variant: mark at 66%)                                     |
+| `src/app/icon.svg`                          | SVG favicon for modern browsers (small-size variant)                                      |
+| `src/app/apple-icon.png`                    | 180 px iOS home-screen icon, full-bleed (iOS rounds it)                                   |
+| `src/app/manifest.ts`                       | PWA manifest; theme #8116E0, background #F6F6F8, start `/today`                           |
+| `apps/mobile/assets/images/*`               | App icon, Android adaptive layers (background `#000000`), monochrome, splash, web favicon |
+| `public/icons/icon-192.png`, `icon-512.png` | PWA icons (rounded tile)                                                                  |
+| `public/icons/icon-maskable-512.png`        | Android maskable icon (mark at 42%, inside the 80% safe zone)                             |
+| `public/brand/mark.svg`                     | Icon tile, 512 px; `mark-full.svg` = the 1600 px master                                   |
 
 - In the UI, render the icon with the inline SVG `Logo` / `LogoMark` components (24–40 px) rather
   than an `<img>`.
