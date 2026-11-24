@@ -8,7 +8,10 @@ import { remindersQuery } from "@/lib/queries";
 import { syncCustomReminders } from "@/lib/reminders";
 import { tabMotion } from "@/lib/motion";
 
-/** Today, Workout, [camera], [coach], Profile. Camera and coach are buttons that open stacks (tab-bar.tsx). */
+/**
+ * Home (today), Meals, Workout, [coach] and the [camera] (tab-bar.tsx; coach and camera open stacks).
+ * Profile is a tab without a bar entry: Home's profile button opens it.
+ */
 export default function TabsLayout() {
   useReminderSync();
   useHealthSync();
@@ -16,6 +19,7 @@ export default function TabsLayout() {
     <>
       <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, ...tabMotion }}>
         <Tabs.Screen name="today" />
+        <Tabs.Screen name="meals" />
         <Tabs.Screen name="workout" />
         <Tabs.Screen name="profile" />
       </Tabs>

@@ -90,7 +90,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#8116E0"
+          "color": "#718B00"
         }
       ],
       "react-native-health-connect",

@@ -1,117 +1,121 @@
 import type { BottomTabBarProps } from "expo-router/tabs";
 import { router } from "expo-router";
-import { Camera, Dumbbell, House, MessageCircle, UserRound, type LucideIcon } from "lucide-react-native";
-import { Pressable, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Camera, Dumbbell, LayoutGrid, MessageCircle, UtensilsCrossed, type LucideIcon } from "lucide-react-native";
+import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui";
+import { OLIVE_BUTTON } from "@/lib/gradients";
 import { makeStyles, useColors } from "@/lib/theme";
 import { useViewDay } from "@/lib/view-day";
 
+/** Tabs shown in the bar, in order. Profile is a tab too, opened from Home's profile button. */
 const TABS: Record<string, { label: string; icon: LucideIcon }> = {
-  today: { label: "Today", icon: House },
+  today: { label: "Home", icon: LayoutGrid },
+  meals: { label: "Meals", icon: UtensilsCrossed },
   workout: { label: "Workout", icon: Dumbbell },
-  profile: { label: "Profile", icon: UserRound },
 };
 
-type Cell =
-  { kind: "tab"; route: BottomTabBarProps["state"]["routes"][number] } | { kind: "camera" } | { kind: "coach" };
-
 /**
- * Today, Workout, [camera], Coach, Profile (design TabBar). 84 px + safe area. Camera and Coach
- * open full-screen stacks (the logger, the chat with its keyboard) rather than tabs.
+ * v2 tab bar: a floating pill with Home · Meals · Workout · Coach, and the camera button beside it.
+ * Coach and the camera open full-screen stacks (the chat with its keyboard, the logger).
  */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const c = useColors();
   const styles = useStyles();
-  // On Today, the button logs to the day being shown (swiped back to yesterday → yesterday); for a
-  // past day it opens typing, the default there (the meal is long eaten).
+  // On Home or Meals the camera logs to the day being shown; a past day opens typing (long eaten).
   const viewDay = useViewDay();
-  const onToday = state.routes[state.index]?.name === "today";
-  const pastDay = onToday ? viewDay : null;
-  const tabs: Cell[] = state.routes.filter((r) => TABS[r.name]).map((route) => ({ kind: "tab", route }));
-  const cells: Cell[] = [...tabs.slice(0, 2), { kind: "camera" }, { kind: "coach" }, ...tabs.slice(2)];
+  const current = state.routes[state.index]?.name;
+  const pastDay = current === "today" || current === "meals" ? viewDay : null;
+  const tabs = Object.keys(TABS)
+    .map((name) => state.routes.find((r) => r.name === name))
+    .filter((r): r is (typeof state.routes)[number] => Boolean(r));
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom, height: 84 + insets.bottom }]}>
-      {cells.map((cell) => {
-        if (cell.kind === "coach") {
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={styles.pill}>
+        {tabs.map((route) => {
+          const tab = TABS[route.name];
+          const focused = state.routes[state.index]?.key === route.key;
+          const color = focused ? c.ink : c.ink3;
+          const Icon = tab.icon;
           return (
-            <View key="coach" style={styles.cell}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Ask your coach"
-                onPress={() => router.push("/coach")}
-                style={styles.tab}
-              >
-                <MessageCircle size={22} color={c.ink3} strokeWidth={2} />
-                <Text weight={600} size={11} color={c.ink3}>
-                  Coach
-                </Text>
-              </Pressable>
-            </View>
-          );
-        }
-        if (cell.kind === "camera") {
-          return (
-            <View key="camera" style={styles.cell}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Log a meal"
-                onPress={() => router.push(pastDay ? { pathname: "/log/type", params: { date: pastDay } } : "/log")}
-                style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? c.brandHover : c.brand }]}
-              >
-                <Camera size={24} color={c.white} strokeWidth={2} />
-              </Pressable>
-            </View>
-          );
-        }
-        const { route } = cell;
-        const tab = TABS[route.name];
-        const focused = state.routes[state.index]?.key === route.key;
-        const color = focused ? c.ink : c.ink3;
-        const Icon = tab.icon;
-        return (
-          <View key={route.key} style={styles.cell}>
             <Pressable
+              key={route.key}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
+              accessibilityLabel={tab.label}
               onPress={() => {
                 const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
                 if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
               }}
               style={styles.tab}
             >
-              <Icon size={22} color={color} strokeWidth={2} />
-              <Text weight={600} size={11} color={color}>
+              <Icon size={21} color={color} strokeWidth={focused ? 2.4 : 2} fill="none" />
+              <Text weight={focused ? 700 : 500} size={11} color={color}>
                 {tab.label}
               </Text>
             </Pressable>
-          </View>
-        );
-      })}
+          );
+        })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ask your coach"
+          onPress={() => router.push("/coach")}
+          style={styles.tab}
+        >
+          <MessageCircle size={21} color={c.ink3} strokeWidth={2} />
+          <Text weight={500} size={11} color={c.ink3}>
+            Coach
+          </Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Log a meal"
+        onPress={() => router.push(pastDay ? { pathname: "/log/type", params: { date: pastDay } } : "/log")}
+        style={({ pressed }) => [styles.camera, pressed && { transform: [{ scale: 0.96 }] }]}
+      >
+        <LinearGradient {...OLIVE_BUTTON} style={styles.cameraFill}>
+          <Camera size={24} color="#ffffff" strokeWidth={2} />
+        </LinearGradient>
+      </Pressable>
     </View>
   );
 }
 
 const useStyles = makeStyles((c, shadows) => ({
-  bar: {
+  wrap: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    paddingTop: 8,
-    backgroundColor: c.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.line,
+    alignItems: "center",
+    gap: 10,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    backgroundColor: c.ground,
   },
-  cell: { flex: 1, alignItems: "center" },
-  tab: { minHeight: 44, minWidth: 56, alignItems: "center", gap: 4, paddingTop: 4 },
-  fab: {
-    marginTop: -26,
-    width: 60,
-    height: 60,
-    borderRadius: 20,
+  pill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    height: 64,
+    borderRadius: 32,
+    paddingHorizontal: 6,
+    backgroundColor: c.surface,
+    ...shadows.seg,
+  },
+  tab: { minWidth: 56, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 3 },
+  // A dark lift, not the old purple FAB glow: the v2 camera is black glass with an olive edge.
+  camera: { width: 64, height: 64, borderRadius: 32, boxShadow: "0 8px 18px rgba(20, 24, 0, 0.32)" },
+  cameraFill: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    ...shadows.fab,
+    borderWidth: 1,
+    borderColor: "rgba(194,224,74,0.5)", // accent/highlight edge on the dark glass
   },
 }));

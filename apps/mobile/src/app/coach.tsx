@@ -1,27 +1,34 @@
 import type { CoachChatInput, CoachConversationView, CoachMessageView, CoachStreamEvent } from "@fitr8/contracts";
 import {
   ArrowUp,
+  ArrowUpRight,
   Brain,
   Check,
+  ChevronLeft,
   Crown,
   CircleAlert,
+  History,
+  Info,
   LoaderCircle,
   RotateCw,
+  Sparkles,
   Square,
   SquarePen,
 } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { BackHeader } from "@/components/back-header";
+import { Sheet } from "@/components/sheet";
 import { Line } from "@/components/skeletons";
-import { Button, Card, Chip, FieldError, Text } from "@/components/ui";
+import { Button, Card, FieldError, Text } from "@/components/ui";
 import { api, ApiError, apiStream } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { readConversationId, writeConversationId } from "@/lib/coach-store";
 import { openPremium, premiumFeatureOf, usePremium } from "@/lib/premium";
 import { queryClient } from "@/lib/query";
+import { COACH_HERO, OLIVE_BUTTON } from "@/lib/gradients";
 import { fonts, gutter, makeStyles, radius, useColors } from "@/lib/theme";
 import { PremiumBadge } from "@/components/premium-badge";
 
@@ -42,7 +49,7 @@ const MAX_LENGTH = 2000; // CoachChatSchema
 const SUGGESTIONS = [
   "How am I doing on protein today?",
   "What should I eat for dinner?",
-  "How many sets per week to build muscle?",
+  "How many sets a week to build muscle?",
   "Help me start running",
   "Why is my calorie target what it is?",
 ];
@@ -74,6 +81,7 @@ export default function CoachScreen() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [menu, setMenu] = useState(false);
   const streamRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -234,47 +242,68 @@ export default function CoachScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <BackHeader>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text variant="meta">Food, training, running and recovery</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text variant="h2">Your coach</Text>
-                {isPremium && <PremiumBadge />}
-              </View>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="What your coach remembers"
-              onPress={() => router.push("/coach-memory")}
-              hitSlop={8}
-              style={styles.newChat}
-            >
-              <Brain size={18} color={c.brandText} />
-            </Pressable>
-            {(messages.length > 0 || conversationId) && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="New chat"
-                onPress={newChat}
-                hitSlop={8}
-                style={styles.newChat}
-              >
-                <SquarePen size={18} color={c.brandText} />
-                <Text weight={600} size={13} color={c.brandText}>
-                  New chat
-                </Text>
-              </Pressable>
-            )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+          style={({ pressed }) => [styles.round, pressed && { backgroundColor: c.sunken }]}
+        >
+          <ChevronLeft size={22} color={c.ink} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text weight={500} size={12} color={c.ink3}>
+            Food, training, running &amp; recovery
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text variant="h2" size={22}>
+              Your coach
+            </Text>
+            {isPremium && <PremiumBadge />}
           </View>
-        </BackHeader>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Chats and memory"
+          onPress={() => setMenu(true)}
+          style={({ pressed }) => [styles.round, pressed && { backgroundColor: c.sunken }]}
+        >
+          <History size={20} color={c.ink} />
+        </Pressable>
       </View>
+
+      <Sheet open={menu} onClose={() => setMenu(false)} title="Your coach">
+        <View style={{ gap: 8, paddingBottom: 8 }}>
+          {(messages.length > 0 || conversationId) && (
+            <MenuRow
+              icon={SquarePen}
+              label="New chat"
+              hint="Start fresh. Your coach still remembers what you told it."
+              onPress={() => {
+                setMenu(false);
+                newChat();
+              }}
+            />
+          )}
+          <MenuRow
+            icon={Brain}
+            label="What your coach remembers"
+            hint="See or delete the things it keeps in mind."
+            onPress={() => {
+              setMenu(false);
+              router.push("/coach-memory");
+            }}
+          />
+        </View>
+      </Sheet>
 
       <ScrollView
         ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        // Follow the conversation as replies stream in; the intro stays at the top.
+        onContentSizeChange={() => {
+          if (messages.length > 0) scrollRef.current?.scrollToEnd({ animated: true });
+        }}
         contentContainerStyle={styles.thread}
       >
         {status === "loading" ? (
@@ -316,19 +345,22 @@ export default function CoachScreen() {
           editable={status === "ready"}
           multiline
           maxLength={MAX_LENGTH}
-          placeholder="Ask your coach"
+          placeholder="Ask your coach..."
+          numberOfLines={1}
           placeholderTextColor={c.ink3}
           style={styles.input}
-          textAlignVertical="top"
+          textAlignVertical="center"
         />
         {sending ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Stop the reply"
             onPress={() => streamRef.current?.abort()}
-            style={[styles.send, { backgroundColor: c.strong }]}
+            style={styles.send}
           >
-            <Square size={16} color={c.onStrong} fill={c.onStrong} />
+            <LinearGradient {...OLIVE_BUTTON} style={styles.sendFill}>
+              <Square size={16} color="#ffffff" fill="#ffffff" />
+            </LinearGradient>
           </Pressable>
         ) : (
           <Pressable
@@ -337,13 +369,11 @@ export default function CoachScreen() {
             accessibilityState={{ disabled: !canSend }}
             disabled={!canSend}
             onPress={() => send(draft)}
-            style={({ pressed }) => [
-              styles.send,
-              { backgroundColor: pressed ? c.brandHover : c.brand },
-              !canSend && { opacity: 0.5 },
-            ]}
+            style={({ pressed }) => [styles.send, pressed && canSend && { transform: [{ scale: 0.96 }] }]}
           >
-            <ArrowUp size={22} color={c.white} strokeWidth={2} />
+            <LinearGradient {...OLIVE_BUTTON} style={styles.sendFill}>
+              <ArrowUp size={22} color="#ffffff" strokeWidth={2.2} />
+            </LinearGradient>
           </Pressable>
         )}
       </View>
@@ -355,7 +385,7 @@ function Intro({ onPick, locked }: { onPick: (text: string) => void; locked: boo
   const c = useColors();
   const styles = useStyles();
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 18 }}>
       {locked && (
         <Card dark style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -375,25 +405,93 @@ function Intro({ onPick, locked }: { onPick: (text: string) => void; locked: boo
           </Button>
         </Card>
       )}
-      <Card>
-        <Text variant="h2">Your fitness and nutrition coach</Text>
-        <Text color={c.ink2}>
+
+      <LinearGradient {...COACH_HERO} style={styles.hero}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={styles.heroIcon}>
+            <Sparkles size={18} color="#ffffff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text weight={700} size={16} color="#ffffff">
+              Your fitness &amp; nutrition coach
+            </Text>
+            <Text size={12} color="rgba(255,255,255,0.65)">
+              Online · knows your plan
+            </Text>
+          </View>
+        </View>
+        <Text size={14} color="rgba(255,255,255,0.82)" style={{ lineHeight: 21 }}>
           I know your goal, targets, meals, workouts and weight, and I remember what you tell me, like injuries or foods
-          you avoid. My advice is based on sports science, and I can log water or a weigh-in for you.
+          you avoid. I can also log water or a weigh-in for you.
         </Text>
-      </Card>
-      <View style={styles.suggestions}>
+        <View style={styles.heroChips}>
+          {["Remembers you", "Science-based", "Logs for you"].map((t) => (
+            <View key={t} style={styles.heroChip}>
+              <Text weight={600} size={11} color="#ffffff">
+                {t}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
+
+      <View style={{ gap: 10 }}>
+        <Text weight={500} size={12} color={c.ink3}>
+          Try asking
+        </Text>
         {SUGGESTIONS.map((s) => (
-          <Chip key={s} onPress={() => onPick(s)}>
-            {s}
-          </Chip>
+          <Pressable
+            key={s}
+            accessibilityRole="button"
+            onPress={() => onPick(s)}
+            style={({ pressed }) => [styles.suggestion, pressed && { backgroundColor: c.sunken }]}
+          >
+            <Text weight={500} size={15}>
+              {s}
+            </Text>
+            <ArrowUpRight size={16} color={c.ink3} />
+          </Pressable>
         ))}
       </View>
-      <Text variant="meta">
-        General guidance, not medical advice. If you&apos;re injured, pregnant, have a medical condition or take
-        medication, check with your doctor or physio.
-      </Text>
+
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Info size={14} color={c.ink3} style={{ marginTop: 2 }} />
+        <Text size={12} color={c.ink3} style={{ flex: 1, lineHeight: 17 }}>
+          General guidance, not medical advice. If you&apos;re injured, pregnant, have a medical condition or take
+          medication, check with your doctor or physio.
+        </Text>
+      </View>
     </View>
+  );
+}
+
+function MenuRow({
+  icon: Icon,
+  label,
+  hint,
+  onPress,
+}: {
+  icon: typeof Brain;
+  label: string;
+  hint: string;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: c.sunken }]}
+    >
+      <Icon size={20} color={c.ink} />
+      <View style={{ flex: 1 }}>
+        <Text weight={600}>{label}</Text>
+        <Text size={13} color={c.ink3}>
+          {hint}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -464,16 +562,52 @@ function ThreadSkeleton() {
 
 const useStyles = makeStyles((c) => ({
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: gutter,
     paddingBottom: 8,
     backgroundColor: c.ground,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.line,
   },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  newChat: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 6 },
+  round: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hero: { borderRadius: radius.card, padding: 18, gap: 14, overflow: "hidden" },
+  heroIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(113,139,0,0.4)", // accent/primary on the dark hero
+    borderWidth: 1,
+    borderColor: "rgba(194,224,74,0.45)", // accent/highlight
+  },
+  heroChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  heroChip: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    justifyContent: "center",
+    backgroundColor: c.glassStrong,
+  },
+  suggestion: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: c.surface,
+  },
+  menuRow: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: radius.input },
   thread: { flexGrow: 1, paddingHorizontal: gutter, paddingVertical: 20, gap: 16 },
-  suggestions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   bubble: { maxWidth: "88%", borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 12 },
   mine: { alignSelf: "flex-end", backgroundColor: c.strong, borderBottomRightRadius: 6 },
   theirs: { alignSelf: "flex-start", backgroundColor: c.surface, borderBottomLeftRadius: 6 },
@@ -490,28 +624,25 @@ const useStyles = makeStyles((c) => ({
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingTop: 12,
+    gap: 10,
+    paddingTop: 10,
     paddingHorizontal: gutter,
     backgroundColor: c.ground,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.line,
   },
   input: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 56,
     maxHeight: 140,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
-    borderRadius: radius.input,
+    borderRadius: 28,
     backgroundColor: c.surface,
-    paddingHorizontal: 14,
-    paddingTop: 13,
-    paddingBottom: 13,
+    paddingHorizontal: 20,
+    paddingTop: 17,
+    paddingBottom: 17,
     fontFamily: fonts.sans400,
     fontSize: 15,
     lineHeight: 20,
     color: c.ink,
   },
-  send: { width: 48, height: 48, borderRadius: radius.input, alignItems: "center", justifyContent: "center" },
+  send: { width: 56, height: 56, borderRadius: 28, boxShadow: "0 8px 18px rgba(20, 24, 0, 0.32)" },
+  sendFill: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
 }));

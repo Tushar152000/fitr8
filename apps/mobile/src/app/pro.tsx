@@ -643,7 +643,7 @@ const useStyles = makeStyles((c) => ({
     gap: 12,
   },
   mini: { flex: 1, gap: 6, padding: 12, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)" },
-  miniPremium: { backgroundColor: "rgba(168,85,247,0.18)", borderWidth: 1, borderColor: "rgba(168,85,247,0.45)" },
+  miniPremium: { backgroundColor: "rgba(194,224,74,0.18)", borderWidth: 1, borderColor: "rgba(194,224,74,0.45)" },
   miniHead: { flexDirection: "row", alignItems: "center", gap: 6 },
   plan: {
     flexDirection: "row",

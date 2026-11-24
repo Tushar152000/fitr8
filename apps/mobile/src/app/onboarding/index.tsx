@@ -58,7 +58,7 @@ import {
 } from "@/lib/person";
 import { Sheet } from "@/components/sheet";
 import { bodySummary, trainingSummary } from "@/lib/onboarding-summary";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import type { PlanResponse } from "@/lib/types-plan";
 import type { PhoneCheckDto } from "@fitr8/contracts";
 
@@ -861,7 +861,7 @@ function TrainingStep({ draft, set, errors }: StepProps) {
           value={draft.injuries}
           onChangeText={(v) => set("injuries", v)}
           placeholder="e.g. left knee, lower back"
-          placeholderTextColor={`${c.ink3}99`}
+          placeholderTextColor={fade(c.ink3, 0.6)}
           style={styles.textInput}
         />
         <Text size={13} color={c.ink3}>
