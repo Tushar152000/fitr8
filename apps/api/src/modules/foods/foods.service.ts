@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
+import { visibleFoodTo } from "./food-visibility.js";
 
 /** The food database: search for adding a missed item. */
 @Injectable()
@@ -21,12 +22,19 @@ export class FoodsService {
               }
             : {},
           // Unreviewed label scans are visible to their submitter only.
-          {
-            OR: [{ verified: true }, { source: { not: "LABEL_SCAN" } }, { submittedById: userId }],
-          },
+          visibleFoodTo(userId),
         ],
       },
-      include: { units: { select: { unit: true, grams: true } } },
+      select: {
+        id: true,
+        name: true,
+        kcalPer100g: true,
+        proteinPer100g: true,
+        carbsPer100g: true,
+        fatPer100g: true,
+        isLiquid: true,
+        units: { select: { unit: true, grams: true } },
+      },
       orderBy: { name: "asc" },
       take: 12,
     });

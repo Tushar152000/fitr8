@@ -11,7 +11,7 @@ const MARK_SQUARE = "M40 488L184 488Q224 488 224 528L224 671Q224 711 184 711L40 
 const MARK_LIME = "#BED465";
 
 /** The FITR8 app icon: the mark on a black tile (docs/DESIGN.md → Brand). 24–40 px in the UI. */
-export function LogoMark({ size = 32 }: { size?: number; onDark?: boolean }) {
+function LogoMark({ size = 32 }: { size?: number; onDark?: boolean }) {
   return (
     <Svg viewBox="0 0 512 512" width={size} height={size}>
       <Rect width="512" height="512" rx="116" fill="#000000" />

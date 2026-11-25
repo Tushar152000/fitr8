@@ -5,9 +5,9 @@ import { LogIn } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Platform, TextInput, useWindowDimensions, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { HeroPlate } from "@/components/hero-plate";
+import { HeroPlate } from "@/components/login/hero-plate";
 import { Button, FieldError, Logo, Screen, Text } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { openLegal } from "@/lib/legal";
 import { fonts, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
@@ -53,7 +53,7 @@ export default function LoginScreen() {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
+      setError(errorMessage(err, "Sign-in failed. Try again."));
     } finally {
       setBusy(false);
     }
@@ -136,7 +136,7 @@ function DevSignIn() {
     try {
       await devSignIn(email.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't sign in. Try again.");
+      setError(errorMessage(err, "Couldn't sign in. Try again."));
     } finally {
       setBusy(false);
     }

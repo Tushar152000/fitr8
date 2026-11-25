@@ -8,7 +8,6 @@ import {
   type HistoryDto,
   type ProgressDto,
 } from "@fitr8/contracts";
-import { parseDateOnly } from "@fitr8/domain/dates";
 import { UserId } from "../../common/auth/decorators.js";
 import { ZodBody } from "../../common/http/zod.js";
 import { wire } from "../../common/http/wire.js";
@@ -45,13 +44,8 @@ export class ProgressController {
 
   /** Screen 6 data: the day's targets and meals, plus the logging streak. `?date=YYYY-MM-DD`, default today. */
   @Get("dashboard")
-  async getDashboard(
-    @UserId() userId: string,
-    @Query("date") date?: string,
-  ): Promise<DashboardDto> {
-    return wire(
-      this.dashboard.getDay(userId, date ? parseDateOnly(date) : await this.users.today(userId)),
-    );
+  getDashboard(@UserId() userId: string, @Query("date") date?: string): Promise<DashboardDto> {
+    return wire(this.dashboard.getDay(userId, date));
   }
 
   /** GET /api/history?days=7|30 — daily totals, targets and confirmed meals (design 12). */

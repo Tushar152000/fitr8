@@ -35,7 +35,7 @@ import { BillingService } from "../billing/billing.service.js";
 import { HealthDataService } from "../health-data/health-data.service.js";
 import { TargetsService } from "../plan/targets.service.js";
 import { UsersService } from "../users/users.service.js";
-import { toTrainingTypes, TrainingPlanner } from "./training-planner.js";
+import { planningContext, toTrainingTypes, TrainingPlanner } from "./training-planner.js";
 import { WorkoutsService } from "./workouts.service.js";
 
 const DAY_MS = 86_400_000;
@@ -105,12 +105,15 @@ export class TrainingService {
       daysPerWeek: input.daysPerWeek,
       sessionMinutes: input.sessionMinutes,
     };
-    await this.prisma.trainingProfile.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: data,
-    });
-    return this.weekDto(userId, weekStart(await this.users.today(userId)));
+    const [, today] = await Promise.all([
+      this.prisma.trainingProfile.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+      }),
+      this.users.today(userId),
+    ]);
+    return this.weekDto(userId, weekStart(today), today);
   }
 
   /** GET /training/week?start=: the week containing `start` (default this week). */
@@ -129,7 +132,7 @@ export class TrainingService {
       if (monday.getTime() < thisWeek - MAX_WEEKS_BACK * 7 * DAY_MS)
         throw new AppError(400, "Pick a week within the last year");
     }
-    return this.weekDto(userId, monday);
+    return this.weekDto(userId, monday, today);
   }
 
   /**
@@ -152,7 +155,11 @@ export class TrainingService {
       );
 
     const [planned, body] = await Promise.all([
-      this.planner.week(userId, weekStart(date)),
+      this.planner.week(
+        userId,
+        weekStart(date),
+        planningContext({ targets: this.targets, users: this.users }, userId, today),
+      ),
       this.targets.bodyBasics(userId, date),
     ]);
     const day = planned?.week.days.find((d) => d.date === input.date);
@@ -180,16 +187,19 @@ export class TrainingService {
     if (!count) throw new AppError(404, "Session not found");
   }
 
-  private async weekDto(userId: string, monday: Date): Promise<TrainingWeekDto> {
-    const planned = await this.planner.week(userId, monday);
+  /** One week for the Workout tab; `today` is the user's local today (read once per request). */
+  private async weekDto(userId: string, monday: Date, today: Date): Promise<TrainingWeekDto> {
+    // One context: the planner and the strength engine share the plan maths and today.
+    const ctx = planningContext({ targets: this.targets, users: this.users }, userId, today);
+    const planned = await this.planner.week(userId, monday, ctx);
     if (!planned) throw new AppError(404, "Set up your training first");
     const { week, profile, goal } = planned;
-    const today = await this.users.today(userId);
     const todayKey = ymdOf(today);
     const end = addDays(monday, 7);
     const isCurrentOrLater = monday.getTime() >= weekStart(today).getTime();
+    const todayPlanned = week.days.find((d) => d.date === todayKey);
 
-    const [logs, setLogs, gymPlan] = await Promise.all([
+    const [logs, setLogs, gymPlan, recovery] = await Promise.all([
       this.prisma.trainingLog.findMany({
         where: { userId, date: { gte: monday, lt: end } },
         orderBy: { createdAt: "desc" },
@@ -198,7 +208,10 @@ export class TrainingService {
         where: { userId, completed: true, date: { gte: monday, lt: end } },
         select: { date: true, exerciseSlug: true },
       }),
-      week.schedule.length ? this.gymPlan(userId, monday, isCurrentOrLater) : Promise.resolve(null),
+      week.schedule.length
+        ? this.gymPlan(userId, monday, isCurrentOrLater, { ctx, schedule: week.schedule })
+        : Promise.resolve(null),
+      todayPlanned ? this.recovery(userId, todayPlanned.effort === "hard") : Promise.resolve(null),
     ]);
 
     const logsByDate = new Map<string, TrainingLog[]>();
@@ -250,7 +263,6 @@ export class TrainingService {
     });
 
     const totalKcal = days.reduce((t, d) => t + d.kcal, 0);
-    const todayDay = days.find((d) => d.date === todayKey);
     return {
       start: ymdOf(monday),
       today: todayKey,
@@ -262,16 +274,22 @@ export class TrainingService {
       coachNote: week.coachNote,
       days,
       profile: profileDto(profile),
-      recovery: todayDay ? await this.recovery(userId, todayDay.effort === "hard") : null,
+      recovery,
     };
   }
 
   /** The strength engine's days for this week (gym exercises). Past weeks: only a plan that exists. */
-  private async gymPlan(userId: string, monday: Date, create: boolean): Promise<PlanDay[] | null> {
-    if (create) return (await this.workouts.getOrCreateWeek(userId, monday)).week.days;
+  private async gymPlan(
+    userId: string,
+    monday: Date,
+    create: boolean,
+    opts: Parameters<WorkoutsService["getOrCreateWeek"]>[2],
+  ): Promise<PlanDay[] | null> {
+    if (create) return (await this.workouts.getOrCreateWeek(userId, monday, opts)).week.days;
     const row = await this.prisma.workoutPlan.findFirst({
       where: { userId, weekStart: monday },
       orderBy: { version: "desc" },
+      select: { plan: true },
     });
     return row ? WeekPlanSchema.parse(row.plan).days : null;
   }

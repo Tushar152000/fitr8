@@ -374,6 +374,10 @@ model Food {
   mealItems      MealItem[]
   savedMealItems SavedMealItem[]
 
+  /// Food search (GET /foods?q=: `name ILIKE '%q%' OR aliases @> {q}`) uses these two GIN indexes
+  /// (the name one needs the pg_trgm extension).
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "foods_name_trgm_idx", type: Gin)
+  @@index([aliases], type: Gin)
   @@map("foods")
 }
 

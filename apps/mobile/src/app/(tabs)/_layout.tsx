@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Tabs } from "expo-router";
 import { useEffect } from "react";
-import { ReminderPrompt } from "@/components/reminder-prompt";
+import { ReminderPrompt } from "@/components/reminders/reminder-prompt";
 import { TabBar } from "@/components/tab-bar";
 import { useHealthSync } from "@/lib/health/use-health-sync";
 import { remindersQuery } from "@/lib/queries";

@@ -62,6 +62,13 @@ describe("plan", () => {
     await onboard(agent, { medicalFlag: true, medicalNote: "   " });
     me = await agent.get("/api/me").expect(200);
     expect(me.body.profile).toMatchObject({ medicalFlag: true, medicalNote: null });
+    // The profile without its owner id or row timestamps.
+    for (const key of ["userId", "createdAt", "updatedAt"])
+      expect(me.body.profile).not.toHaveProperty(key);
+    expect(me.body.profile).toMatchObject({
+      timezone: "Asia/Kolkata",
+      onboardedAt: expect.any(String),
+    });
   });
 
   it("onboards, stores targets and rebuilds the plan", async () => {
@@ -73,11 +80,12 @@ describe("plan", () => {
     expect(res.body).toMatchObject({
       bmi: { value: expect.any(Number), category: expect.any(String) },
       bodyFatPct: expect.any(Number),
+      // The summary carries the numbers only; the stored row is GET /api/targets.
       target: {
-        userId,
         kcal: expect.any(Number),
         proteinG: expect.any(Number),
-        reason: "Initial targets from onboarding",
+        carbsG: expect.any(Number),
+        fatG: expect.any(Number),
       },
       plan: {
         bmr: expect.any(Number),
@@ -87,12 +95,17 @@ describe("plan", () => {
       },
     });
 
+    expect(Object.keys(res.body.target).sort()).toEqual(["carbsG", "fatG", "kcal", "proteinG"]);
     const targets = await agent.get("/api/targets").expect(200);
-    expect(targets.body.target.id).toBe(res.body.target.id);
+    expect(targets.body.target).toMatchObject({
+      ...res.body.target,
+      userId,
+      reason: "Initial targets from onboarding",
+    });
 
     const plan = await agent.get("/api/plan").expect(200);
+    expect(plan.body.summary.target).toEqual(res.body.target);
     expect(plan.body).toMatchObject({
-      summary: { target: { kcal: res.body.target.kcal } },
       goal: { type: "FAT_LOSS", targetWeightKg: 76 },
       metric: { weightKg: 82, waistCm: 90, neckCm: 38 },
       training: { daysPerWeek: 3, sessionMinutes: 45 },

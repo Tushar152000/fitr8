@@ -1,11 +1,12 @@
 import { router } from "expo-router";
-import { NATIVE_DRIVER } from "@/lib/motion";
 import { Camera, Check, CircleAlert, RotateCw, Trash2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Animated, Pressable, View } from "react-native";
-import { Button, Card, FieldError, Text } from "@/components/ui";
+import { Button, Card, FieldError, PressableScale, Text } from "@/components/ui";
 import type { MealType } from "@/lib/format";
+import { NATIVE_DRIVER, useReduceMotion } from "@/lib/motion";
 import { makeStyles, radius, useColors } from "@/lib/theme";
+import { TipsCard } from "./tips-card";
 
 const STEP_MS = 2500;
 
@@ -89,8 +90,13 @@ export function Analysing({ slow, mealType, hasPhoto }: { slow: boolean; mealTyp
 }
 
 function usePulse() {
+  const reduce = useReduceMotion();
   const [v] = useState(() => new Animated.Value(1));
   useEffect(() => {
+    if (reduce) {
+      v.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(v, { toValue: 0.5, duration: 600, useNativeDriver: NATIVE_DRIVER }),
@@ -99,7 +105,7 @@ function usePulse() {
     );
     loop.start();
     return () => loop.stop();
-  }, [v]);
+  }, [reduce, v]);
   return v;
 }
 
@@ -158,17 +164,7 @@ export function Failed({
             We couldn&apos;t spot any food
           </Text>
           <Text color={c.ink2}>This doesn&apos;t count toward your daily scans.</Text>
-          <Card>
-            <Text weight={600}>For a better read</Text>
-            {TIPS.map((tip) => (
-              <View key={tip} style={{ flexDirection: "row", gap: 8 }}>
-                <Check size={16} color={c.protein} style={{ marginTop: 3 }} />
-                <Text color={c.ink2} style={{ flex: 1 }}>
-                  {tip}
-                </Text>
-              </View>
-            ))}
-          </Card>
+          <TipsCard title="For a better read" tips={TIPS} icon={Check} />
         </>
       ) : (
         <>
@@ -200,7 +196,7 @@ export function Failed({
         >
           Type it instead
         </Button>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           onPress={onDelete}
           style={{ minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
@@ -209,7 +205,7 @@ export function Failed({
           <Text weight={600} size={13} color={c.ink3}>
             Delete this meal
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );

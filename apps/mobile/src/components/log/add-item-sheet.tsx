@@ -1,10 +1,10 @@
 import { Search, Sparkles } from "lucide-react-native";
 import type { FoodHitDto, ParsedItemDto } from "@fitr8/contracts";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, StyleSheet, TextInput, View } from "react-native";
 import { Sheet } from "@/components/sheet";
-import { Button, FieldError, Text } from "@/components/ui";
-import { api } from "@/lib/api";
+import { Button, FieldError, PressableScale, Text } from "@/components/ui";
+import { api, errorMessage } from "@/lib/api";
 import { formatInt, sentenceCase, type MealType } from "@/lib/format";
 import { rowFromFood, type Row } from "@/lib/meal-rows";
 import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
@@ -83,7 +83,7 @@ export function AddItemSheet({
       );
       setQ("");
     } catch (e) {
-      setDescribeError(e instanceof Error ? e.message : "Couldn't add that. Try again.");
+      setDescribeError(errorMessage(e, "Couldn't add that. Try again."));
     } finally {
       setDescribing(false);
     }
@@ -103,7 +103,7 @@ export function AddItemSheet({
           {picked.units.map((u) => {
             const row = rowFromFood(picked, u);
             return (
-              <Pressable
+              <PressableScale
                 key={u.unit}
                 accessibilityRole="button"
                 onPress={() => {
@@ -122,7 +122,7 @@ export function AddItemSheet({
                 <Text weight={700} tabular>
                   {formatInt(row.kcal)} kcal
                 </Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
           <Button variant="secondary" onPress={() => setPicked(null)}>
@@ -149,14 +149,14 @@ export function AddItemSheet({
           </View>
           <View>
             {hits.map((f) => (
-              <Pressable key={f.id} accessibilityRole="button" onPress={() => setPicked(f)} style={styles.hit}>
+              <PressableScale key={f.id} accessibilityRole="button" onPress={() => setPicked(f)} style={styles.hit}>
                 <Text weight={600} style={{ flex: 1 }}>
                   {sentenceCase(f.name)}
                 </Text>
                 <Text size={13} color={c.ink3} tabular>
                   {formatInt(f.per100g.kcal)} kcal / 100 g
                 </Text>
-              </Pressable>
+              </PressableScale>
             ))}
             {!loading && hits.length === 0 && (
               <Text size={13} color={c.ink3} center style={{ paddingVertical: 16 }}>

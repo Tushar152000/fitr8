@@ -1,19 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Dumbbell, Flame, Lock, MessageCircle, type LucideIcon } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
-import { Button, Screen, Text } from "@/components/ui";
+import { View } from "react-native";
+import { Button, PressableScale, Screen, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { LIST_PRICE, openPaywall } from "@/lib/premium";
 import { restorePurchases } from "@/lib/purchases";
-import { billingQuery } from "@/lib/queries";
+import { billingQuery, planQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
 import { showToast } from "@/lib/toast";
 import { ACTIVITY_LABEL, dayColors, DAY_LABEL } from "@/lib/training";
 import { makeStyles, radius, useColors } from "@/lib/theme";
-import type { PlanResponse } from "@/lib/types-plan";
 import type { DayType } from "@fitr8/contracts";
 
 const FEATURES: { icon: LucideIcon; title: string; line: string }[] = [
@@ -37,7 +36,7 @@ export function WorkoutLocked({ source }: { source: "banner" | "tab" }) {
   const c = useColors();
   const styles = useStyles();
   const me = useMe();
-  const plan = useQuery({ queryKey: ["plan"], queryFn: () => api<PlanResponse>("/api/plan") });
+  const plan = useQuery(planQuery);
   const [restoring, setRestoring] = useState(false);
 
   const viewed = useRef(false);
@@ -135,7 +134,7 @@ export function WorkoutLocked({ source }: { source: "banner" | "tab" }) {
         <Button onPress={() => openPaywall("workout_tab")}>
           {`Unlock with Premium · from ${LIST_PRICE.perMonth}/month`}
         </Button>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           onPress={alreadyPremium}
           disabled={restoring}
@@ -144,7 +143,7 @@ export function WorkoutLocked({ source }: { source: "banner" | "tab" }) {
           <Text weight={600} color={c.brandText}>
             {restoring ? "Checking your purchases…" : "Already Premium? Set up your plan"}
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </Screen>
   );

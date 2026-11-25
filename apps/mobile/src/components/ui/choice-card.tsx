@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 export interface ChoiceOption<T extends string> {
   value: T;
@@ -29,7 +30,7 @@ export function ChoiceCardGroup<T extends string>({
       {options.map((o) => {
         const selected = o.value === value;
         return (
-          <Pressable
+          <PressableScale
             key={o.value}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -54,7 +55,7 @@ export function ChoiceCardGroup<T extends string>({
             <View style={[styles.radio, { borderColor: selected ? c.brandText : c.lineStrong }]}>
               {selected && <View style={styles.dot} />}
             </View>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>

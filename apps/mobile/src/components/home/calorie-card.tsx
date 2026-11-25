@@ -1,13 +1,12 @@
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { Text } from "@/components/ui";
+import { ProgressFill, RingArc, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
 const SIZE = 120;
 const STROKE = 9;
 const R = (SIZE - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
 
 type Macros = { proteinG: number; carbsG: number; fatG: number };
 
@@ -36,19 +35,7 @@ export function CalorieCard({
       <View style={{ width: SIZE, height: SIZE }} accessible accessibilityRole="image" accessibilityLabel={label}>
         <Svg width={SIZE} height={SIZE} style={{ transform: [{ rotate: "-90deg" }] }}>
           <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" strokeWidth={STROKE} stroke={c.track} />
-          {fraction > 0 && (
-            <Circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={R}
-              fill="none"
-              strokeWidth={STROKE}
-              strokeLinecap="round"
-              strokeDasharray={`${CIRC} ${CIRC}`}
-              strokeDashoffset={CIRC * (1 - fraction)}
-              stroke={c.ink}
-            />
-          )}
+          <RingArc centre={SIZE / 2} r={R} strokeWidth={STROKE} fraction={fraction} color={c.ink} />
         </Svg>
         <View style={[StyleSheet.absoluteFill, styles.centre]}>
           <Text weight={700} size={24} tabular>
@@ -74,7 +61,6 @@ export function CalorieCard({
 function MacroRow({ label, eaten, target }: { label: string; eaten: number; target: number }) {
   const c = useColors();
   const styles = useStyles();
-  const pct = target > 0 ? Math.min(100, (eaten / target) * 100) : 0;
   return (
     <View
       style={{ gap: 6 }}
@@ -92,9 +78,12 @@ function MacroRow({ label, eaten, target }: { label: string; eaten: number; targ
           /{formatInt(target)}g
         </Text>
       </View>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${pct}%` }]} />
-      </View>
+      <ProgressFill
+        fraction={target > 0 ? eaten / target : 0}
+        color={c.ink}
+        trackStyle={styles.track}
+        fillStyle={styles.fill}
+      />
     </View>
   );
 }
@@ -112,5 +101,5 @@ const useStyles = makeStyles((c) => ({
   macros: { flex: 1, gap: 14 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
   track: { height: 6, borderRadius: 3, backgroundColor: c.track, overflow: "hidden" },
-  fill: { height: "100%", borderRadius: 3, backgroundColor: c.ink },
+  fill: { borderRadius: 3 },
 }));

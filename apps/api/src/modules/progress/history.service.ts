@@ -19,7 +19,16 @@ export class HistoryService {
     const [meals, targets] = await Promise.all([
       this.prisma.mealLog.findMany({
         where: { userId, status: "CONFIRMED", date: { gte: from, lte: today } },
-        include: { items: { select: { name: true } } },
+        select: {
+          id: true,
+          date: true,
+          mealType: true,
+          inputText: true,
+          totalKcal: true,
+          totalProtein: true,
+          createdAt: true,
+          items: { select: { name: true } },
+        },
         orderBy: { createdAt: "asc" },
       }),
       this.prisma.dailyTarget.findMany({

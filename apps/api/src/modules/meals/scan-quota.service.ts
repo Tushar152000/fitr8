@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { startOfLocalDay } from "@fitr8/domain/dates";
+import type { PlanName } from "@fitr8/contracts";
+import { localDate, startOfLocalDay } from "@fitr8/domain/dates";
 import { AppError } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { BillingService } from "../billing/billing.service.js";
@@ -8,6 +9,24 @@ import { proRequired } from "../billing/pro-required.js";
 
 /** Typed meals are free; this only stops runaway use. Not shown to users. */
 const TEXT_DAILY_CAP = 60;
+
+/** The user's local midnight, and the next one (when today's scans reset). */
+function dayStart(tz: string) {
+  const since = startOfLocalDay(tz);
+  // 26 h later is always inside the next local day, even across a DST change.
+  const resetsAt = startOfLocalDay(tz, new Date(since.getTime() + 26 * 60 * 60 * 1000));
+  return { since, resetsAt };
+}
+
+function usageOf(used: number, limit: number, resetsAt: Date, plan: PlanName) {
+  return {
+    used,
+    limit,
+    left: Math.max(0, limit - used),
+    resetsAt: resetsAt.toISOString(),
+    plan,
+  };
+}
 
 /** Per-user AI quotas, counted from AiCall rows within the user's local day (design 9c); limits by plan. */
 @Injectable()
@@ -18,12 +37,19 @@ export class ScanQuotaService {
     private readonly billing: BillingService,
   ) {}
 
-  private async userDayStart(userId: string) {
+  /**
+   * GET /usage: photo scans used today, plus meals typed today and this month. One timezone
+   * read, then the plan and every count in parallel.
+   */
+  async usage(userId: string) {
     const tz = await this.users.timezone(userId);
-    const since = startOfLocalDay(tz);
-    // 26 h later is always inside the next local day, even across a DST change.
-    const resetsAt = startOfLocalDay(tz, new Date(since.getTime() + 26 * 60 * 60 * 1000));
-    return { since, resetsAt };
+    const { since, resetsAt } = dayStart(tz);
+    const [{ plan, scans: limit }, used, typedMeals] = await Promise.all([
+      this.billing.limits(userId),
+      this.scansSince(userId, since),
+      this.typedMealsOn(userId, localDate(tz)),
+    ]);
+    return { ...usageOf(used, limit, resetsAt, plan), typedMeals };
   }
 
   /**
@@ -31,20 +57,13 @@ export class ScanQuotaService {
    * typed meals, "usuals", not-food results and our own failures never do.
    */
   async scanUsage(userId: string) {
-    const [{ since, resetsAt }, { plan, scans: limit }] = await Promise.all([
-      this.userDayStart(userId),
+    const tz = await this.users.timezone(userId);
+    const { since, resetsAt } = dayStart(tz);
+    const [{ plan, scans: limit }, used] = await Promise.all([
       this.billing.limits(userId),
+      this.scansSince(userId, since),
     ]);
-    const used = await this.prisma.aiCall.count({
-      where: { userId, countsAsScan: true, createdAt: { gte: since } },
-    });
-    return {
-      used,
-      limit,
-      left: Math.max(0, limit - used),
-      resetsAt: resetsAt.toISOString(),
-      plan,
-    };
+    return usageOf(used, limit, resetsAt, plan);
   }
 
   /**
@@ -68,7 +87,26 @@ export class ScanQuotaService {
 
   /** Meals logged by typing today and this calendar month (the user's local dates). */
   async typedMeals(userId: string) {
-    const today = await this.users.today(userId);
+    return this.typedMealsOn(userId, await this.users.today(userId));
+  }
+
+  async assertWithinTextCap(userId: string) {
+    const { since } = dayStart(await this.users.timezone(userId));
+    const count = await this.prisma.aiCall.count({
+      where: { userId, type: "MEAL_TEXT", createdAt: { gte: since } },
+    });
+    if (count >= TEXT_DAILY_CAP) {
+      throw new AppError(429, "That's a lot of typed meals for one day. Try again tomorrow.");
+    }
+  }
+
+  private scansSince(userId: string, since: Date) {
+    return this.prisma.aiCall.count({
+      where: { userId, countsAsScan: true, createdAt: { gte: since } },
+    });
+  }
+
+  private async typedMealsOn(userId: string, today: Date) {
     const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
     const where = { userId, source: "TEXT" as const };
     const [todayCount, thisMonth] = await Promise.all([
@@ -76,16 +114,6 @@ export class ScanQuotaService {
       this.prisma.mealLog.count({ where: { ...where, date: { gte: monthStart, lte: today } } }),
     ]);
     return { today: todayCount, thisMonth };
-  }
-
-  async assertWithinTextCap(userId: string) {
-    const { since } = await this.userDayStart(userId);
-    const count = await this.prisma.aiCall.count({
-      where: { userId, type: "MEAL_TEXT", createdAt: { gte: since } },
-    });
-    if (count >= TEXT_DAILY_CAP) {
-      throw new AppError(429, "That's a lot of typed meals for one day. Try again tomorrow.");
-    }
   }
 }
 

@@ -104,7 +104,7 @@ export function PremiumBanner() {
           accessibilityLabel="Hide Premium banner for today"
           onPress={dismiss}
           hitSlop={8}
-          style={styles.close}
+          style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}
         >
           <X size={18} color={c.ink3} />
         </Pressable>

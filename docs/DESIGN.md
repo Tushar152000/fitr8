@@ -336,12 +336,20 @@ One feel across the app (`src/lib/motion.ts`); everything follows the phone's re
 - **Sheets:** the backdrop fades while the panel rises (280 ms, ease-out).
 - **In place:** banners and cards fade up 240 ms; accordion content fades in 180 ms; toasts drop in
   from the top and leave upward.
+- **Loading:** content replaces its skeleton with a 180 ms cross-fade (`FadeIn`); switching day or
+  week keeps the previous one on screen at 60 % opacity until the next has loaded.
+- **Lists:** rows fade up when added, fade out when removed, and the rest slide into place
+  (`AnimatedRow`); coach replies fade up as they arrive.
+- **Values:** rings and progress bars glide to a new value in 220 ms (`RingArc`, `ProgressFill`).
+- **Press:** buttons, chips, cards and rows sink to 98 % for 120 ms (`PressableScale`); icon-only
+  buttons dim instead.
+- **Pull to refresh** spins only for the user's own pull, never for a background refetch.
 
 ## Premium touches (Premium users)
 
 Quiet confirmation of the plan, never a different look, and never a worse free app.
 
-- **`PremiumBadge`** (`src/components/premium-badge.tsx`): brand crown + label on `brandSoft`, pill.
+- **`PremiumBadge`** (`src/components/premium/premium-badge.tsx`): brand crown + label on `brandSoft`, pill.
   On Today next to the date, in the Profile header ("FITR8 Premium", md), beside "Your coach", and
   "Unlimited" in the reminders header.
 - **Camera:** under "Snap your meal", a `brandGlow` crown and "7 of 10 photo scans left today".

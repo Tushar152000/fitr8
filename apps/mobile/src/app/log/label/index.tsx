@@ -1,20 +1,22 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { Camera, ChevronLeft, Images } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ChevronLeft, Images } from "lucide-react-native";
+import { useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AiLimitSheet, type ScanUsage } from "@/components/log/ai-limit-sheet";
-import { Button, Text } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
+import { cam } from "@/components/log/camera/cam";
+import { CameraSideButton, CameraTopButton, Shutter } from "@/components/log/camera/camera-buttons";
+import { CameraBusy, CameraError, CameraPermission } from "@/components/log/camera/camera-overlays";
+import { Text } from "@/components/ui";
+import { api, errorMessage } from "@/lib/api";
 import { choiceParams, dayFromParam, mealFromParam } from "@/lib/meal-param";
 import { compressPhoto, uploadPhoto } from "@/lib/photo";
-import { palettes, radius } from "@/lib/theme";
 import { handlePremiumError } from "@/lib/premium";
-
-/** The camera stays dark in both schemes, so its colours are fixed (the light palette's). */
-const cam = palettes.light;
+import { radius } from "@/lib/theme";
+import { useCameraAutoPermission } from "@/lib/use-camera-auto-permission";
+import { useScanLimit } from "@/lib/use-scan-limit";
 
 /** Labels have small print, so keep more pixels than a plate photo. */
 const LABEL_MAX_SIDE = 1600;
@@ -26,19 +28,11 @@ export default function LabelCamera() {
   const choice = choiceParams(mealFromParam(params.meal), dayFromParam(params.date));
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
-  // First visit: show the system camera prompt straight away (the in-screen button stays as the
-  // fallback). Not again once the user has answered.
-  useEffect(() => {
-    if (permission && !permission.granted && permission.status === "undetermined" && permission.canAskAgain) {
-      void requestPermission();
-    }
-  }, [permission, requestPermission]);
+  const [permission, requestPermission] = useCameraAutoPermission();
   const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState<"idle" | "uploading" | "reading">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [limit, setLimit] = useState<ScanUsage | null>(null);
-  const [limitOpen, setLimitOpen] = useState(false);
+  const limit = useScanLimit();
   const busy = phase !== "idle";
 
   async function submit(photo: { uri: string; width: number; height: number }) {
@@ -53,13 +47,8 @@ export default function LabelCamera() {
       router.replace({ pathname: "/log/label/[id]", params: { id: scan.id, ...choice } });
     } catch (e) {
       setPhase("idle");
-      if (handlePremiumError(e, choice)) return;
-      if (e instanceof ApiError && e.status === 429) {
-        setLimit((e.details as ScanUsage | undefined) ?? null);
-        setLimitOpen(true);
-      } else {
-        setError(e instanceof Error ? e.message : "Couldn't read the label. Try again.");
-      }
+      if (handlePremiumError(e, choice) || limit.catchLimit(e)) return;
+      setError(errorMessage(e, "Couldn't read the label. Try again."));
     }
   }
 
@@ -83,35 +72,23 @@ export default function LabelCamera() {
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
       <View style={styles.top}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={styles.icon}
-        >
-          <ChevronLeft size={26} color={cam.white} />
-        </Pressable>
+        <CameraTopButton icon={ChevronLeft} label="Back" onPress={() => router.back()} />
         <Text weight={600} color={cam.white}>
           Photograph the label
         </Text>
-        <View style={styles.icon} />
+        {/* Balances the back button so the title stays centred. */}
+        <View style={styles.spacer} />
       </View>
 
       <View style={styles.viewfinder}>
         {granted ? (
           <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" onCameraReady={() => setReady(true)} />
         ) : (
-          <View style={styles.center}>
-            <Camera size={32} color="rgba(255,255,255,0.6)" />
-            <Text size={13} color="rgba(255,255,255,0.7)" center>
-              Allow the camera to photograph the label, or pick a photo from your gallery.
-            </Text>
-            {permission?.canAskAgain !== false && (
-              <View style={{ alignSelf: "stretch", marginTop: 8 }}>
-                <Button onPress={requestPermission}>Allow camera</Button>
-              </View>
-            )}
-          </View>
+          <CameraPermission
+            message="Allow the camera to photograph the label, or pick a photo from your gallery."
+            canAsk={permission?.canAskAgain !== false}
+            onAllow={requestPermission}
+          />
         )}
         {/* Tall frame for the nutrition table. */}
         <View style={[styles.frame, { pointerEvents: "none" }]} />
@@ -120,45 +97,23 @@ export default function LabelCamera() {
             Whole table in frame · per 100 g visible
           </Text>
         </View>
-        {busy && (
-          <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: "rgba(23,24,28,0.75)" }]}>
-            <ActivityIndicator color={cam.white} size="large" />
-            <Text weight={600} color={cam.white} accessibilityLiveRegion="polite">
-              {phase === "uploading" ? "Uploading…" : "Reading the label…"}
-            </Text>
-          </View>
-        )}
+        {busy && <CameraBusy label={phase === "uploading" ? "Uploading…" : "Reading the label…"} />}
       </View>
 
-      {error && (
-        <Text weight={600} size={13} color="#ffb68a" center style={{ marginHorizontal: 20, marginTop: 12 }}>
-          {error}
-        </Text>
-      )}
+      {error && <CameraError message={error} />}
 
       <View style={[styles.controls, { paddingBottom: Math.max(28, insets.bottom + 8) }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Pick from gallery"
-          onPress={pick}
-          disabled={busy}
-          style={styles.side}
-        >
-          <Images size={24} color={cam.white} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+        <CameraSideButton icon={Images} accessibilityLabel="Pick from gallery" onPress={pick} disabled={busy} />
+        <Shutter
           accessibilityLabel="Take photo of label"
           onPress={shoot}
           disabled={busy || !granted || !ready}
-          style={[styles.shutter, (busy || !granted) && { opacity: 0.5 }]}
-        >
-          <View style={styles.shutterInner} />
-        </Pressable>
+          dimmed={busy || !granted}
+        />
         <View style={{ width: 48 }} />
       </View>
 
-      <AiLimitSheet open={limitOpen} onClose={() => setLimitOpen(false)} params={choice} usage={limit} />
+      <AiLimitSheet {...limit.sheet} params={choice} />
     </View>
   );
 }
@@ -166,7 +121,7 @@ export default function LabelCamera() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cam.panel },
   top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12 },
-  icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  spacer: { width: 44, height: 44 },
   viewfinder: {
     flex: 1,
     marginHorizontal: 20,
@@ -175,7 +130,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "rgba(255,255,255,0.05)",
   },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 32 },
   frame: {
     position: "absolute",
     left: 40,
@@ -203,22 +157,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 24,
   },
-  side: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutter: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutterInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: cam.brandGlow },
 });

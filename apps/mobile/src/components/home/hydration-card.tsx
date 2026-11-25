@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
-import { FieldError, Text } from "@/components/ui";
-import { useWater } from "@/components/water-card";
+import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, glassRow, setGlassMl, useGlassMl } from "@/lib/glass-size";
 import { makeStyles, radius, useColors } from "@/lib/theme";
+import { useWater } from "@/lib/use-water";
 
 const L = (ml: number) => (Math.round(ml / 100) / 10).toFixed(1);
 
@@ -25,7 +25,6 @@ export function HydrationCard() {
   const glass = useGlassMl();
   const [sizing, setSizing] = useState(false);
   const d = water.water.data;
-  const busy = water.add.isPending || water.undo.isPending;
   const error = water.add.error ?? water.undo.error;
 
   return (
@@ -34,7 +33,7 @@ export function HydrationCard() {
         <Text size={13} weight={500} color="rgba(255,255,255,0.85)">
           Current hydration
         </Text>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel={`Glass size ${glass} ml. Change`}
           onPress={() => setSizing(true)}
@@ -46,7 +45,7 @@ export function HydrationCard() {
             = {glass} ml
           </Text>
           <Pencil size={13} color="rgba(255,255,255,0.85)" />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {d ? (
@@ -61,12 +60,10 @@ export function HydrationCard() {
             consumedMl={d.consumedMl}
             targetMl={d.targetMl}
             glass={glass}
-            busy={busy}
-            canUndo={d.logs.length > 0}
+            canUndo={Boolean(water.undoable)}
             onAdd={() => water.add.mutate(glass)}
             onUndo={() => {
-              const last = d.logs.at(-1);
-              if (last) water.undo.mutate(last.id);
+              if (water.undoable) water.undo.mutate(water.undoable.id);
             }}
           />
           {error && <FieldError>{error.message || "Couldn't save. Try again."}</FieldError>}
@@ -98,7 +95,6 @@ function Glasses({
   consumedMl,
   targetMl,
   glass,
-  busy,
   canUndo,
   onAdd,
   onUndo,
@@ -106,7 +102,6 @@ function Glasses({
   consumedMl: number;
   targetMl: number;
   glass: number;
-  busy: boolean;
   canUndo: boolean;
   onAdd: () => void;
   onUndo: () => void;
@@ -118,7 +113,6 @@ function Glasses({
       {Array.from({ length: slots }, (_, i) => {
         const full = i < filled;
         const last = full && i === filled - 1;
-        const next = i === filled;
         return (
           <Pressable
             key={i}
@@ -126,11 +120,11 @@ function Glasses({
             accessibilityLabel={
               full ? (last ? `Remove the last glass` : `Glass ${i + 1}, drunk`) : `Add a glass, ${glass} ml`
             }
-            accessibilityState={{ disabled: busy || (full && !(last && canUndo)) }}
-            disabled={busy || (full && !(last && canUndo))}
+            accessibilityState={{ disabled: full && !(last && canUndo) }}
+            disabled={full && !(last && canUndo)}
             onPress={full ? onUndo : onAdd}
             hitSlop={4}
-            style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }, busy && next && { opacity: 0.5 }]}
+            style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
           >
             <Glass full={full} size={32} />
           </Pressable>
@@ -144,7 +138,7 @@ function SizeChip({ ml, selected, onPress }: { ml: number; selected: boolean; on
   const c = useColors();
   const styles = useStyles();
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       onPress={onPress}
@@ -153,7 +147,7 @@ function SizeChip({ ml, selected, onPress }: { ml: number; selected: boolean; on
       <Text weight={600} color={selected ? c.surface : c.ink} tabular>
         {ml} ml
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

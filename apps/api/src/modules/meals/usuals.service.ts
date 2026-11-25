@@ -27,7 +27,15 @@ export class UsualsService {
   async getUsuals(userId: string, limit = 6) {
     const meals = await this.prisma.mealLog.findMany({
       where: { userId, status: "CONFIRMED", createdAt: { gte: new Date(Date.now() - 60 * DAY) } },
-      include: { items: true },
+      select: {
+        id: true,
+        mealType: true,
+        totalKcal: true,
+        totalProtein: true,
+        totalCarbs: true,
+        createdAt: true,
+        items: { select: { name: true, quantity: true, unit: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 200,
     });

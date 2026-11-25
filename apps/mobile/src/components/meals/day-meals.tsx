@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { Camera, Keyboard, Plus } from "lucide-react-native";
 import { View } from "react-native";
-import { Button, Card, MealRow, Text } from "@/components/ui";
+import { MealRow } from "@/components/meals/meal-row";
+import { AnimatedRow, Button, Card, Text } from "@/components/ui";
 import { formatInt, formatTime, MEAL_LABEL, MEAL_TYPES, mealTitle } from "@/lib/format";
 import { dayLabel } from "@/lib/meal-param";
 import { useColors } from "@/lib/theme";
@@ -61,7 +62,7 @@ export function DayMeals({ day, pastDay }: { day: Day; pastDay: string | null })
         if (meals.length === 0) return null;
         const kcal = meals.reduce((sum, m) => sum + (m.status === "CONFIRMED" ? m.totalKcal : 0), 0);
         return (
-          <View key={t} style={{ gap: 8 }}>
+          <AnimatedRow key={t} style={{ gap: 8 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
               <Text weight={600}>{MEAL_LABEL[t]}</Text>
               <Text weight={600} size={13} color={c.ink3} tabular>
@@ -69,27 +70,30 @@ export function DayMeals({ day, pastDay }: { day: Day; pastDay: string | null })
               </Text>
             </View>
             {meals.map((m) => (
-              <MealRow
-                key={m.id}
-                onPress={() => router.push(`/log/${m.id}`)}
-                photoUrl={m.photoUrl}
-                meta={`${MEAL_LABEL[m.mealType]} · ${formatTime(m.createdAt, day.timezone)}`}
-                title={mealTitle(
-                  m.items.map((i) => i.name),
-                  m.source === "TEXT" ? (m.inputText ?? "Typed meal") : "Photo",
-                )}
-                kcal={m.totalKcal}
-                status={m.status}
-              />
+              <AnimatedRow key={m.id}>
+                <MealRow
+                  onPress={() => router.push(`/log/${m.id}`)}
+                  photoUrl={m.photoUrl}
+                  meta={`${MEAL_LABEL[m.mealType]} · ${formatTime(m.createdAt, day.timezone)}`}
+                  title={mealTitle(
+                    m.items.map((i) => i.name),
+                    m.source === "TEXT" ? (m.inputText ?? "Typed meal") : "Photo",
+                  )}
+                  kcal={m.totalKcal}
+                  status={m.status}
+                />
+              </AnimatedRow>
             ))}
-          </View>
+          </AnimatedRow>
         );
       })}
 
       {day.meals.length > 0 && (
-        <Button variant="dashed" icon={Plus} onPress={() => router.push({ pathname: logPath, params: logParams() })}>
-          Log food
-        </Button>
+        <AnimatedRow>
+          <Button variant="dashed" icon={Plus} onPress={() => router.push({ pathname: logPath, params: logParams() })}>
+            Log food
+          </Button>
+        </AnimatedRow>
       )}
     </View>
   );

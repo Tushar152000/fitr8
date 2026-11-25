@@ -1,11 +1,11 @@
 import type { TrainingStateDto, TrainingType, TrainingWeekDto } from "@fitr8/contracts";
 import { Check } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { BackHeader } from "@/components/back-header";
-import { Button, Card, FieldError, Screen, Segmented, Text } from "@/components/ui";
+import { Button, Card, FieldError, PressableScale, Screen, Section, Segmented, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
-import { api } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { handlePremiumError } from "@/lib/premium";
 import { queryClient } from "@/lib/query";
 import { ACTIVITY_LABEL, GOAL_LABEL, setupSummary, TRAINING_CHOICES } from "@/lib/training";
@@ -56,7 +56,7 @@ export function TrainingSetup({
       void queryClient.invalidateQueries({ queryKey: ["water"] });
       onDone(week);
     } catch (e) {
-      if (!handlePremiumError(e)) setError(e instanceof Error ? e.message : "Couldn't build your week. Try again.");
+      if (!handlePremiumError(e)) setError(errorMessage(e, "Couldn't build your week. Try again."));
     } finally {
       setBusy(false);
     }
@@ -105,8 +105,7 @@ export function TrainingSetup({
         ))}
       </Card>
 
-      <View style={{ gap: 10 }}>
-        <Text variant="h2">How do you like to train?</Text>
+      <Section title="How do you like to train?">
         <Text size={13} color={c.ink3}>
           Pick one or more.
         </Text>
@@ -114,7 +113,7 @@ export function TrainingSetup({
           {TRAINING_CHOICES.map((o) => {
             const on = types.includes(o.value);
             return (
-              <Pressable
+              <PressableScale
                 key={o.value}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
@@ -131,31 +130,29 @@ export function TrainingSetup({
                 <Text size={12} color={c.ink3}>
                   {o.line}
                 </Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
-      </View>
+      </Section>
 
-      <View style={{ gap: 10 }}>
-        <Text variant="h2">Days a week</Text>
+      <Section title="Days a week">
         <Segmented
           label="Days a week"
           options={DAYS.map((d) => ({ value: d, label: String(d) }))}
           value={days as (typeof DAYS)[number]}
           onChange={setDays}
         />
-      </View>
+      </Section>
 
-      <View style={{ gap: 10 }}>
-        <Text variant="h2">Time per session</Text>
+      <Section title="Time per session">
         <Segmented
           label="Time per session"
           options={MINUTES.map((m) => ({ value: m, label: `${m} min` }))}
           value={minutes as (typeof MINUTES)[number]}
           onChange={setMinutes}
         />
-      </View>
+      </Section>
       {error && <FieldError>{error}</FieldError>}
     </Screen>
   );

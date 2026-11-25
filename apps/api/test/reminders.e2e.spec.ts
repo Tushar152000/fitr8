@@ -138,6 +138,22 @@ describe("reminders", () => {
 
     const list = await owner.agent.get("/api/reminders").expect(200);
     expect(list.body).toMatchObject({ max: 50, reminders: [{ id }] });
+    // No owner id or row timestamps; `crons` stays (shipped app builds read it).
+    expect(Object.keys(list.body.reminders[0]).sort()).toEqual(
+      [
+        "id",
+        "title",
+        "description",
+        "crons",
+        "enabled",
+        "prompt",
+        "summary",
+        "rules",
+        "slots",
+        "upcoming",
+        "nextAt",
+      ].sort(),
+    );
     expect((await stranger.agent.get("/api/reminders").expect(200)).body.reminders).toEqual([]);
 
     await stranger.agent.patch(`/api/reminders/${id}`).send({ enabled: false }).expect(404, {

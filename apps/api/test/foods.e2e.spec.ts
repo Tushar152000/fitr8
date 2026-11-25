@@ -164,13 +164,33 @@ describe("foods", () => {
         }),
       );
       const res = await agent.get(`/api/foods/barcode/${code}`).expect(200);
+      expect(res.body.code).toBe(code);
       expect(res.body.food).toMatchObject({
         name: `Test Cookies ${code} (Parle)`,
         source: "OPEN_FOOD_FACTS",
         verified: true,
-        barcode: code,
         servingSizeG: 30,
       });
+      // Only what the product screen reads: no aliases, fibre, veg flag, barcode, submitter or dates.
+      expect(Object.keys(res.body.food).sort()).toEqual(
+        [
+          "id",
+          "name",
+          "source",
+          "kcalPer100g",
+          "proteinPer100g",
+          "carbsPer100g",
+          "fatPer100g",
+          "isLiquid",
+          "brand",
+          "servingSizeG",
+          "servingLabel",
+          "imageUrl",
+          "sugarPer100g",
+          "sodiumMgPer100g",
+          "verified",
+        ].sort(),
+      );
       expect(fetch).toHaveBeenCalledTimes(1);
       await agent.get(`/api/foods/barcode/${code}`).expect(200);
       expect(fetch).toHaveBeenCalledTimes(1);
@@ -411,12 +431,8 @@ describe("foods", () => {
         upc: () => json(200, { items: [{ title: "Quaker Oats" }] }),
       });
       const res = await agent.get(`/api/foods/barcode/${code}`).expect(200);
-      expect(res.body.food).toMatchObject({
-        source: "USDA",
-        verified: true,
-        barcode: code,
-        kcalPer100g: 379,
-      });
+      expect(res.body).toMatchObject({ code, food: { source: "USDA", verified: true } });
+      expect(res.body.food).toMatchObject({ kcalPer100g: 379 });
       const hosts = fetch.mock.calls.map(([u]) => new URL(String(u)).hostname);
       expect(new Set(hosts)).toEqual(
         new Set([

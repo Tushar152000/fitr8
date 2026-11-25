@@ -1,18 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { History } from "lucide-react-native";
-import { Pressable, View } from "react-native";
-import { DaySwitcher } from "@/components/day-switcher";
+import { View } from "react-native";
+import { DaySwitcher } from "@/components/home/day-switcher";
 import { DayMeals } from "@/components/meals/day-meals";
 import { QueryError } from "@/components/query-error";
 import { TodaySkeleton } from "@/components/skeletons";
-import { Screen, Text } from "@/components/ui";
+import { FadeIn, PressableScale, Screen, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
 import { dayFromParam, recentDays } from "@/lib/meal-param";
 import { dayQueryFor } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
 import { makeStyles, useColors } from "@/lib/theme";
+import { usePullRefresh } from "@/lib/use-pull-refresh";
 import { showDay, useViewDay } from "@/lib/view-day";
 
 /**
@@ -27,20 +27,15 @@ export default function MealsScreen() {
   const index = viewDay ? Math.max(0, days.indexOf(viewDay)) : 0;
   const go = (i: number) => showDay(i <= 0 ? null : days[Math.min(i, days.length - 1)]);
   const isToday = index === 0;
-  const day = useQuery(dayQueryFor(isToday ? null : days[index]));
-
-  const [refreshing, setRefreshing] = useState(false);
-  const refresh = async () => {
-    setRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["day"] });
-    setRefreshing(false);
-  };
+  // Keep the last day on screen (dimmed) while the next one loads, instead of flashing a skeleton.
+  const day = useQuery({ ...dayQueryFor(isToday ? null : days[index]), placeholderData: keepPreviousData });
+  const pull = usePullRefresh(() => queryClient.invalidateQueries({ queryKey: ["day"] }));
 
   const eaten = day.data?.eaten.kcal ?? 0;
   const target = day.data?.target?.kcal;
 
   return (
-    <Screen tabBar refreshing={refreshing} onRefresh={refresh} contentStyle={{ gap: 16 }}>
+    <Screen tabBar refreshing={pull.refreshing} onRefresh={pull.onRefresh} contentStyle={{ gap: 16 }}>
       <View style={styles.header}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="h1" size={26}>
@@ -53,7 +48,7 @@ export default function MealsScreen() {
             </Text>
           )}
         </View>
-        <Pressable
+        <PressableScale
           accessibilityRole="link"
           accessibilityLabel="Past logs"
           onPress={() => router.push("/history")}
@@ -64,7 +59,7 @@ export default function MealsScreen() {
           <Text weight={600} size={15} color={c.brandText}>
             Past logs
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
 
       <DaySwitcher
@@ -81,7 +76,9 @@ export default function MealsScreen() {
       ) : day.isError ? (
         <QueryError error={day.error} onRetry={() => day.refetch()} />
       ) : (
-        <DayMeals day={day.data} pastDay={isToday ? null : days[index]} />
+        <FadeIn style={day.isPlaceholderData && { opacity: 0.6 }}>
+          <DayMeals day={day.data} pastDay={isToday ? null : days[index]} />
+        </FadeIn>
       )}
     </Screen>
   );

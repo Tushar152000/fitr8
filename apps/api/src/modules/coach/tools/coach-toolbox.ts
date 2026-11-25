@@ -84,7 +84,7 @@ export class CoachToolbox {
         run: async () => {
           const date = await today();
           const [day, water] = await Promise.all([
-            this.dashboard.getDay(userId, date),
+            this.dashboard.coachDay(userId, date),
             this.water.getDay(userId, date).catch(() => null),
           ]);
           return forModel({ ...day, water });
@@ -105,7 +105,7 @@ export class CoachToolbox {
         description:
           "Weight trend (weekly averages), body-fat estimates, the goal, target date and whether the user is on pace.",
         input: z.object({}),
-        run: async () => forModel(await this.progress.get(userId)),
+        run: async () => forModel(await this.progress.details(userId)),
       }),
       defineTool({
         name: "get_workout_today",
@@ -179,12 +179,14 @@ export class CoachToolbox {
           mealType: MealTypeSchema,
         }),
         run: async ({ description, mealType }) => {
-          const { body } = await this.meals.create(userId, {
+          const { status, body } = await this.meals.create(userId, {
             source: "TEXT",
             text: description,
             mealType,
           });
-          return forModel({ meal: body, reviewInApp: true });
+          // Queued: only the id so far. Analysed inline: the items and numbers to talk about.
+          const meal = status === 202 ? body : await this.meals.draftView(userId, body.id);
+          return forModel({ meal, reviewInApp: true });
         },
       }),
       defineTool({

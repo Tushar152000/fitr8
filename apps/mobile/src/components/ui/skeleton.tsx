@@ -1,29 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { NATIVE_DRIVER } from "@/lib/motion";
+import { NATIVE_DRIVER, useReduceMotion } from "@/lib/motion";
 import { useEffect, useState } from "react";
-import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
-  StyleSheet,
-  View,
-  type DimensionValue,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
+import { Animated, Easing, StyleSheet, View, type DimensionValue, type StyleProp, type ViewStyle } from "react-native";
 import { useColors, useScheme, type Colors, type ColorScheme } from "@/lib/theme";
-
-function useReduceMotion() {
-  const [reduce, setReduce] = useState(false);
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then(setReduce)
-      .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduce);
-    return () => sub.remove();
-  }, []);
-  return reduce;
-}
 
 export type SkeletonTone = "ground" | "card" | "dark";
 

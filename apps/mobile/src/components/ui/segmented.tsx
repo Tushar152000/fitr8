@@ -1,6 +1,7 @@
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { makeStyles, useColors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 /** Sunken track; the selected option is a raised surface. */
 export function Segmented<T extends string | number>({
@@ -21,7 +22,7 @@ export function Segmented<T extends string | number>({
       {options.map((o) => {
         const selected = o.value === value;
         return (
-          <Pressable
+          <PressableScale
             key={String(o.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -31,7 +32,7 @@ export function Segmented<T extends string | number>({
             <Text weight={600} color={selected ? c.ink : c.ink2}>
               {o.label}
             </Text>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>

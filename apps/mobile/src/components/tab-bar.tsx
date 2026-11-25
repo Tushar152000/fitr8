@@ -1,11 +1,9 @@
 import type { BottomTabBarProps } from "expo-router/tabs";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Camera, Dumbbell, LayoutGrid, MessageCircle, UtensilsCrossed, type LucideIcon } from "lucide-react-native";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "@/components/ui";
-import { OLIVE_BUTTON } from "@/lib/gradients";
+import { GradientFab, PressableScale, Text } from "@/components/ui";
 import { makeStyles, useColors } from "@/lib/theme";
 import { useViewDay } from "@/lib/view-day";
 
@@ -41,7 +39,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           const color = focused ? c.ink : c.ink3;
           const Icon = tab.icon;
           return (
-            <Pressable
+            <PressableScale
               key={route.key}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
@@ -56,10 +54,10 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               <Text weight={focused ? 700 : 500} size={11} color={color}>
                 {tab.label}
               </Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Ask your coach"
           onPress={() => router.push("/coach")}
@@ -69,19 +67,18 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           <Text weight={500} size={11} color={c.ink3}>
             Coach
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
 
-      <Pressable
+      <GradientFab
+        size={64}
+        edge
         accessibilityRole="button"
         accessibilityLabel="Log a meal"
         onPress={() => router.push(pastDay ? { pathname: "/log/type", params: { date: pastDay } } : "/log")}
-        style={({ pressed }) => [styles.camera, pressed && { transform: [{ scale: 0.96 }] }]}
       >
-        <LinearGradient {...OLIVE_BUTTON} style={styles.cameraFill}>
-          <Camera size={24} color="#ffffff" strokeWidth={2} />
-        </LinearGradient>
-      </Pressable>
+        <Camera size={24} color="#ffffff" strokeWidth={2} />
+      </GradientFab>
     </View>
   );
 }
@@ -107,15 +104,4 @@ const useStyles = makeStyles((c, shadows) => ({
     ...shadows.seg,
   },
   tab: { minWidth: 56, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 3 },
-  // A dark lift, not the old purple FAB glow: the v2 camera is black glass with an olive edge.
-  camera: { width: 64, height: 64, borderRadius: 32, boxShadow: "0 8px 18px rgba(20, 24, 0, 0.32)" },
-  cameraFill: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(194,224,74,0.5)", // accent/highlight edge on the dark glass
-  },
 }));

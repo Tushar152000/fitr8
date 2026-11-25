@@ -198,14 +198,14 @@ export class PlanService {
    * metric (the app also uses these to prefill onboarding when the goal is edited).
    */
   async getPlan(userId: string) {
-    let computed;
-    try {
-      computed = await this.targets.computePlan(userId);
-    } catch {
-      throw new AppError(404, "Finish onboarding first");
-    }
+    // The target is keyed by the user's local date, read in parallel with the plan maths.
+    const [computed, target] = await Promise.all([
+      this.targets.computePlan(userId).catch(() => {
+        throw new AppError(404, "Finish onboarding first");
+      }),
+      this.users.today(userId).then((today) => this.targets.currentTarget(userId, today)),
+    ]);
     const { plan, metric, goal, profile, bodyFatPct } = computed;
-    const target = await this.targets.currentTarget(userId, localDate(profile.timezone));
     if (!target) throw new AppError(404, "Finish onboarding first");
 
     return {

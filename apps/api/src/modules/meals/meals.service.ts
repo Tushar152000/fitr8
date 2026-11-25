@@ -11,14 +11,16 @@ import type {
 } from "@fitr8/contracts";
 import { parseDateOnly } from "@fitr8/domain/dates";
 import { sumMacros } from "@fitr8/domain/nutrition";
+import type { MealLogStatus } from "@fitr8/db";
 import { AppError, notFound } from "../../common/errors.js";
+import { visibleFoodTo } from "../foods/food-visibility.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { JobQueue, type EnqueueResult } from "../../infra/queue/job-queue.service.js";
 import { StorageService } from "../../infra/storage/storage.service.js";
 import { FOOD_EXTRACTOR, type FoodExtractor } from "../ai/index.js";
 import { UsersService } from "../users/users.service.js";
 import { MEAL_ANALYSIS_QUEUE, type MealAnalysisData } from "./meal-analysis.job.js";
-import { MealItemsService, type BuiltItem } from "./meal-items.service.js";
+import { MealItemsService, PRICING_SELECT, type BuiltItem } from "./meal-items.service.js";
 import { ScanQuotaService } from "./scan-quota.service.js";
 import { UsualsService } from "./usuals.service.js";
 
@@ -26,6 +28,79 @@ import { UsualsService } from "./usuals.service.js";
 export interface StatusResult<T> {
   status: number;
   body: T;
+}
+
+type CreatedMeal = { id: string; status: MealLogStatus };
+
+/** A meal as the coach sees a draft: what was found, the amounts and the numbers. */
+const MEAL_DRAFT_SELECT = {
+  id: true,
+  date: true,
+  mealType: true,
+  source: true,
+  inputText: true,
+  status: true,
+  aiNotes: true,
+  error: true,
+  totalKcal: true,
+  totalProtein: true,
+  totalCarbs: true,
+  totalFat: true,
+  items: {
+    select: {
+      name: true,
+      quantity: true,
+      unit: true,
+      grams: true,
+      kcal: true,
+      proteinG: true,
+      carbsG: true,
+      fatG: true,
+      approximate: true,
+    },
+  },
+} as const;
+
+/** GET /meals/:id: what the review screen reads (polled every second while analysing). */
+const MEAL_DETAIL_SELECT = {
+  id: true,
+  date: true,
+  mealType: true,
+  source: true,
+  inputText: true,
+  status: true,
+  photoKey: true,
+  aiRaw: true,
+  aiNotes: true,
+  note: true,
+  error: true,
+  totalKcal: true,
+  createdAt: true,
+  items: {
+    select: {
+      id: true,
+      foodId: true,
+      name: true,
+      quantity: true,
+      unit: true,
+      grams: true,
+      kcal: true,
+      proteinG: true,
+      carbsG: true,
+      fatG: true,
+      aiConfidence: true,
+      approximate: true,
+      edited: true,
+      isLiquid: true,
+    },
+  },
+} as const;
+
+/** Clients read only `hiddenFatLikely` from the model's output (it turns the ghee switch on). */
+function aiHints(raw: unknown): { hiddenFatLikely?: boolean } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const hidden = (raw as { hiddenFatLikely?: unknown }).hiddenFatLikely;
+  return typeof hidden === "boolean" ? { hiddenFatLikely: hidden } : {};
 }
 
 /** Meal logging: photo/text/manual meals, AI analysis hand-off, confirmation, and no-AI quick logs. */
@@ -52,9 +127,10 @@ export class MealsService {
   /**
    * Step 2: create a meal log from a photo key or text, then analyse it (queued, or inline without Redis).
    * MANUAL creates an empty READY log with no AI call, for the user to fill in.
-   * Queued → 202 `{ id, status: "PENDING" }` (poll GET /meals/:id); inline → 201 with the analysed log.
+   * Queued → 202 `{ id, status: "PENDING" }` (poll GET /meals/:id); inline → 201 `{ id, status }`.
    */
-  async create(userId: string, input: CreateMealInput) {
+  async create(userId: string, input: CreateMealInput): Promise<StatusResult<CreatedMeal>> {
+    const select = { id: true, status: true } as const;
     if (input.source === "PHOTO" && !input.photoKey.startsWith(`meals/${userId}/`)) {
       throw new AppError(403, "Photo does not belong to you");
     }
@@ -68,7 +144,7 @@ export class MealsService {
     if (input.source === "MANUAL") {
       const log = await this.prisma.mealLog.create({
         data: { userId, date, mealType: input.mealType, source: "TEXT", status: "READY" },
-        include: { items: true },
+        select,
       });
       return { status: 201, body: log };
     }
@@ -82,15 +158,13 @@ export class MealsService {
         photoKey: input.source === "PHOTO" ? input.photoKey : null,
         inputText: input.source === "TEXT" ? input.text : null,
       },
+      select: { id: true },
     });
 
     if ((await this.analyze(log.id, log.id)) === "queued") {
       return { status: 202, body: { id: log.id, status: "PENDING" as const } };
     }
-    const result = await this.prisma.mealLog.findUnique({
-      where: { id: log.id },
-      include: { items: true },
-    });
+    const result = await this.prisma.mealLog.findUnique({ where: { id: log.id }, select });
     return { status: 201, body: result! }; // just created; never null
   }
 
@@ -108,9 +182,24 @@ export class MealsService {
 
   /** One meal with a 5-minute photo link. Poll this while status is PENDING/ANALYZING. */
   async get(userId: string, id: string) {
-    const log = await this.ownedLog(userId, id);
-    const photoUrl = log.photoKey ? await this.storage.presignRead(log.photoKey, 300) : null;
-    return { ...log, photoUrl };
+    const log = await this.prisma.mealLog.findFirst({
+      where: { id, userId },
+      select: MEAL_DETAIL_SELECT,
+    });
+    if (!log) throw notFound("Meal");
+    const { photoKey, aiRaw, ...rest } = log;
+    const photoUrl = photoKey ? await this.storage.presignRead(photoKey, 300) : null;
+    return { ...rest, aiRaw: aiHints(aiRaw), photoUrl };
+  }
+
+  /** A meal as the coach describes a draft: items, amounts and the numbers (no raw model output). */
+  async draftView(userId: string, id: string) {
+    const log = await this.prisma.mealLog.findFirst({
+      where: { id, userId },
+      select: MEAL_DRAFT_SELECT,
+    });
+    if (!log) throw notFound("Meal");
+    return log;
   }
 
   /** Step 3: replace the AI's items with the user's confirmed list and recompute totals. */
@@ -119,25 +208,24 @@ export class MealsService {
     this.assertNotAnalysing(log.status);
 
     const byId = new Map(log.items.map((e) => [e.id, e]));
-    const items = await Promise.all(
-      input.map(async (i) => {
-        const prev = i.id ? byId.get(i.id) : undefined;
-        // Keep the user's amount; estimated items keep their own nutrition (no food row to price from).
-        const built = await this.items.buildItem(i, { trustGrams: true });
-        const edited =
-          !prev ||
-          prev.name !== built.name ||
-          prev.quantity !== built.quantity ||
-          prev.unit !== built.unit ||
-          prev.grams !== built.grams;
-        return {
-          ...built,
-          aiConfidence: prev?.aiConfidence ?? null,
-          aiGrams: prev?.aiGrams ?? null,
-          edited,
-        };
-      }),
-    );
+    // Keep the user's amount; estimated items keep their own nutrition (no food row to price from).
+    const builtItems = await this.items.buildItems(input, { trustGrams: true });
+    const items = input.map((i, index) => {
+      const prev = i.id ? byId.get(i.id) : undefined;
+      const built = builtItems[index]!;
+      const edited =
+        !prev ||
+        prev.name !== built.name ||
+        prev.quantity !== built.quantity ||
+        prev.unit !== built.unit ||
+        prev.grams !== built.grams;
+      return {
+        ...built,
+        aiConfidence: prev?.aiConfidence ?? null,
+        aiGrams: prev?.aiGrams ?? null,
+        edited,
+      };
+    });
     const totals = sumMacros(items);
 
     const [, , confirmed] = await this.prisma.$transaction([
@@ -155,15 +243,16 @@ export class MealsService {
           totalCarbs: totals.carbsG,
           totalFat: totals.fatG,
         },
-        include: { items: true },
+        select: { id: true, status: true },
       }),
     ]);
     return confirmed;
   }
 
+  /** Only the owner's meal; its items go with it (cascade). */
   async remove(userId: string, id: string) {
-    await this.ownedLog(userId, id);
-    await this.prisma.mealLog.delete({ where: { id } });
+    const { count } = await this.prisma.mealLog.deleteMany({ where: { id, userId } });
+    if (!count) throw notFound("Meal");
   }
 
   /**
@@ -207,15 +296,17 @@ export class MealsService {
 
   /** Log known foods as one confirmed meal (e.g. the pre-workout snack). No AI, no scan used. */
   async logItems(userId: string, { mealType, items, date }: LogItemsInput) {
+    // Unreviewed label scans are visible (and loggable) to their submitter only.
     const foods = await this.prisma.food.findMany({
-      where: { id: { in: items.map((i) => i.foodId) } },
+      where: { id: { in: items.map((i) => i.foodId) }, ...visibleFoodTo(userId) },
+      select: PRICING_SELECT,
     });
     if (foods.length !== new Set(items.map((i) => i.foodId)).size) throw notFound("Food");
     const byId = new Map(foods.map((f) => [f.id, f]));
-    const built = await Promise.all(
-      items.map((i) =>
-        this.items.buildItem({ ...i, name: byId.get(i.foodId)!.name }, { trustGrams: true }),
-      ),
+    const built = await this.items.buildItems(
+      items.map((i) => ({ ...i, name: byId.get(i.foodId)!.name })),
+      { trustGrams: true },
+      foods,
     );
     const log = await this.createConfirmed(userId, {
       mealType,
@@ -229,14 +320,12 @@ export class MealsService {
   /** Log one known food straight to a meal (barcode product "Add to snack"). No AI, no scan used. */
   async quickAdd(userId: string, input: QuickAddInput) {
     const day = await this.users.mealDate(userId, input.date); // 400 before any lookup
-    const food = await this.prisma.food.findUnique({ where: { id: input.foodId } });
     // Unreviewed label scans are visible to their submitter only.
-    if (
-      !food ||
-      (food.source === "LABEL_SCAN" && !food.verified && food.submittedById !== userId)
-    ) {
-      throw notFound("Food");
-    }
+    const food = await this.prisma.food.findFirst({
+      where: { id: input.foodId, ...visibleFoodTo(userId) },
+      select: PRICING_SELECT,
+    });
+    if (!food) throw notFound("Food");
     const item = await this.items.buildItem(
       {
         foodId: food.id,
@@ -246,6 +335,7 @@ export class MealsService {
         grams: input.grams,
       },
       { trustGrams: true },
+      [food],
     );
     const log = await this.createConfirmed(userId, {
       mealType: input.mealType,
@@ -295,6 +385,7 @@ export class MealsService {
         totalFat: totals.fatG,
         items: { create: input.items },
       },
+      select: { id: true },
     });
   }
 
@@ -322,12 +413,9 @@ export class MealsService {
         },
       });
       if (!result.data.isFood) return [];
-      return Promise.all(
-        result.data.items.map(async (d) => ({
-          ...(await this.items.buildItem({ ...d, isLiquid: d.isDrink })),
-          aiConfidence: d.confidence,
-        })),
-      );
+      const items = result.data.items;
+      const built = await this.items.buildItems(items.map((d) => ({ ...d, isLiquid: d.isDrink })));
+      return built.map((b, i) => ({ ...b, aiConfidence: items[i]!.confidence }));
     } catch (err) {
       await this.prisma.aiCall.create({
         data: {

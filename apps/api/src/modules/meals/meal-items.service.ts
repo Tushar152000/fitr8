@@ -68,6 +68,32 @@ export interface ItemInput {
 
 export type BuiltItem = Awaited<ReturnType<MealItemsService["buildItem"]>>;
 
+/** The columns pricing reads (no aliases/barcode/timestamps). */
+export const PRICING_SELECT = {
+  id: true,
+  name: true,
+  kcalPer100g: true,
+  proteinPer100g: true,
+  carbsPer100g: true,
+  fatPer100g: true,
+  isLiquid: true,
+  units: { select: { unit: true, grams: true } },
+} as const;
+
+/** A food as pricing needs it. */
+export interface PricedFood {
+  id: string;
+  name: string;
+  kcalPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  isLiquid: boolean;
+  units: { unit: string; grams: number }[];
+}
+
+type BuildOptions = { trustGrams?: boolean | "containers" };
+
 /** Prices meal items from the food database (read-only), falling back to the model's estimate. */
 @Injectable()
 export class MealItemsService {
@@ -86,10 +112,37 @@ export class MealItemsService {
           { name: { endsWith: ` ${n}`, mode: "insensitive" } },
         ],
       },
-      include: { units: true },
+      select: { ...PRICING_SELECT, aliases: true },
       take: 25,
     });
     return pickFood(n, candidates);
+  }
+
+  /**
+   * Price several items with one query for every food id (no query per item). `known` are foods
+   * the caller already loaded (with their units); items without a food id are matched by name.
+   */
+  async buildItems(inputs: ItemInput[], options: BuildOptions = {}, known: PricedFood[] = []) {
+    const byId = new Map(known.map((f) => [f.id, f]));
+    const missing = [
+      ...new Set(inputs.flatMap((i) => (i.foodId && !byId.has(i.foodId) ? [i.foodId] : []))),
+    ];
+    if (missing.length) {
+      const foods = await this.prisma.food.findMany({
+        where: { id: { in: missing } },
+        select: PRICING_SELECT,
+      });
+      for (const f of foods) byId.set(f.id, f);
+    }
+    return Promise.all(
+      inputs.map(async (i) =>
+        this.price(
+          i,
+          i.foodId ? (byId.get(i.foodId) ?? null) : await this.matchFood(i.name),
+          options,
+        ),
+      ),
+    );
   }
 
   /**
@@ -98,14 +151,12 @@ export class MealItemsService {
    * (a user-set amount), `"containers"` only for units whose size varies (cup, glass, bowl…), so a
    * sachet or teaspoon keeps its standard weight.
    */
-  async buildItem(
-    input: ItemInput,
-    { trustGrams = false }: { trustGrams?: boolean | "containers" } = {},
-  ) {
-    const food = input.foodId
-      ? await this.prisma.food.findUnique({ where: { id: input.foodId }, include: { units: true } })
-      : await this.matchFood(input.name);
+  async buildItem(input: ItemInput, options: BuildOptions = {}, known: PricedFood[] = []) {
+    const [item] = await this.buildItems([input], options, known);
+    return item!;
+  }
 
+  private price(input: ItemInput, food: PricedFood | null, { trustGrams = false }: BuildOptions) {
     const unitGrams = food?.units.find((u) => u.unit === normalize(input.unit))?.grams;
     const unit = normalize(input.unit);
     const keepGiven =

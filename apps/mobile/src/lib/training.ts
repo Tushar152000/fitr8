@@ -1,9 +1,15 @@
 /**
- * Workout tab helpers (UI only): day-type colours and labels, effort and goal wording. The rules
- * live on the server (@fitr8/domain/training, GET /api/training/week).
+ * Workout tab helpers: day-type colours and labels, effort and goal wording, the gym session's
+ * rep and role labels, and logging a finished session. The rules live on the server
+ * (@fitr8/domain/training, GET /api/training/week).
  */
-import type { DayType, Effort, TrainingGoal, TrainingType } from "@fitr8/contracts";
+import type { DayType, Effort, TrainingDayDto, TrainingGoal, TrainingType } from "@fitr8/contracts";
+import { track } from "./analytics";
+import { api } from "./api";
+import { shortDate, weekdayName } from "./dates";
 import type { Colors } from "./palette";
+import { queryClient } from "./query";
+import type { AdjustedExercise } from "./types";
 
 export const DAY_LABEL: Record<DayType, string> = {
   gym: "Gym",
@@ -70,18 +76,47 @@ export const kcalText = (n: number) => `~${new Intl.NumberFormat("en-IN").format
 
 /** "Week of 23 Nov" for a Monday YYYY-MM-DD. */
 export function weekOf(start: string): string {
-  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }).format(
-    new Date(`${start}T00:00:00Z`),
-  );
+  return shortDate(start);
 }
 
 /** One-letter weekday (M T W T F S S) for a YYYY-MM-DD. */
-export const weekdayLetter = (ymd: string) =>
-  new Intl.DateTimeFormat("en-IN", { weekday: "narrow", timeZone: "UTC" }).format(new Date(`${ymd}T00:00:00Z`));
+export const weekdayLetter = (ymd: string) => weekdayName(ymd, "narrow");
 
 /** "{days} days of {types}, {minutes} min each, plus active rest days." (16b live summary). */
 export function setupSummary(types: TrainingType[], days: number, minutes: number): string {
   const names = types.map((t) => TRAINING_CHOICES.find((c) => c.value === t)!.label.toLowerCase());
   const list = names.length <= 1 ? (names[0] ?? "training") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
   return `${days} days of ${list}, ${minutes} min each, plus active rest days.`;
+}
+
+/** Button wording per guided day type (16d); gym and rest days have none. */
+export const SESSION_VERB: Partial<Record<DayType, { start: string; done: string; did: string }>> = {
+  run: { start: "Start run", done: "Finish run", did: "I already ran · log it" },
+  hiit: { start: "Start intervals", done: "Finish intervals", did: "I already did it · log it" },
+  cycle: { start: "Start ride", done: "Finish ride", did: "I already rode · log it" },
+  yoga: { start: "Start flow", done: "Finish flow", did: "I already did it · log it" },
+  walk: { start: "Start walk", done: "Finish walk", did: "I already walked · log it" },
+};
+
+/** Whole minutes, 1–300 (the training log's range). */
+export const sessionMinutes = (minutes: number) => Math.min(300, Math.max(1, Math.round(minutes)));
+
+/** Whole minutes since a start time, 1–300. */
+export const minutesSince = (start: number) => sessionMinutes((Date.now() - start) / 60_000);
+
+/** "8–12" or "30–45 s" for a timed exercise. */
+export const repsLabel = (e: { repMin: number; repMax: number; timed: boolean }) =>
+  `${e.repMin}–${e.repMax}${e.timed ? " s" : ""}`;
+
+export const roleLabel = (role: AdjustedExercise["role"]) =>
+  role === "main" ? "Main lift" : role === "secondary" ? "Second lift" : "Accessory";
+
+/** Logs a day's session (a rest day counts as a walk) and refreshes the week. */
+export async function logSession(day: TrainingDayDto, minutes: number, distanceKm?: number) {
+  const type = day.type === "rest" ? "walk" : day.type;
+  await api("/api/training/logs", {
+    json: { date: day.date, type, minutes, ...(distanceKm ? { distanceKm } : {}) },
+  });
+  track("training_session_logged", { type, minutes });
+  await queryClient.invalidateQueries({ queryKey: ["training"] });
 }

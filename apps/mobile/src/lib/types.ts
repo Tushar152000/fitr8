@@ -9,7 +9,6 @@ import type {
   MeDto,
   MealItemDto,
   ProfileDto,
-  SnackPickDto,
   TodayWorkoutDto,
   WaterDayDto,
 } from "@fitr8/contracts";
@@ -39,7 +38,6 @@ export type MealItem = MealItemDto;
 /** A meal as the Today screen gets it (GET /api/dashboard). */
 export type Meal = DashboardMealDto;
 export type Day = DashboardDto;
-export type SnackPick = SnackPickDto;
 export type TodayWorkout = TodayWorkoutDto;
 /** GET /api/water */
 export type WaterDay = WaterDayDto;

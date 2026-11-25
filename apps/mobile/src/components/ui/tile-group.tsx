@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 export interface TileOption<T extends string | number> {
   value: T;
@@ -29,7 +30,7 @@ export function TileGroup<T extends string | number>({
       {options.map((o) => {
         const selected = o.value === value;
         return (
-          <Pressable
+          <PressableScale
             key={String(o.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
@@ -45,7 +46,7 @@ export function TileGroup<T extends string | number>({
                 {o.sub}
               </Text>
             )}
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>

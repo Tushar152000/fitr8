@@ -33,11 +33,6 @@ function load(): Firebase | null {
   return firebase;
 }
 
-/** True when this build reports to Google Analytics. */
-export function analyticsEnabled(): boolean {
-  return load() !== null;
-}
-
 export function track<E extends AnalyticsEventName>(name: E, params: AnalyticsEvents[E]): void {
   const fb = load();
   if (!fb) return;

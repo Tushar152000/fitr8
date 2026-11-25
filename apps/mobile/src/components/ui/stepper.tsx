@@ -1,8 +1,9 @@
 import { Minus, Plus } from "lucide-react-native";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { formatQty } from "@/lib/format";
 import { fade, makeStyles, radius, useColors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 /** −/+ stepper with 44 px buttons on a sunken track. */
 export function Stepper({
@@ -27,7 +28,7 @@ export function Stepper({
   const canMore = value + step <= max + 1e-9;
   return (
     <View style={styles.track} accessibilityLabel={label}>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={`Less ${label}`}
         disabled={!canLess}
@@ -35,11 +36,11 @@ export function Stepper({
         style={styles.btn}
       >
         <Minus size={20} color={canLess ? c.ink : fade(c.ink3, 0.5)} strokeWidth={2} />
-      </Pressable>
+      </PressableScale>
       <Text weight={600} tabular center style={{ minWidth: 32 }} accessibilityLiveRegion="polite">
         {formatQty(value)}
       </Text>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={`More ${label}`}
         disabled={!canMore}
@@ -47,7 +48,7 @@ export function Stepper({
         style={styles.btn}
       >
         <Plus size={20} color={canMore ? c.ink : fade(c.ink3, 0.5)} strokeWidth={2} />
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }

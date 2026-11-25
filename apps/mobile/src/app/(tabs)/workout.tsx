@@ -3,11 +3,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { QueryError } from "@/components/query-error";
 import { WorkoutSkeleton } from "@/components/skeletons";
-import { Screen } from "@/components/ui";
+import { FadeIn, Screen } from "@/components/ui";
 import { WorkoutLocked } from "@/components/workout/locked";
 import { TrainingSetup } from "@/components/workout/setup";
 import { TrainingWeekView } from "@/components/workout/week";
 import { billingQuery, trainingStateQuery, trainingWeekQuery } from "@/lib/queries";
+import { usePullRefresh } from "@/lib/use-pull-refresh";
 
 /**
  * The Workout tab (spec "Workout unlock"). Free → 16a (locked, with the user's own numbers).
@@ -34,6 +35,7 @@ function PremiumWorkouts() {
   const [start, setStart] = useState<string | null>(null);
   const hasProfile = Boolean(state.data?.profile);
   const week = useQuery({ ...trainingWeekQuery(start), enabled: hasProfile, placeholderData: (prev) => prev });
+  const pull = usePullRefresh(() => Promise.all([state.refetch(), week.refetch()]));
 
   if (state.isPending) return <Loading />;
   if (state.isError)
@@ -51,15 +53,11 @@ function PremiumWorkouts() {
       </Screen>
     );
   return (
-    <Screen
-      tabBar
-      refreshing={week.isRefetching && !week.isPlaceholderData}
-      onRefresh={() => {
-        void state.refetch();
-        void week.refetch();
-      }}
-    >
-      <TrainingWeekView key={week.data.start} week={week.data} onWeek={setStart} />
+    <Screen tabBar refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
+      {/* Keyed by week: the arrows cross-fade to the new week once it has loaded. */}
+      <FadeIn key={week.data.start} style={[{ gap: 24 }, week.isPlaceholderData && { opacity: 0.6 }]}>
+        <TrainingWeekView week={week.data} onWeek={setStart} />
+      </FadeIn>
     </Screen>
   );
 }

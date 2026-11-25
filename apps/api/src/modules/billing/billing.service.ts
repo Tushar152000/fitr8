@@ -64,7 +64,10 @@ export class BillingService {
   }
 
   private async entitlement(userId: string) {
-    return this.prisma.entitlement.findUnique({ where: { userId } });
+    return this.prisma.entitlement.findUnique({
+      where: { userId },
+      select: { proUntil: true, lifetime: true, willRenew: true, store: true, productId: true },
+    });
   }
 
   async plan(userId: string): Promise<PlanName> {
@@ -73,7 +76,10 @@ export class BillingService {
 
   /** The caller's plan and today's limits, for quotas (scans, coach, label scans). */
   async limits(userId: string) {
-    const plan = await this.plan(userId);
+    return this.limitsFor(await this.plan(userId));
+  }
+
+  private limitsFor(plan: PlanName) {
     return {
       plan,
       ...dailyLimits(plan, {
@@ -83,10 +89,12 @@ export class BillingService {
     };
   }
 
+  /** GET /billing: one entitlement read gives the plan, renewal and limits. */
   async billing(userId: string): Promise<BillingDto> {
     const row = await this.entitlement(userId);
-    const { plan, scans, coach, labelScans, barcode, reminders, workouts } =
-      await this.limits(userId);
+    const { plan, scans, coach, labelScans, barcode, reminders, workouts } = this.limitsFor(
+      planOf(row),
+    );
     return {
       plan,
       testPurchases: this.testPurchases,
@@ -217,7 +225,7 @@ export class BillingService {
 
   /** Stores an access change unless a newer one is already stored. Unknown users are ignored. */
   private async apply(userId: string, change: AccessChange, at: Date, meta: Meta) {
-    const current = await this.entitlement(userId);
+    const current = await this.prisma.entitlement.findUnique({ where: { userId } });
     if (current && current.syncedAt > at) return;
     const data = {
       proUntil: change.proUntil,

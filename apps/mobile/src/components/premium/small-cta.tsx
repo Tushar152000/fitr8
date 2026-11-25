@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { ArrowRight } from "lucide-react-native";
-import { Pressable, View } from "react-native";
-import { Text } from "@/components/ui";
+import { View } from "react-native";
+import { PressableScale, Text } from "@/components/ui";
 import { OLIVE_BUTTON } from "@/lib/gradients";
 import { makeStyles } from "@/lib/theme";
 
@@ -39,15 +39,9 @@ export function SmallCta({
     );
   if (!onPress) return pill;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      hitSlop={4}
-      style={({ pressed }) => pressed && { transform: [{ scale: 0.97 }] }}
-    >
+    <PressableScale accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={4} scaleTo={0.97}>
       {pill}
-    </Pressable>
+    </PressableScale>
   );
 }
 
