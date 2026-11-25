@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Link2,
   LogOut,
+  MessageSquareText,
   Tags,
   UserRound,
   Users,
@@ -44,6 +45,8 @@ const SECTIONS: {
   href: string;
   items: NavItem[];
   action?: React.ReactNode;
+  /** Hide the whole group (e.g. Feedback is admins only). */
+  show?: (me: AdminMeDto) => boolean;
 }[] = [
   {
     key: "blog",
@@ -75,17 +78,25 @@ const SECTIONS: {
       { href: "/admin/blog/profile", label: "Author profile", icon: UserRound },
     ],
   },
+  {
+    key: "feedback",
+    label: "Support",
+    href: "/admin/feedback",
+    show: (m) => m.sections.feedback.read,
+    items: [{ href: "/admin/feedback", label: "Feedback", icon: MessageSquareText }],
+  },
 ];
 
 /** Admin sidebar (lg+) and the scrolling top bar on smaller screens. Active = brand tint + left bar. */
 export function AdminNav({ me }: { me: AdminMeDto }) {
   const pathname = usePathname();
   const visible = (items: NavItem[]) => items.filter((n) => !n.show || n.show(me));
+  const sections = SECTIONS.filter((s) => !s.show || s.show(me));
   // Section roots (/admin, /admin/blog) are active only on themselves; others also on sub-pages.
-  const roots = new Set(["/admin", ...SECTIONS.map((s) => s.href)]);
+  const roots = new Set(["/admin", ...sections.map((s) => s.href)]);
   const active = (href: string) =>
     roots.has(href) ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  const section = SECTIONS.find((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
+  const section = sections.find((s) => pathname === s.href || pathname.startsWith(`${s.href}/`));
 
   const link = ({ href, label, icon: Icon }: NavItem) => (
     <Link
@@ -113,7 +124,7 @@ export function AdminNav({ me }: { me: AdminMeDto }) {
         </Link>
         <nav className="mt-6 flex flex-col gap-1" aria-label="Admin">
           {visible(GENERAL).map(link)}
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <div key={s.key} className="mt-5 flex flex-col gap-1">
               <p className="px-3 text-[11px] font-bold tracking-[0.08em] text-ink-3 uppercase">
                 {s.label}
@@ -172,7 +183,7 @@ export function AdminNav({ me }: { me: AdminMeDto }) {
             ),
           )}
           {!section &&
-            SECTIONS.map((s) => (
+            sections.map((s) => (
               <Link
                 key={s.key}
                 href={s.href}

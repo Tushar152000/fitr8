@@ -32,11 +32,11 @@ export function Logo({ size = 32, onDark = false }: { size?: number; onDark?: bo
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }} accessibilityLabel="FITR8">
       <LogoMark size={size} onDark={onDark} />
       <Text
-        style={{ fontFamily: fonts.display700, fontSize, lineHeight: fontSize * 1.1, letterSpacing: -0.02 * fontSize }}
+        style={{ fontFamily: fonts.brand700, fontSize, lineHeight: fontSize * 1.1, letterSpacing: -0.02 * fontSize }}
         color={onDark ? c.white : c.ink}
       >
         FIT
-        <Text style={{ fontFamily: fonts.display700, fontSize }} color={c.brandText}>
+        <Text style={{ fontFamily: fonts.brand700, fontSize }} color={c.brandText}>
           R8
         </Text>
       </Text>

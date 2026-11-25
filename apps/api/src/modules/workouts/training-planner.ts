@@ -5,6 +5,7 @@ import { weekStart } from "@fitr8/domain/dates";
 import { ageFromBirthDate } from "@fitr8/domain/nutrition";
 import {
   buildTrainingWeek,
+  caloriePhase,
   type TrainingGoal,
   type TrainingType,
   type TrainingWeek,
@@ -20,6 +21,13 @@ const GOAL: Record<string, TrainingGoal> = {
   MUSCLE_GAIN: "gain",
   RECOMPOSITION: "maintain",
 };
+
+/**
+ * Bump when `buildTrainingWeek`'s output changes for the same inputs (wording, templates), so this
+ * week and later ones are rebuilt once; past weeks keep what was stored. 2: "deficit" wording
+ * follows the deficit flag (2026-11-26).
+ */
+const WEEK_RULES = 2;
 
 export const toTrainingTypes = (types: TrainingProfile["types"]): TrainingType[] =>
   types.map((t) => t.toLowerCase() as TrainingType);
@@ -55,6 +63,8 @@ export interface PlannedWeek {
   profile: TrainingProfile;
   goal: TrainingGoal;
   weightKg: number;
+  /** Eating below maintenance this week (rest-day cardio and the hard-session cap follow it). */
+  deficit: boolean;
 }
 
 /**
@@ -89,8 +99,10 @@ export class TrainingPlanner {
         select: { inputsKey: true, plan: true },
       }),
     ]);
-    const inputsKey = createHash("sha256").update(JSON.stringify(input)).digest("hex");
-    const meta = { profile, goal: input.goal, weightKg: input.weightKg };
+    const inputsKey = createHash("sha256")
+      .update(JSON.stringify({ rules: WEEK_RULES, input }))
+      .digest("hex");
+    const meta = { profile, goal: input.goal, weightKg: input.weightKg, deficit: input.deficit };
 
     const past = monday.getTime() < weekStart(today).getTime();
     if (stored && (stored.inputsKey === inputsKey || past)) {
@@ -132,7 +144,8 @@ export class TrainingPlanner {
       daysPerWeek: profile.daysPerWeek,
       sessionMinutes: profile.sessionMinutes,
       goal: GOAL[goal.type] ?? "maintain",
-      deficit: !restricted && target.kcal < plan.tdee * 0.95,
+      // Same rule as the strength engine's phase (caloriePhase), so gym and rest days agree.
+      deficit: !restricted && caloriePhase(target.kcal, plan.tdee) === "deficit",
       weightKg: metric.weightKg,
       experience: body.experience,
       restricted,

@@ -55,7 +55,7 @@ function PremiumWorkouts() {
   return (
     <Screen tabBar refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
       {/* Keyed by week: the arrows cross-fade to the new week once it has loaded. */}
-      <FadeIn key={week.data.start} style={[{ gap: 24 }, week.isPlaceholderData && { opacity: 0.6 }]}>
+      <FadeIn key={week.data.start} style={[{ gap: 16 }, week.isPlaceholderData && { opacity: 0.6 }]}>
         <TrainingWeekView week={week.data} onWeek={setStart} />
       </FadeIn>
     </Screen>

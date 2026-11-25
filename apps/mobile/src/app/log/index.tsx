@@ -1,26 +1,28 @@
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useIsFocused } from "expo-router";
-import { Crown, Images, Keyboard, X } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Crown, Image as ImageIcon, Keyboard, X, Zap } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
-import { cam } from "@/components/log/camera/cam";
+import { cam, CAM_SUBTLE } from "@/components/log/camera/cam";
 import { CameraSideButton, CameraTopButton, Shutter } from "@/components/log/camera/camera-buttons";
 import { CameraBusy, CameraError, CameraPermission } from "@/components/log/camera/camera-overlays";
 import { Corners } from "@/components/log/camera/corners";
+import { ScanGuide } from "@/components/log/camera/scan-guide";
 import { ScanHint } from "@/components/log/camera/scan-hint";
 import { MealWhen } from "@/components/log/meal-when";
 import { Text } from "@/components/ui";
+import { Glow } from "@/components/ui/glow";
 import { api, errorMessage } from "@/lib/api";
 import { BARCODE_TYPES, barcodeInPhoto } from "@/lib/barcode-photo";
 import { useMealChoice } from "@/lib/meal-param";
 import { compressPhoto, uploadPhoto } from "@/lib/photo";
 import { handlePremiumError, openPremium, usePremium } from "@/lib/premium";
 import { usageQuery } from "@/lib/queries";
-import { radius } from "@/lib/theme";
 import { useCameraAutoPermission } from "@/lib/use-camera-auto-permission";
 import { useLiveBarcode } from "@/lib/use-live-barcode";
 import { useScanLimit } from "@/lib/use-scan-limit";
@@ -47,6 +49,8 @@ export default function CameraScreen() {
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraAutoPermission();
   const [ready, setReady] = useState(false);
+  // The flash button keeps the torch on while framing (low light); off again when the screen closes.
+  const [torch, setTorch] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const limit = useScanLimit();
@@ -120,33 +124,42 @@ export default function CameraScreen() {
   const granted = permission?.granted;
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.top}>
+      <View style={styles.header}>
         <CameraTopButton icon={X} label="Close" onPress={() => router.back()} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text weight={600} color={cam.white}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text variant="heading2" color={cam.white} numberOfLines={1}>
             Snap your meal
           </Text>
           {premium.isPremium && scans.data && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Crown size={12} color={cam.brandGlow} />
-              <Text size={12} weight={600} color="rgba(255,255,255,0.75)" tabular>
+              <Crown size={12} color={cam.highlight} strokeWidth={2.4} absoluteStrokeWidth />
+              <Text variant="labelMedium" color={CAM_SUBTLE} tabular>
                 {scans.data.left} of {scans.data.limit} photo scans left today
               </Text>
             </View>
           )}
         </View>
+        <CameraTopButton
+          icon={Zap}
+          iconSize={18}
+          label="Flash"
+          on={torch}
+          disabled={!granted || !ready}
+          onPress={() => setTorch((t) => !t)}
+        />
       </View>
 
-      <View style={{ paddingTop: 8, paddingBottom: 12 }}>
-        <MealWhen tone="dark" gutter={20} mealType={mealType} onMealType={setMealType} date={date} />
-      </View>
+      <MealWhen tone="dark" mealType={mealType} onMealType={setMealType} date={date} />
 
       <View style={styles.viewfinder}>
+        <LinearGradient colors={VIEWFINDER} style={StyleSheet.absoluteFill} />
+        <Glow tone="aqua" opacity={0.6} left={12} bottom={-13} />
         {granted ? (
           <CameraView
             ref={camera}
             style={StyleSheet.absoluteFill}
             facing="back"
+            enableTorch={torch && focused}
             onCameraReady={() => setReady(true)}
             barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
             onBarcodeScanned={busy || !focused ? undefined : onBarcode}
@@ -163,7 +176,8 @@ export default function CameraScreen() {
             onAllow={requestPermission}
           />
         )}
-        <Corners color={seen ? cam.proteinSoft : undefined} />
+        {granted && <ScanGuide />}
+        <Corners color={seen ? cam.highlight : undefined} />
         <ScanHint
           locked={photoLocked && barcodeLocked}
           seen={seen}
@@ -174,9 +188,9 @@ export default function CameraScreen() {
 
       {error && <CameraError message={error} />}
 
-      <View style={[styles.controls, { paddingBottom: Math.max(28, insets.bottom + 16) }]}>
-        <CameraSideButton caption="Gallery" icon={Images} onPress={pickFromGallery} disabled={busy} />
-        <View style={{ alignItems: "center", gap: 6 }}>
+      <View style={[styles.controls, { paddingBottom: Math.max(24, insets.bottom + 11) }]}>
+        <CameraSideButton caption="Gallery" icon={ImageIcon} onPress={pickFromGallery} disabled={busy} />
+        <View style={{ alignItems: "center", gap: 8 }}>
           <Shutter
             accessibilityLabel={seen ? `Look up barcode ${seen}` : "Take photo"}
             accessibilityHint={seen ? "Opens the product to pick how much you had" : undefined}
@@ -185,7 +199,7 @@ export default function CameraScreen() {
             dimmed={busy || !granted}
             barcode={Boolean(seen)}
           />
-          <Text weight={600} size={12} color={seen ? cam.proteinSoft : "rgba(255,255,255,0.85)"}>
+          <Text variant="labelStrong" color={seen ? cam.highlight : cam.white}>
             {seen ? "Look up product" : "Snap"}
           </Text>
         </View>
@@ -201,23 +215,18 @@ export default function CameraScreen() {
   );
 }
 
+/** Figma "Viewfinder": the frame's own fill, seen until the camera feed draws over it. */
+const VIEWFINDER = ["#2a2e33", "#121416"] as const;
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: cam.panel },
-  top: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
-  viewfinder: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    aspectRatio: 3 / 4,
-    borderRadius: radius.card,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.05)",
-  },
+  root: { flex: 1, backgroundColor: cam.panel, paddingHorizontal: 20, gap: 16 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  viewfinder: { flex: 1, borderRadius: 28, overflow: "hidden" },
   controls: {
-    marginTop: "auto",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingHorizontal: 12,
+    paddingTop: 16,
   },
 });

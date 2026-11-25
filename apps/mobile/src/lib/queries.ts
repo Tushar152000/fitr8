@@ -2,6 +2,7 @@ import type {
   BillingDto,
   HealthStatusDto,
   HealthSummaryDto,
+  MeasurementsDto,
   TrainingStateDto,
   TrainingWeekDto,
   CoachMemoryView,
@@ -28,6 +29,12 @@ export const workoutQuery = (energy: Energy = "ok") => ({
 /** GET /api/progress: Today's Progress card and the Progress screen (same key, one fetch). */
 export const progressQuery = { queryKey: ["progress"], queryFn: () => api<ProgressDto>("/api/progress") };
 export const waterQuery = { queryKey: ["water"], queryFn: () => api<WaterDay>("/api/water") };
+
+/** GET /api/measurements: each body measurement's newest value (Profile / Measurements). */
+export const measurementsQuery = {
+  queryKey: ["measurements"],
+  queryFn: () => api<MeasurementsDto>("/api/measurements"),
+};
 
 /** GET /api/plan: profile, goal, targets and the plan summary (Profile, onboarding, welcome back). */
 export const planQuery = { queryKey: ["plan"], queryFn: () => api<PlanResponse>("/api/plan") };

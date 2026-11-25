@@ -16,10 +16,12 @@ import { AuthModule } from "./modules/auth/auth.module.js";
 import { BillingModule } from "./modules/billing/billing.module.js";
 import { BlogModule } from "./modules/blog/blog.module.js";
 import { OriginGuard } from "./modules/auth/origin.guard.js";
+import { FeedbackModule } from "./modules/feedback/feedback.module.js";
 import { FoodsModule } from "./modules/foods/foods.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { HealthDataModule } from "./modules/health-data/health-data.module.js";
 import { MealsModule } from "./modules/meals/meals.module.js";
+import { MeasurementsModule } from "./modules/measurements/measurements.module.js";
 import { PlanModule } from "./modules/plan/plan.module.js";
 import { ProgressModule } from "./modules/progress/progress.module.js";
 import { RemindersModule } from "./modules/reminders/reminders.module.js";
@@ -92,6 +94,8 @@ import { WorkoutsModule } from "./modules/workouts/workouts.module.js";
     ContactModule,
     AdminModule,
     BlogModule,
+    FeedbackModule,
+    MeasurementsModule,
   ],
   // Guards run in this order: rate limit → CSRF origin check → session.
   providers: [

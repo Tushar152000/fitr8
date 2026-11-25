@@ -46,7 +46,7 @@ export function HealthTodayCard() {
   if (!connected) {
     if (hidden !== false) return null;
     return (
-      <PressableScale accessibilityRole="button" onPress={() => router.push("/health")} style={styles.prompt}>
+      <PressableScale accessibilityRole="button" onPress={() => router.push("/health/connect")} style={styles.prompt}>
         <View style={styles.icon}>
           <HeartPulse size={18} color={c.white} />
         </View>
@@ -81,7 +81,7 @@ export function HealthTodayCard() {
     <View style={{ gap: 10 }}>
       <PressableScale
         accessibilityRole="link"
-        onPress={() => router.push("/health")}
+        onPress={() => router.push("/health/connect")}
         style={{ flexDirection: "row", alignItems: "center", minHeight: 44 }}
       >
         <Text variant="h2" style={{ flex: 1 }}>

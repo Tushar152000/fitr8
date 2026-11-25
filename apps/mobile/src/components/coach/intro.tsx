@@ -1,10 +1,12 @@
+import { ArrowUpRight, Crown, Info, Sparkle } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { ArrowUpRight, Crown, Info, Sparkles } from "lucide-react-native";
-import { Pressable, View } from "react-native";
-import { Button, Card, Text } from "@/components/ui";
-import { COACH_HERO } from "@/lib/gradients";
+import { View } from "react-native";
+import { PremiumBadge } from "@/components/premium/premium-badge";
+import { PillButton, PressableScale, Text } from "@/components/ui";
+import { Glow } from "@/components/ui/glow";
+import { PRIMARY_PILL } from "@/lib/gradients";
 import { openPremium } from "@/lib/premium";
-import { makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, makeStyles, useColors } from "@/lib/theme";
 
 const SUGGESTIONS = [
   "How am I doing on protein today?",
@@ -14,87 +16,77 @@ const SUGGESTIONS = [
   "Why is my calorie target what it is?",
 ];
 
+const ON_DARK_BODY = "rgba(255,255,255,0.75)";
+const ON_DARK_SUBTLE = "rgba(255,255,255,0.55)";
+
 /**
- * An empty chat: the Premium unlock card (free plan), the gradient hero saying what the coach
- * knows, "Try asking" pills that send at once, and the not-medical-advice note.
+ * An empty chat (Figma "Your coach"): the Premium card (free plan), the dark "Coach intro" card with
+ * its lime glow, "Try asking" pills that send at once, and the not-medical-advice note.
  */
 export function Intro({ onPick, locked }: { onPick: (text: string) => void; locked: boolean }) {
   const c = useColors();
   const styles = useStyles();
   return (
-    <View style={{ gap: 18 }}>
+    <View style={{ gap: 16 }}>
       {locked && (
-        <Card dark style={{ gap: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Crown size={18} color={c.brandGlow} />
-            <Text size={12} weight={700} color={c.brandGlow}>
-              PREMIUM
+        <View style={styles.premium}>
+          <PremiumBadge />
+          <View style={{ gap: 4 }}>
+            <Text variant="heading3">Your coach is part of Premium</Text>
+            <Text variant="bodySm" color={c.ink2}>
+              Try it free for 7 days: answers made for your goal, meals and training, backed by sports science.
             </Text>
           </View>
-          <Text variant="h2" color={c.white}>
-            Your coach is part of Premium
-          </Text>
-          <Text color="rgba(255,255,255,0.78)">
-            Try it free for 7 days: answers made for your goal, meals and training, backed by sports science.
-          </Text>
-          <Button icon={Crown} onPress={() => openPremium("coach")}>
-            Unlock the AI Coach
-          </Button>
-        </Card>
+          <PillButton icon={Crown} label="Unlock the AI Coach" onPress={() => openPremium("coach")} />
+        </View>
       )}
 
-      <LinearGradient {...COACH_HERO} style={styles.hero}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={styles.heroIcon}>
-            <Sparkles size={18} color="#ffffff" />
-          </View>
+      <View style={styles.hero}>
+        <Glow tone="lime" opacity={0.7} left={6} bottom={-59} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <LinearGradient {...PRIMARY_PILL} style={styles.avatar}>
+            <Sparkle size={18} color={c.white} strokeWidth={2} absoluteStrokeWidth />
+          </LinearGradient>
           <View style={{ flex: 1 }}>
-            <Text weight={700} size={16} color="#ffffff">
+            <Text variant="heading3" color={c.white}>
               Your fitness &amp; nutrition coach
             </Text>
-            <Text size={12} color="rgba(255,255,255,0.65)">
+            <Text variant="labelMedium" color={ON_DARK_SUBTLE}>
               Online · knows your plan
             </Text>
           </View>
         </View>
-        <Text size={14} color="rgba(255,255,255,0.82)" style={{ lineHeight: 21 }}>
-          I know your goal, targets, meals, workouts and weight, and I remember what you tell me, like injuries or foods
-          you avoid. I can also log water or a weigh-in for you.
+        <Text variant="bodySm" color={ON_DARK_BODY}>
+          I know your goal, targets, meals, workouts and weight — and I remember what you tell me, like injuries or
+          foods you avoid. I can also log water or a weigh-in for you.
         </Text>
-        <View style={styles.heroChips}>
+        <View style={styles.chips}>
           {["Remembers you", "Science-based", "Logs for you"].map((t) => (
-            <View key={t} style={styles.heroChip}>
-              <Text weight={600} size={11} color="#ffffff">
+            <View key={t} style={styles.chip}>
+              <Text variant="captionStrong" color={c.white}>
                 {t}
               </Text>
             </View>
           ))}
         </View>
-      </LinearGradient>
+      </View>
 
-      <View style={{ gap: 10 }}>
-        <Text weight={500} size={12} color={c.ink3}>
+      <View style={{ gap: 8 }}>
+        <Text variant="labelStrong" color={c.ink2}>
           Try asking
         </Text>
         {SUGGESTIONS.map((s) => (
-          <Pressable
-            key={s}
-            accessibilityRole="button"
-            onPress={() => onPick(s)}
-            style={({ pressed }) => [styles.suggestion, pressed && { backgroundColor: c.sunken }]}
-          >
-            <Text weight={500} size={15}>
-              {s}
-            </Text>
-            <ArrowUpRight size={16} color={c.ink3} />
-          </Pressable>
+          <PressableScale key={s} accessibilityRole="button" onPress={() => onPick(s)} style={styles.suggestion}>
+            <Text variant="bodyMedium">{s}</Text>
+            <ArrowUpRight size={16} color={c.ink3} strokeWidth={2} absoluteStrokeWidth />
+          </PressableScale>
         ))}
       </View>
 
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Info size={14} color={c.ink3} style={{ marginTop: 2 }} />
-        <Text size={12} color={c.ink3} style={{ flex: 1, lineHeight: 17 }}>
-          General guidance, not medical advice. If you&apos;re injured, pregnant, have a medical condition or take
+        <Info size={14} color={fade(c.ink, 0.45)} strokeWidth={2} absoluteStrokeWidth style={{ marginTop: 1 }} />
+        <Text variant="caption" color={fade(c.ink, 0.5)} style={{ flex: 1 }}>
+          General guidance, not medical advice. If you’re injured, pregnant, have a medical condition or take
           medication, check with your doctor or physio.
         </Text>
       </View>
@@ -102,34 +94,30 @@ export function Intro({ onPick, locked }: { onPick: (text: string) => void; lock
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  hero: { borderRadius: radius.card, padding: 18, gap: 14, overflow: "hidden" },
-  heroIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(113,139,0,0.4)", // accent/primary on the dark hero
-    borderWidth: 1,
-    borderColor: "rgba(194,224,74,0.45)", // accent/highlight
+const useStyles = makeStyles((c, shadows) => ({
+  premium: { gap: 14, padding: 20, borderRadius: 20, backgroundColor: c.surface, ...shadows.card },
+  // Figma "Coach intro": inverse surface, always dark (white text in both themes).
+  hero: {
+    gap: 14,
+    padding: 20,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: c.panel,
+    ...shadows.card,
   },
-  heroChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  heroChip: {
-    height: 28,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    justifyContent: "center",
-    backgroundColor: c.glassStrong,
-  },
+  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, backgroundColor: c.glassStrong },
   suggestion: {
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    minHeight: 44,
-    paddingHorizontal: 16,
-    borderRadius: 22,
+    gap: 8,
+    paddingLeft: 16,
+    paddingRight: 14,
+    paddingVertical: 12,
+    borderRadius: 100,
     backgroundColor: c.surface,
+    ...shadows.card,
   },
 }));

@@ -22,6 +22,8 @@ import {
   burnKcal,
   fatKgFromKcal,
   MET_BY_TYPE,
+  restDayCardio,
+  trainingPlanName,
   weekdayName,
   WeekPlanSchema,
   type DayType,
@@ -193,7 +195,7 @@ export class TrainingService {
     const ctx = planningContext({ targets: this.targets, users: this.users }, userId, today);
     const planned = await this.planner.week(userId, monday, ctx);
     if (!planned) throw new AppError(404, "Set up your training first");
-    const { week, profile, goal } = planned;
+    const { week, profile, goal, deficit } = planned;
     const todayKey = ymdOf(today);
     const end = addDays(monday, 7);
     const isCurrentOrLater = monday.getTime() >= weekStart(today).getTime();
@@ -259,6 +261,16 @@ export class TrainingService {
         logs: dayLogs.map(logDto),
         gym:
           d.type === "gym" ? { exercises: gymDay?.exercises.length ?? 0, logged: setsDone } : null,
+        exercises: gymDay
+          ? gymDay.exercises.map((e) => ({
+              name: e.name,
+              sets: e.sets,
+              repMin: e.repMin,
+              repMax: e.repMax,
+              timed: e.timed,
+              targetKg: e.targetKg,
+            }))
+          : null,
       };
     });
 
@@ -275,6 +287,8 @@ export class TrainingService {
       days,
       profile: profileDto(profile),
       recovery,
+      plan: trainingPlanName(week.days),
+      restDay: restDayCardio(deficit ? "deficit" : "maintenance"),
     };
   }
 

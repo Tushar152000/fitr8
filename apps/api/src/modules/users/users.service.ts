@@ -1,6 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@fitr8/db";
-import type { DeleteAccountInput, PreferredNameInput, RemindersInput } from "@fitr8/contracts";
+import type {
+  DeleteAccountInput,
+  PreferredNameInput,
+  RemindersInput,
+  UploadUrlInput,
+} from "@fitr8/contracts";
 import { isWelcomeBack, shouldTouchActivity } from "@fitr8/domain/activity";
 import { localDate, mealDateProblem, parseDateOnly } from "@fitr8/domain/dates";
 import { ageFromBirthDate } from "@fitr8/domain/nutrition";
@@ -32,6 +37,8 @@ const ME_PROFILE_SELECT = {
   remindLunch: true,
   remindDinner: true,
   remindWater: true,
+  remindMeals: true,
+  remindWeighIn: true,
   onboardedAt: true,
 } as const;
 
@@ -49,6 +56,9 @@ export const csvCell = (v: unknown) => {
 };
 
 /** Identity and per-user settings every other module needs (timezone → the user's "today"). */
+/** How long the signed profile-photo URL in GET /api/me stays valid (the app refetches /me well within it). */
+const PHOTO_URL_SECONDS = 24 * 60 * 60;
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -160,18 +170,22 @@ export class UsersService {
         phone: true,
         email: true,
         image: true,
+        imageKey: true,
         lastActiveAt: true,
         profile: { select: ME_PROFILE_SELECT },
       },
     });
-    const { profile, lastActiveAt, ...rest } = user;
+    const { profile, lastActiveAt, imageKey, image, ...rest } = user;
     const activity = { onboardedAt: profile?.onboardedAt ?? null, lastActiveAt };
-    const [plan] = await Promise.all([
+    const [plan, photo] = await Promise.all([
       this.billing.plan(userId),
+      this.storage.presignReadOrNull(imageKey, PHOTO_URL_SECONDS),
       shouldTouchActivity(activity, now) ? this.markActive(userId, now) : null,
     ]);
     return {
       ...rest,
+      image: photo ?? image,
+      hasPhoto: Boolean(imageKey),
       onboarded: Boolean(profile?.onboardedAt),
       welcomeBack: isWelcomeBack(activity, now),
       profile,
@@ -265,14 +279,44 @@ export class UsersService {
     return this.me(userId);
   }
 
+  /** Profile photo step 1: a signed URL the client PUTs the (compressed) image to. */
+  async photoUploadUrl(userId: string, { contentType }: UploadUrlInput) {
+    const key = this.storage.avatarKey(userId, contentType);
+    return { key, uploadUrl: await this.storage.presignUpload(key, contentType), expiresIn: 300 };
+  }
+
+  /** Profile photo step 2: use the uploaded key (the caller's own); the previous photo is deleted. */
+  async setPhoto(userId: string, key: string | null) {
+    if (key && !key.startsWith(`avatars/${userId}/`))
+      throw new AppError(403, "Photo does not belong to you");
+    const { imageKey: previous } = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { imageKey: true },
+    });
+    await this.prisma.user.update({ where: { id: userId }, data: { imageKey: key } });
+    // Best effort and not awaited: a storage hiccup must not fail the change.
+    if (previous && previous !== key)
+      void this.storage
+        .deleteObject(previous)
+        .catch((err) =>
+          this.logger.warn(
+            `Old profile photo ${previous} not removed: ${err instanceof Error ? err.message : err}`,
+          ),
+        );
+    return this.me(userId);
+  }
+
   /** True unless another account has this E.164 number (your own counts as available). */
   async phoneAvailable(userId: string, phone: string): Promise<boolean> {
     const owner = await this.prisma.user.findUnique({ where: { phone }, select: { id: true } });
     return !owner || owner.id === userId;
   }
 
-  /** Save the design-13 reminder switches (lunch, dinner, water). */
-  async setReminders(userId: string, { lunch, dinner, water }: RemindersInput) {
+  /**
+   * Save the built-in reminder switches (Profile / Reminders: meals, water, weekly weigh-in; the
+   * legacy lunch / dinner switches from older app builds). Omitted = unchanged.
+   */
+  async setReminders(userId: string, { meals, water, weighIn, lunch, dinner }: RemindersInput) {
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
       select: { userId: true },
@@ -281,11 +325,19 @@ export class UsersService {
     return this.prisma.profile.update({
       where: { userId },
       data: {
+        ...(meals !== undefined ? { remindMeals: meals } : {}),
+        ...(water !== undefined ? { remindWater: water } : {}),
+        ...(weighIn !== undefined ? { remindWeighIn: weighIn } : {}),
         ...(lunch !== undefined ? { remindLunch: lunch } : {}),
         ...(dinner !== undefined ? { remindDinner: dinner } : {}),
-        ...(water !== undefined ? { remindWater: water } : {}),
       },
-      select: { remindLunch: true, remindDinner: true, remindWater: true },
+      select: {
+        remindMeals: true,
+        remindWater: true,
+        remindWeighIn: true,
+        remindLunch: true,
+        remindDinner: true,
+      },
     });
   }
 
@@ -337,20 +389,33 @@ export class UsersService {
         ]);
       }
     }
+    // A row with a weight is a weigh-in; one without is a measurement-only day. The other
+    // measurements go in the note: "waist 88 cm; neck 38 cm; …; body fat 18.2%".
     for (const b of metrics) {
+      const measures = [
+        ["waist", b.waistCm],
+        ["neck", b.neckCm],
+        ["chest", b.chestCm],
+        ["hips", b.hipCm],
+        ["arms", b.armCm],
+      ] as const;
+      const note = [
+        ...measures.filter(([, v]) => v != null).map(([label, v]) => `${label} ${v} cm`),
+        ...(b.bodyFatPct != null ? [`body fat ${Math.round(b.bodyFatPct * 10) / 10}%`] : []),
+      ].join("; ");
       rows.push([
-        "weigh_in",
+        b.weightKg != null ? "weigh_in" : "measurement",
         b.date.toISOString().slice(0, 10),
         "",
-        "weight_kg",
-        String(b.weightKg),
-        "kg",
+        b.weightKg != null ? "weight_kg" : "",
+        b.weightKg != null ? String(b.weightKg) : "",
+        b.weightKg != null ? "kg" : "",
         "",
         "",
         "",
         "",
         "",
-        b.waistCm != null ? `waist ${b.waistCm} cm` : "",
+        note,
       ]);
     }
 

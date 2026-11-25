@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   buildTrainingWeek,
   buildWeek,
+  caloriePhase,
+  restDayCardio,
   burnKcal,
   easyPace,
   fatKgFromKcal,
   formatPace,
   MET,
   scheduleKey,
+  trainingPlanName,
   TRAINING_TYPES,
   weekProblems,
   weekStyle,
@@ -390,5 +393,63 @@ describe("buildWeek with a training schedule", () => {
     });
     expect(week.days).toEqual([]);
     expect(week.scheduleKey).toBe("");
+  });
+});
+
+describe("trainingPlanName (Workout tab eyebrow)", () => {
+  const week = (types: TrainingType[], daysPerWeek = 4) =>
+    buildTrainingWeek({ ...base, types, daysPerWeek }).days;
+
+  it("names the strength split; more than one kind of training is a mixed plan", () => {
+    expect(trainingPlanName(week(["gym"], 4))).toBe("Upper / lower");
+    expect(trainingPlanName(week(["gym"], 3))).toBe("Full body A/B");
+    expect(trainingPlanName(week(["gym", "run", "yoga"], 5))).toBe("Mixed plan");
+    expect(trainingPlanName(week(["run", "cycle"], 4))).toBe("Mixed plan");
+  });
+
+  it("names weeks without strength by what they train", () => {
+    expect(trainingPlanName(week(["run"], 4))).toBe("Running");
+    expect(trainingPlanName(week(["yoga"], 3))).toBe("Yoga");
+    expect(trainingPlanName(week(["walk"], 3))).toBe("Walking");
+  });
+
+  it("handles one full-body day and mixed templates", () => {
+    expect(
+      trainingPlanName([
+        { type: "gym", template: "full_a" },
+        { type: "rest", template: null },
+      ]),
+    ).toBe("Full body");
+    expect(
+      trainingPlanName([
+        { type: "gym", template: "full_a" },
+        { type: "gym", template: "upper_a" },
+      ]),
+    ).toBe("Strength");
+    expect(trainingPlanName([{ type: "rest", template: null }])).toBe("Rest");
+  });
+});
+
+describe("deficit wording follows the deficit flag (one source of truth)", () => {
+  const upperWhy = (input: TrainingWeekInput) =>
+    buildTrainingWeek({ ...input, types: ["gym"], daysPerWeek: 4 }).days.find(
+      (d) => d.template === "upper_a",
+    )!.why;
+
+  it("says 'deficit' only when the plan eats below 95 % of maintenance, like the rest-day cardio", () => {
+    // A slow fat-loss plan (2,299 of 2,396 kcal = 96 %): not a deficit phase.
+    const slow = {
+      ...base,
+      goal: "lose" as const,
+      deficit: caloriePhase(2299, 2396) === "deficit",
+    };
+    expect(slow.deficit).toBe(false);
+    expect(upperWhy(slow)).toBe("Keeps your strength while you slowly lose fat.");
+    expect(restDayCardio(slow.deficit ? "deficit" : "maintenance").noHiit).toBe(false);
+
+    const cut = { ...base, goal: "lose" as const, deficit: caloriePhase(1900, 2396) === "deficit" };
+    expect(cut.deficit).toBe(true);
+    expect(upperWhy(cut)).toBe("Keeps your strength while you eat in a deficit.");
+    expect(restDayCardio("deficit").noHiit).toBe(true);
   });
 });

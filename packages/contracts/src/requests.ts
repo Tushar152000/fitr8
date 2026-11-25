@@ -116,6 +116,17 @@ export const CheckinSchema = z.object({
   hipCm: z.number().min(50).max(200).optional(),
 });
 
+/** PATCH /api/checkins/:date — correct that day's weigh-in (Progress → a weekly check-in row). */
+export const CheckinUpdateSchema = z.object({
+  weightKg: z.number().min(30).max(250),
+});
+
+/** The `:date` of PATCH / DELETE /api/checkins/:date (one weigh-in per user per day). */
+export const CheckinDateSchema = ymd.refine((d) => {
+  const t = Date.parse(`${d}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().startsWith(d);
+}, "Not a calendar date");
+
 export const ParseItemsSchema = z.object({
   text: z.string().trim().min(2).max(300),
   mealType: MealTypeSchema,
@@ -152,10 +163,20 @@ export const WelcomeBackSchema = z.object({
   timezone: z.string().default("Asia/Kolkata"),
 });
 
+/**
+ * PATCH /api/profile/reminders: the built-in reminder switches; omitted = unchanged. `meals`,
+ * `water` and `weighIn` are Profile / Reminders' three switches (times: REMINDER_SCHEDULE in
+ * ./profile-extras.ts). `lunch` / `dinner` are the old design-13 switches, still accepted from
+ * app builds that predate `meals`.
+ */
 export const RemindersSchema = z.object({
-  lunch: z.boolean().optional(),
-  dinner: z.boolean().optional(),
+  meals: z.boolean().optional(),
   water: z.boolean().optional(),
+  weighIn: z.boolean().optional(),
+  /** @deprecated Older app builds only; use `meals`. */
+  lunch: z.boolean().optional(),
+  /** @deprecated Older app builds only; use `meals`. */
+  dinner: z.boolean().optional(),
 });
 
 /**
@@ -366,6 +387,7 @@ export type ConfirmMealInput = z.infer<typeof ConfirmMealSchema>;
 export type MealItemInput = z.infer<typeof MealItemInputSchema>;
 export type RecheckInput = z.infer<typeof RecheckSchema>;
 export type CheckinInput = z.infer<typeof CheckinSchema>;
+export type CheckinUpdateInput = z.infer<typeof CheckinUpdateSchema>;
 export type ParseItemsInput = z.infer<typeof ParseItemsSchema>;
 export type RelogInput = z.infer<typeof RelogSchema>;
 export type GoalOptionInput = z.infer<typeof GoalOptionSchema>;

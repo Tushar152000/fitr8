@@ -1,7 +1,7 @@
 import { Camera } from "lucide-react-native";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { Button, Text } from "@/components/ui";
-import { cam } from "./cam";
+import { PillButton, Text } from "@/components/ui";
+import { cam, CAM_GLASS, CAM_MUTED } from "./cam";
 
 /** In the viewfinder while the camera is off: why it's needed, and "Allow camera" while it can still ask. */
 export function CameraPermission({
@@ -17,20 +17,18 @@ export function CameraPermission({
 }) {
   return (
     <View style={styles.center}>
-      <Camera size={32} color="rgba(255,255,255,0.6)" />
+      <View style={styles.icon}>
+        <Camera size={22} color={cam.white} strokeWidth={2} absoluteStrokeWidth />
+      </View>
       {title && (
-        <Text weight={600} color={cam.white} center>
+        <Text variant="heading3" color={cam.white} center>
           {title}
         </Text>
       )}
-      <Text size={13} color="rgba(255,255,255,0.7)" center>
+      <Text variant="bodySm" color={CAM_MUTED} center>
         {message}
       </Text>
-      {canAsk && (
-        <View style={{ alignSelf: "stretch", marginTop: 8 }}>
-          <Button onPress={onAllow}>Allow camera</Button>
-        </View>
-      )}
+      {canAsk && <PillButton variant="onDark" label="Allow camera" onPress={onAllow} style={{ marginTop: 8 }} />}
     </View>
   );
 }
@@ -38,9 +36,9 @@ export function CameraPermission({
 /** Dims the viewfinder with a spinner and what's happening (uploading, reading). */
 export function CameraBusy({ label }: { label: string }) {
   return (
-    <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: "rgba(23,24,28,0.75)" }]}>
-      <ActivityIndicator color={cam.white} size="large" />
-      <Text weight={600} color={cam.white} accessibilityLiveRegion="polite">
+    <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: "rgba(12,12,12,0.75)" }]}>
+      <ActivityIndicator color={cam.highlight} size="large" />
+      <Text variant="bodyStrong" color={cam.white} accessibilityLiveRegion="polite">
         {label}
       </Text>
     </View>
@@ -50,7 +48,7 @@ export function CameraBusy({ label }: { label: string }) {
 /** The error line under the viewfinder (amber on the dark camera). */
 export function CameraError({ message }: { message: string }) {
   return (
-    <Text weight={600} size={13} color="#ffb68a" center style={{ marginHorizontal: 20, marginTop: 12 }}>
+    <Text variant="bodyStrong" size={13} color="#ffb68a" center style={{ marginHorizontal: 20, marginTop: 12 }}>
       {message}
     </Text>
   );
@@ -58,4 +56,13 @@ export function CameraError({ message }: { message: string }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 32 },
+  icon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: CAM_GLASS,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
 });

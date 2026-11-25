@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
+import { streakDetails, weeklyWeighIns } from "@fitr8/domain/progress";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { TargetsService } from "../plan/targets.service.js";
 import { UsersService } from "../users/users.service.js";
+import { DashboardService } from "./dashboard.service.js";
+import { HistoryService } from "./history.service.js";
+import { HAS_WEIGHT, weighed } from "./weigh-ins.js";
 
 const DAY = 86_400_000;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -37,15 +41,33 @@ export class ProgressService {
     private readonly prisma: PrismaService,
     private readonly targets: TargetsService,
     private readonly users: UsersService,
+    private readonly dashboard: DashboardService,
+    private readonly history: HistoryService,
   ) {}
 
-  /** GET /progress for the user's local today: only what the Progress screen and card read. */
+  /**
+   * GET /progress for the user's local today: only what the Progress screen and card read, plus
+   * the stat tiles (weight change since the plan's start, % of logged days on target, streaks) and the last 8 weeks' weigh-ins.
+   */
   async get(userId: string) {
-    const p = await this.getProgress(userId, await this.users.today(userId));
+    const today = await this.users.today(userId);
+    const [p, days, onTarget] = await Promise.all([
+      this.getProgress(userId, today),
+      this.dashboard.loggedDays(userId, undefined, today),
+      this.history.onTarget(userId, today),
+    ]);
+    const { current, longest } = streakDetails(days, ymd(today));
     return {
       ...p,
       latest: p.latest && { weightKg: p.latest.weightKg, waistCm: p.latest.waistCm },
       target: p.target && { kcal: p.target.kcal },
+      weightChangeKg: p.latest
+        ? Math.round((p.latest.weightKg - p.plan.startWeightKg) * 10) / 10
+        : null,
+      streak: { current, longest },
+      onTarget,
+      // The newest 120 weigh-ins (at most one a day) always cover the 8 weeks.
+      weeks: weeklyWeighIns(p.points, ymd(today), 8),
     };
   }
 
@@ -59,7 +81,7 @@ export class ProgressService {
     const since7 = new Date(today.getTime() - 6 * DAY);
     const [newestFirst, { plan, goal }, target, meals] = await Promise.all([
       this.prisma.bodyMetric.findMany({
-        where: { userId },
+        where: { userId, ...HAS_WEIGHT },
         orderBy: { date: "desc" },
         take: 120,
         select: {
@@ -79,7 +101,7 @@ export class ProgressService {
         _sum: { totalKcal: true },
       }),
     ]);
-    const metrics = newestFirst.reverse();
+    const metrics = weighed(newestFirst.reverse());
 
     const points = sevenDayAverages(metrics);
     const thisWeek = weekMean(metrics, today.getTime());

@@ -143,14 +143,49 @@ describe("users", () => {
       .expect(404, { error: "Finish onboarding first" });
     await onboard(agent);
     await agent.patch("/api/profile/reminders").send({ lunch: "yes" }).expect(400);
+    await agent.patch("/api/profile/reminders").send({ weighIn: 1 }).expect(400);
     const res = await agent
       .patch("/api/profile/reminders")
       .send({ water: true, dinner: false })
       .expect(200);
     expect(res.body).toEqual({
+      remindMeals: false,
+      remindWater: true,
+      remindWeighIn: false,
       remindLunch: expect.any(Boolean),
       remindDinner: false,
-      remindWater: true,
+    });
+  });
+
+  it("saves Profile / Reminders' meal and weekly weigh-in switches, keeping older builds' lunch/dinner", async () => {
+    const { agent } = await t.signIn();
+    await onboard(agent);
+    const res = await agent
+      .patch("/api/profile/reminders")
+      .send({ meals: true, weighIn: true })
+      .expect(200);
+    expect(res.body).toEqual({
+      remindMeals: true,
+      remindWater: false,
+      remindWeighIn: true,
+      remindLunch: false,
+      remindDinner: false,
+    });
+    // An app build from before `meals` still toggles its own switches; the new ones are untouched.
+    const legacy = await agent.patch("/api/profile/reminders").send({ lunch: true }).expect(200);
+    expect(legacy.body).toMatchObject({
+      remindMeals: true,
+      remindWeighIn: true,
+      remindLunch: true,
+    });
+    await agent.patch("/api/profile/reminders").send({ weighIn: false }).expect(200);
+    const me = await agent.get("/api/me").expect(200);
+    expect(me.body.profile).toMatchObject({
+      remindMeals: true,
+      remindWater: false,
+      remindWeighIn: false,
+      remindLunch: true,
+      remindDinner: false,
     });
   });
 
@@ -202,5 +237,110 @@ describe("users", () => {
     );
     expect(lines[2]).toMatch(/^weigh_in,\d{4}-\d{2}-\d{2},,weight_kg,82,kg,,,,,,$/);
     expect(lines).toHaveLength(3);
+
+    // A measurement-only day (no weight) and a weigh-in with circumferences.
+    await t.prisma.bodyMetric.createMany({
+      data: [
+        { userId, date: new Date("2026-01-05"), chestCm: 104, armCm: 34 },
+        {
+          userId,
+          date: new Date("2026-01-06"),
+          weightKg: 83,
+          waistCm: 90,
+          neckCm: 38,
+          bodyFatPct: 19.04,
+        },
+      ],
+    });
+    const more = (await agent.get("/api/export").expect(200)).text.trimEnd().split("\n");
+    expect(more.slice(2, 4)).toEqual([
+      "measurement,2026-01-05,,,,,,,,,,chest 104 cm; arms 34 cm",
+      "weigh_in,2026-01-06,,weight_kg,83,kg,,,,,,waist 90 cm; neck 38 cm; body fat 19%",
+    ]);
+  });
+
+  describe("profile photo", () => {
+    const uuid = "0f8fad5b-d9cb-469f-a165-70867728950e";
+
+    it("requires sign-in", async () => {
+      await t
+        .http()
+        .post("/api/profile/photo/upload-url")
+        .send({ contentType: "image/jpeg", sizeBytes: 1000 })
+        .expect(401);
+      await t
+        .http()
+        .put("/api/profile/photo")
+        .send({ key: `avatars/x/${uuid}.jpg` })
+        .expect(401);
+      await t.http().delete("/api/profile/photo").expect(401);
+    });
+
+    it("rejects bad uploads, bad keys and other users' photos", async () => {
+      const { agent } = await t.signIn();
+      const { userId: other } = await t.signIn();
+      await agent
+        .post("/api/profile/photo/upload-url")
+        .send({ contentType: "image/gif", sizeBytes: 10 })
+        .expect(400);
+      await agent
+        .post("/api/profile/photo/upload-url")
+        .send({ contentType: "image/jpeg", sizeBytes: 11 * 1024 * 1024 })
+        .expect(400);
+      await agent.put("/api/profile/photo").send({}).expect(400);
+      await agent
+        .put("/api/profile/photo")
+        .send({ key: `meals/x/${uuid}.jpg` })
+        .expect(400);
+      await agent
+        .put("/api/profile/photo")
+        .send({ key: `avatars/x/../${uuid}.jpg` })
+        .expect(400);
+      await agent
+        .put("/api/profile/photo")
+        .send({ key: `avatars/${other}/${uuid}.jpg` })
+        .expect(403);
+    });
+
+    it("signs an upload, shows the uploaded photo on /me, and removes it", async () => {
+      const { userId, agent } = await t.signIn();
+      const before = await agent.get("/api/me").expect(200);
+      expect(before.body).toMatchObject({ image: null, hasPhoto: false });
+
+      const signed = await agent
+        .post("/api/profile/photo/upload-url")
+        .send({ contentType: "image/jpeg", sizeBytes: 1000 })
+        .expect(200);
+      expect(signed.body.key).toMatch(new RegExp(`^avatars/${userId}/[0-9a-f-]{36}\\.jpg$`));
+      expect(signed.body.uploadUrl).toEqual(expect.stringContaining(signed.body.key));
+      expect(signed.body.expiresIn).toBe(300);
+
+      const set = await agent.put("/api/profile/photo").send({ key: signed.body.key }).expect(200);
+      expect(set.body.hasPhoto).toBe(true);
+      expect(set.body.image).toEqual(expect.stringContaining(signed.body.key));
+      const me = await agent.get("/api/me").expect(200);
+      expect(me.body).toMatchObject({
+        hasPhoto: true,
+        image: expect.stringContaining(signed.body.key),
+      });
+      const row = await t.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(row.imageKey).toBe(signed.body.key);
+
+      const removed = await agent.delete("/api/profile/photo").expect(200);
+      expect(removed.body).toMatchObject({ image: null, hasPhoto: false });
+    });
+
+    it("falls back to the sign-in picture when no photo is uploaded", async () => {
+      const { userId, agent } = await t.signIn();
+      await t.prisma.user.update({
+        where: { id: userId },
+        data: { image: "https://lh3.googleusercontent.com/a/pic" },
+      });
+      const me = await agent.get("/api/me").expect(200);
+      expect(me.body).toMatchObject({
+        image: "https://lh3.googleusercontent.com/a/pic",
+        hasPhoto: false,
+      });
+    });
   });
 });

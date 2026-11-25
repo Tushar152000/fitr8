@@ -1,14 +1,14 @@
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { Pressable, View } from "react-native";
-import { Text } from "@/components/ui";
+import { PressableScale, Text } from "@/components/ui";
 import { dayLabel } from "@/lib/meal-param";
-import { makeStyles, radius, useColors } from "@/lib/theme";
+import { makeStyles, useColors } from "@/lib/theme";
 
 /**
- * ‹ Today › — step back up to a week to see a day and add a meal you forgot to log (or swipe the
- * cards below). Older days are in Past logs; the API won't take meals further back. Fixed height:
- * the second line is always there (a swipe hint today, "Back to today" on a past day), so nothing
- * below moves when the day changes.
+ * Figma "Day Switcher": a white pill, ‹ day › with a hint under the day ("Swipe for earlier days",
+ * or "Back to today" on a past day). Tapping the middle opens the month calendar (`onCalendar`).
+ * Fixed height, so nothing below moves when the day changes. A disabled arrow is drawn in
+ * text/secondary, as in the design.
  */
 export function DaySwitcher({
   day,
@@ -17,6 +17,7 @@ export function DaySwitcher({
   onOlder,
   onNewer,
   onToday,
+  onCalendar,
 }: {
   day: string;
   canOlder: boolean;
@@ -24,58 +25,74 @@ export function DaySwitcher({
   onOlder: () => void;
   onNewer: () => void;
   onToday: () => void;
+  onCalendar?: () => void;
 }) {
   const c = useColors();
   const styles = useStyles();
   return (
     <View style={styles.switcher} accessibilityLabel="Choose a day">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Previous day"
-        accessibilityState={{ disabled: !canOlder }}
-        disabled={!canOlder}
-        onPress={onOlder}
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.switchBtn,
-          pressed && { backgroundColor: c.sunken },
-          !canOlder && { opacity: 0.3 },
-        ]}
-      >
-        <ChevronLeft size={20} color={c.ink} />
-      </Pressable>
-      <View style={styles.switchMid}>
-        <Text weight={600} accessibilityLiveRegion="polite" numberOfLines={1}>
-          {dayLabel(day)}
-        </Text>
-        {canNewer ? (
-          <Pressable accessibilityRole="button" onPress={onToday} hitSlop={10}>
-            <Text weight={600} size={12} color={c.brandText} style={styles.switchSub}>
+      <Arrow label="Previous day" enabled={canOlder} onPress={onOlder}>
+        <ChevronLeft size={24} color={canOlder ? c.ink : c.ink2} strokeWidth={2} />
+      </Arrow>
+      {/* Middle: the day (→ calendar) and its hint. "Back to today" is a sibling button, not nested. */}
+      <View style={styles.mid}>
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={`${dayLabel(day)}. Open the calendar`}
+          disabled={!onCalendar}
+          onPress={onCalendar}
+          hitSlop={{ top: 12, bottom: canNewer ? 2 : 12, left: 24, right: 24 }}
+          style={styles.midPress}
+        >
+          <Text variant="bodyStrong" style={styles.tight} accessibilityLiveRegion="polite" numberOfLines={1}>
+            {dayLabel(day)}
+          </Text>
+          {!canNewer && (
+            <Text variant="labelRegular" color={c.ink2} style={styles.tight}>
+              Swipe for earlier days
+            </Text>
+          )}
+        </PressableScale>
+        {canNewer && (
+          <Pressable accessibilityRole="button" onPress={onToday} hitSlop={{ top: 2, bottom: 12, left: 24, right: 24 }}>
+            <Text variant="labelStrong" color={c.brandText} style={styles.tight}>
               Back to today
             </Text>
           </Pressable>
-        ) : (
-          <Text size={12} color={c.ink3} style={styles.switchSub}>
-            Swipe for earlier days
-          </Text>
         )}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Next day"
-        accessibilityState={{ disabled: !canNewer }}
-        disabled={!canNewer}
-        onPress={onNewer}
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.switchBtn,
-          pressed && { backgroundColor: c.sunken },
-          !canNewer && { opacity: 0.3 },
-        ]}
-      >
-        <ChevronRight size={20} color={c.ink} />
-      </Pressable>
+      <Arrow label="Next day" enabled={canNewer} onPress={onNewer}>
+        <ChevronRight size={24} color={canNewer ? c.ink : c.ink2} strokeWidth={2} />
+      </Arrow>
     </View>
+  );
+}
+
+function Arrow({
+  label,
+  enabled,
+  onPress,
+  children,
+}: {
+  label: string;
+  enabled: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  const c = useColors();
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !enabled }}
+      disabled={!enabled}
+      onPress={onPress}
+      hitSlop={{ top: 10, bottom: 10, left: 16, right: 16 }}
+      style={({ pressed }) => [styles.arrow, pressed && { backgroundColor: c.sunken }]}
+    >
+      {children}
+    </Pressable>
   );
 }
 
@@ -83,13 +100,15 @@ const useStyles = makeStyles((c) => ({
   switcher: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    height: 60,
-    borderRadius: radius.card,
+    justifyContent: "space-between",
+    height: 58,
+    borderRadius: 100,
     backgroundColor: c.surface,
-    paddingHorizontal: 6,
+    paddingHorizontal: 16,
   },
-  switchBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  switchMid: { flex: 1, alignItems: "center", justifyContent: "center", height: 44 },
-  switchSub: { lineHeight: 16, height: 16 },
+  arrow: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  mid: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
+  midPress: { alignItems: "center", gap: 2 },
+  // Figma letter-spacing on this component: -2 %.
+  tight: { letterSpacing: -0.26 },
 }));

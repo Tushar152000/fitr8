@@ -15,6 +15,8 @@ export type PremiumFeatureLabel =
 /** Where the Premium screen was opened from. */
 export type PaywallSource =
   | "home_banner"
+  /** Home header "Go Premium" / Premium pill (app v2). */
+  | "home_header"
   | "profile"
   | "onboarding"
   | "locked_photo"

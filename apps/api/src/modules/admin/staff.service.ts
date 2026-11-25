@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { StaffInviteInput } from "@fitr8/contracts";
 import { blogCan } from "@fitr8/domain/blog";
+import { feedbackCan } from "@fitr8/domain/feedback";
 import { staffCan, type StaffAction, type StaffRole } from "@fitr8/domain/staff";
 import { AppError, notFound } from "../../common/errors.js";
 import { InjectEnv, type Env } from "../../config/config.module.js";
@@ -104,6 +105,7 @@ export class StaffService {
           manageContent: blogCan(actor.role, "manage-content"),
           assignAuthor: blogCan(actor.role, "assign-author"),
         },
+        feedback: { read: feedbackCan(actor.role, "read") },
       },
     };
   }

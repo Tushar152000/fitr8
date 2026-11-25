@@ -8,7 +8,6 @@ import {
   FadeOut,
   FadeOutUp,
   LinearTransition,
-  SlideInDown,
 } from "react-native-reanimated";
 
 /**
@@ -44,8 +43,9 @@ export const appear = FadeInDown.duration(240).easing(easeOut);
 export const disappear = FadeOut.duration(160);
 /** Content revealed by a tap (an accordion row). */
 export const reveal = FadeIn.duration(180).easing(easeOut);
-/** A bottom sheet's panel rising in. */
-export const sheetIn = SlideInDown.duration(280).easing(easeOut);
+/** Bottom sheet (components/sheet.tsx): open = rise + backdrop fade-in, close = the same in reverse. */
+export const SHEET_OPEN = { duration: 280, easing: easeOut };
+export const SHEET_CLOSE = { duration: 220, easing: Easing.in(Easing.cubic) };
 /** A toast dropping in and out at the top. */
 export const toastIn = FadeInUp.duration(220).easing(easeOut);
 export const toastOut = FadeOutUp.duration(180);

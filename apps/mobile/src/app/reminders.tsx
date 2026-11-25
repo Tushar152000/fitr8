@@ -1,32 +1,58 @@
+import { REMINDER_SCHEDULE, type ReminderDraftDto, type ReminderDto } from "@fitr8/contracts";
 import { useQuery } from "@tanstack/react-query";
-import type { ReminderDraftDto, ReminderDto } from "@fitr8/contracts";
-import { BellRing } from "lucide-react-native";
+import { Bell, BellRing, Calendar, Droplet, type LucideIcon } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { PremiumBadge } from "@/components/premium/premium-badge";
+import { ProfilePage } from "@/components/profile/profile-page";
 import { QueryError } from "@/components/query-error";
 import { NewReminderCard } from "@/components/reminders/new-reminder-card";
 import { PermissionNote } from "@/components/reminders/permission-note";
 import { ReminderCard } from "@/components/reminders/reminder-card";
 import { ReminderSheet, type ReminderDraft } from "@/components/reminders/reminder-sheet";
 import { ListSkeleton } from "@/components/skeletons";
-import { AnimatedRow, Card, FieldError, Screen, Text } from "@/components/ui";
+import { AnimatedRow, FieldError, MenuGroup, MenuRow, SectionLabel, Switch, Text } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { usePremium } from "@/lib/premium";
 import { queryClient } from "@/lib/query";
 import { remindersQuery } from "@/lib/queries";
 import { ensureNotificationPermission } from "@/lib/reminders";
-import { makeStyles, useColors } from "@/lib/theme";
+import { useColors } from "@/lib/theme";
 import { useNotificationStatus } from "@/lib/use-notification-status";
 import { usePullRefresh } from "@/lib/use-pull-refresh";
+import { useReminderSwitches, type SwitchKey } from "@/lib/use-reminder-switches";
 
-/** Reminders you describe in words. The server keeps the list; this phone schedules the alerts. */
+/** "08:00" → "8:00". */
+const clock = (hhmm: string) => hhmm.replace(/^0(\d)/, "$1");
+const ISO_WEEKDAYS = ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"];
+
+/** Figma frame 12's three switches; times from contracts REMINDER_SCHEDULE. */
+const SWITCHES: { key: SwitchKey; icon: LucideIcon; title: string; subtitle: string }[] = [
+  { key: "meals", icon: Bell, title: "Meal reminders", subtitle: REMINDER_SCHEDULE.meals.map(clock).join(" · ") },
+  {
+    key: "water",
+    icon: Droplet,
+    title: "Water reminders",
+    subtitle: `Every ${REMINDER_SCHEDULE.water.everyHours} hours`,
+  },
+  {
+    key: "weighIn",
+    icon: Calendar,
+    title: "Weekly weigh-in",
+    subtitle: `${ISO_WEEKDAYS[REMINDER_SCHEDULE.weighIn.weekday - 1]}, ${clock(REMINDER_SCHEDULE.weighIn.time)}`,
+  },
+];
+
+/**
+ * Profile / Reminders (Figma frame 12): the built-in meal, water and weekly weigh-in switches, then
+ * the user's own reminders described in words (kept below the design's group). The server keeps the
+ * choices; this phone schedules the notifications.
+ */
 export default function RemindersScreen() {
   const c = useColors();
-  const styles = useStyles();
   const list = useQuery(remindersQuery);
   const status = useNotificationStatus();
+  const switches = useReminderSwitches();
   const pull = usePullRefresh(() => {
     status.refresh();
     return list.refetch();
@@ -86,78 +112,97 @@ export default function RemindersScreen() {
   }
 
   return (
-    <Screen refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
-      <BackHeader />
-      <View style={{ gap: 6 }}>
-        <Text variant="h1">Reminders</Text>
-        <Text color={c.ink2}>Say what and when, in your own words. Your phone does the reminding.</Text>
+    <ProfilePage
+      title="Reminders"
+      intro="Nudges at the right time help you log consistently."
+      refreshing={pull.refreshing}
+      onRefresh={pull.onRefresh}
+    >
+      <View style={{ gap: 10 }}>
+        <MenuGroup>
+          {SWITCHES.map((s) => (
+            <MenuRow
+              key={s.key}
+              icon={s.icon}
+              title={s.title}
+              subtitle={s.subtitle}
+              trailing={
+                <Switch
+                  checked={switches.state[s.key]}
+                  onChange={(v) => {
+                    switches.toggle(s.key, v).finally(status.refresh);
+                  }}
+                  label={s.title}
+                />
+              }
+            />
+          ))}
+        </MenuGroup>
+        {switches.error && <FieldError>{switches.error}</FieldError>}
       </View>
 
       <PermissionNote status={status.value} />
 
-      <NewReminderCard
-        text={text}
-        onChangeText={(v) => {
-          setText(v);
-          setParseError(null);
-        }}
-        onPickExample={setText}
-        error={parseError}
-        max={max}
-        full={full}
-        upgradeForMore={upgradeForMore}
-        parsing={parsing}
-        onCreate={create}
-      />
-
-      <View style={{ gap: 8 }}>
-        <View style={styles.sectionHead}>
-          <Text variant="h2">Your reminders</Text>
+      <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <SectionLabel>Custom reminders</SectionLabel>
           {isPremium ? (
             <PremiumBadge label="Unlimited" />
-          ) : (
-            reminders.length > 0 && (
-              <Text size={13} color={c.ink3} tabular>
-                {reminders.length} of {max}
-              </Text>
-            )
-          )}
+          ) : reminders.length > 0 ? (
+            <Text variant="labelMedium" color={c.ink2} tabular>
+              {reminders.length} of {max}
+            </Text>
+          ) : null}
         </View>
         {list.isPending ? (
-          <ListSkeleton rows={3} />
+          <ListSkeleton rows={2} />
         ) : list.isError ? (
           <QueryError error={list.error} onRetry={() => list.refetch()} />
-        ) : reminders.length === 0 ? (
-          <Card style={{ alignItems: "center", gap: 8, paddingVertical: 24 }}>
-            <BellRing size={28} color={c.ink3} />
-            <Text weight={600} center>
-              No reminders yet
-            </Text>
-            <Text size={13} color={c.ink3} center>
-              Creatine, water, a walk after dinner, Monday weigh-ins — describe one above.
-            </Text>
-          </Card>
+        ) : reminders.length > 0 ? (
+          <MenuGroup>
+            {reminders.map((r) => (
+              <AnimatedRow key={r.id}>
+                <ReminderCard
+                  reminder={r}
+                  busy={toggling === r.id}
+                  onToggle={(v) => toggle(r, v)}
+                  onOpen={() =>
+                    setDraft({
+                      nonce: Date.now(),
+                      id: r.id,
+                      title: r.title,
+                      description: r.description ?? "",
+                      rules: r.rules,
+                    })
+                  }
+                />
+              </AnimatedRow>
+            ))}
+          </MenuGroup>
         ) : (
-          reminders.map((r) => (
-            <AnimatedRow key={r.id}>
-              <ReminderCard
-                reminder={r}
-                busy={toggling === r.id}
-                onToggle={(v) => toggle(r, v)}
-                onOpen={() =>
-                  setDraft({
-                    nonce: Date.now(),
-                    id: r.id,
-                    title: r.title,
-                    description: r.description ?? "",
-                    rules: r.rules,
-                  })
-                }
-              />
-            </AnimatedRow>
-          ))
+          <MenuGroup>
+            <MenuRow icon={BellRing} title="Your own reminders" subtitle="Describe one below in your own words" />
+          </MenuGroup>
         )}
         {listError && <FieldError>{listError}</FieldError>}
+      </View>
+
+      <View style={{ gap: 10 }}>
+        <SectionLabel>New reminder</SectionLabel>
+        <NewReminderCard
+          text={text}
+          onChangeText={(v) => {
+            setText(v);
+            setParseError(null);
+          }}
+          onPickExample={setText}
+          error={parseError}
+          max={max}
+          full={full}
+          upgradeForMore={upgradeForMore}
+          parsing={parsing}
+          onCreate={create}
+        />
       </View>
 
       <ReminderSheet
@@ -169,10 +214,6 @@ export default function RemindersScreen() {
           status.refresh();
         }}
       />
-    </Screen>
+    </ProfilePage>
   );
 }
-
-const useStyles = makeStyles(() => ({
-  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-}));

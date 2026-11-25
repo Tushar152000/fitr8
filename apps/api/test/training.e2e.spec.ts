@@ -142,14 +142,35 @@ describe("training (Workout tab)", () => {
     expect(week.totalKcal).toBe(total);
     expect(week.fatKg).toBe(Math.round((total / 7700) * 100) / 100);
     expect(week.recovery).toBeNull();
+    // The eyebrow's plan name and the rest-day cardio as fields (a deficit: steps, no HIIT).
+    expect(week.plan).toBe("Mixed plan");
+    expect(week.restDay).toEqual({
+      activity: "Zone 2 walk or cycle",
+      minutes: { min: 20, max: 25 },
+      daysPerWeek: { min: 2, max: 3 },
+      steps: { min: 8000, max: 10000 },
+      noHiit: true,
+    });
 
     // Gym days carry the strength engine's exercises.
     const upper = week.days[0];
     expect(upper.type).toBe("gym");
+    // Same deficit flag as restDay above (noHiit): the gym day's why says "deficit" too.
+    expect(upper.why).toBe("Keeps your strength while you eat in a deficit.");
     expect(upper.gym.exercises).toBeGreaterThan(0);
     expect(upper.steps.length).toBeGreaterThanOrEqual(2);
     expect(upper.steps.length).toBeLessThanOrEqual(4);
     expect(upper.steps[0].detail).toMatch(/×/);
+    // …in full, as fields; other days have none.
+    expect(upper.exercises).toHaveLength(upper.gym.exercises);
+    expect(upper.exercises[0]).toMatchObject({
+      name: upper.steps[0].name,
+      sets: expect.any(Number),
+      repMin: expect.any(Number),
+      repMax: expect.any(Number),
+      timed: expect.any(Boolean),
+    });
+    expect(week.days[1].exercises).toBeNull();
     // Runs carry pace, distance and timer blocks.
     const run = week.days[1];
     expect(run).toMatchObject({
@@ -209,6 +230,7 @@ describe("training (Workout tab)", () => {
       .send({ types: ["yoga"], daysPerWeek: 3, sessionMinutes: 30 })
       .expect(200);
     expect(yoga.body.style).toBe("yoga");
+    expect(yoga.body.plan).toBe("Yoga");
     expect(yoga.body.days.map((d: { type: string }) => d.type)).toEqual([
       "yoga",
       "walk",

@@ -1,11 +1,11 @@
-import { Barcode, Crown } from "lucide-react-native";
+import { Crown, ScanBarcode } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 import { PressableScale, Text } from "@/components/ui";
 import { cam } from "./cam";
 
 /**
- * The pill at the bottom of the viewfinder: what to point at, "Barcode found" while a code is in
- * view, or (free plan, both scans locked) a tap through to Premium.
+ * The pill at the bottom of the viewfinder: what to point at, "Barcode found" (lime) while a code
+ * is in view, or (free plan, both scans locked) a tap through to Premium.
  */
 export function ScanHint({ locked, seen, onUnlock }: { locked: boolean; seen: string | null; onUnlock: () => void }) {
   if (locked) {
@@ -14,22 +14,25 @@ export function ScanHint({ locked, seen, onUnlock }: { locked: boolean; seen: st
         accessibilityRole="button"
         accessibilityLabel="Scanning is part of FITR8 Premium. See Premium"
         onPress={onUnlock}
-        style={[styles.hint, { backgroundColor: cam.brand }]}
+        style={styles.hint}
       >
-        <Crown size={16} color={cam.white} />
-        <Text weight={600} size={13} color={cam.white}>
-          Photo and barcode scanning are Premium · Try free
+        <Crown size={12} color={cam.highlight} strokeWidth={2.4} absoluteStrokeWidth />
+        <Text variant="labelMedium" color={cam.white}>
+          Scanning is Premium ·{" "}
+          <Text variant="labelStrong" color={cam.highlight}>
+            Try free
+          </Text>
         </Text>
       </PressableScale>
     );
   }
   return (
     <View
-      style={[styles.hint, { pointerEvents: "none" }, seen && { backgroundColor: cam.protein }]}
+      style={[styles.hint, { pointerEvents: "none" }, seen && { backgroundColor: cam.highlight }]}
       accessibilityLiveRegion="polite"
     >
-      {seen && <Barcode size={16} color={cam.white} />}
-      <Text weight={600} size={13} color={cam.white} tabular>
+      {seen && <ScanBarcode size={14} color={cam.ink} strokeWidth={2} absoluteStrokeWidth />}
+      <Text variant={seen ? "labelStrong" : "labelMedium"} color={seen ? cam.ink : cam.white} tabular>
         {seen ? `Barcode found · opening ${seen}` : "Point at a barcode, or snap your plate"}
       </Text>
     </View>
@@ -42,11 +45,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     position: "absolute",
-    bottom: 16,
+    bottom: 24,
     alignSelf: "center",
-    borderRadius: 999,
-    backgroundColor: "rgba(23,24,28,0.7)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    backdropFilter: "blur(6px)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
 });

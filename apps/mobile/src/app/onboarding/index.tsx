@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
 import { useRef } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +17,7 @@ import type { OnboardingDraft } from "@/lib/onboarding-draft";
 import { splitName, splitPhone, type PersonDetails } from "@/lib/person";
 import { planQuery } from "@/lib/queries";
 import { useColors } from "@/lib/theme";
-import { LAST_STEP, useOnboardingForm } from "@/lib/use-onboarding-form";
+import { editEntry, LAST_STEP, useOnboardingForm, type EditEntry } from "@/lib/use-onboarding-form";
 
 const STEP_TITLES = ["What can we call you?", "Your goal", "About you"];
 /** The line under each title (the web shows the same words). */
@@ -33,6 +34,8 @@ const str = (n: number | null | undefined) => (n == null ? "" : String(n));
  */
 export default function OnboardingScreen() {
   const me = useMe();
+  // Goal page rows open the edit at their step: `?step=goal` or `?step=about&part=body|food`.
+  const params = useLocalSearchParams<{ step?: string; part?: string }>();
   const returning = me.onboarded;
   const plan = useQuery({ ...planQuery, enabled: returning });
   const c = useColors();
@@ -79,13 +82,21 @@ export default function OnboardingScreen() {
     phoneCountry: phone.country,
     phone: phone.national,
   };
-  return <OnboardingForm initial={initial} initialPerson={initialPerson} returning={returning} />;
+  return (
+    <OnboardingForm
+      initial={initial}
+      initialPerson={initialPerson}
+      returning={returning}
+      entry={editEntry(params.step, params.part)}
+    />
+  );
 }
 
 function OnboardingForm(props: {
   initial: Partial<OnboardingDraft>;
   initialPerson: PersonDetails;
   returning: boolean;
+  entry?: EditEntry;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();

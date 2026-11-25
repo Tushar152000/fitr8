@@ -2,14 +2,13 @@ import { useEffect, useId } from "react";
 import Animated, {
   Easing,
   useAnimatedProps,
-  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { View } from "react-native";
 import Svg, { Circle, ClipPath, Defs, G, LinearGradient, Path, Stop } from "react-native-svg";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -23,7 +22,7 @@ const BOTTOM = 28.5;
 
 /**
  * A glass of water. `full` animates the water in (rises from the bottom with a slosh that settles,
- * a droplet, a small bounce) or out (drains). `still` draws it without motion (the small legend icon).
+ * a droplet; no pop/scale, user decision 2026-11-26) or out (drains). `still` draws it without motion (the small legend icon).
  * Water uses data/hydration-3 → data/hydration-2; the empty glass is frosted with a + to add one.
  */
 export function Glass({ full, size, still }: { full: boolean; size: number; still?: boolean }) {
@@ -33,7 +32,6 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
   const slosh = useSharedValue(0); // wave height, decays to 0
   const phase = useSharedValue(0); // wave travel
   const drop = useSharedValue(0); // droplet: 0 hidden … 1 done
-  const scale = useSharedValue(1);
 
   useEffect(() => {
     const target = full ? 1 : 0;
@@ -50,7 +48,6 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
     );
     phase.set(0);
     phase.set(withTiming(Math.PI * 4, { duration: 1200, easing: Easing.out(Easing.quad) }));
-    scale.set(withSequence(withTiming(0.88, { duration: 90 }), withSpring(1, { damping: 9, stiffness: 260 })));
     if (full) {
       drop.set(0);
       drop.set(withDelay(260, withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) })));
@@ -73,11 +70,10 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
     const t = drop.get();
     return { cy: 6 - t * 9, opacity: t > 0 && t < 1 ? 1 - t : 0, r: 1.6 };
   });
-  const bounce = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   const w = size * 0.8;
   return (
-    <Animated.View style={bounce}>
+    <View>
       <Svg width={w} height={size} viewBox="0 -4 24 34">
         <Defs>
           <ClipPath id={`cup${id}`}>
@@ -106,6 +102,6 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
         </AnimatedG>
         <AnimatedCircle animatedProps={droplet} cx={15} fill="#a6dded" />
       </Svg>
-    </Animated.View>
+    </View>
   );
 }

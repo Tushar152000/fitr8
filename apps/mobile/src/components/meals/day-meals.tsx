@@ -1,100 +1,49 @@
-import { router } from "expo-router";
-import { Camera, Keyboard, Plus } from "lucide-react-native";
 import { View } from "react-native";
-import { MealRow } from "@/components/meals/meal-row";
-import { AnimatedRow, Button, Card, Text } from "@/components/ui";
-import { formatInt, formatTime, MEAL_LABEL, MEAL_TYPES, mealTitle } from "@/lib/format";
-import { dayLabel } from "@/lib/meal-param";
+import { Card, Text } from "@/components/ui";
+import { MEAL_TYPES } from "@/lib/format";
+import { dayLabel, MEAL_BACKFILL_DAYS } from "@/lib/meal-param";
+import { slotShareKcal } from "@/lib/meal-slots";
 import { useColors } from "@/lib/theme";
 import type { Day } from "@/lib/types";
+import { DailySummary } from "./daily-summary";
+import { MealSlotCard } from "./meal-slot-card";
+import { QuickLog } from "./quick-log";
 
 /**
- * A day's meals (the Meals tab): grouped by Breakfast / Lunch / Snack / Dinner in day order (empty
- * groups take no space), one "Log food" under them, and the design-6b empty card when nothing is
- * logged. `pastDay` = a recent day being filled in (typing first; the meal is long eaten).
+ * A day on the Meals tab (Figma "Meals"): the day's summary, Quick log, then one card per slot
+ * (Breakfast, Lunch, Snacks, Dinner). `pastDay` = an earlier day; `canLog` false = older than the
+ * logging window (read-only: no quick log or add buttons).
  */
-export function DayMeals({ day, pastDay }: { day: Day; pastDay: string | null }) {
+export function DayMeals({ day, pastDay, canLog }: { day: Day; pastDay: string | null; canLog: boolean }) {
   const c = useColors();
-  const logParams = () => (pastDay ? { date: pastDay } : {});
-  const logPath = pastDay ? "/log/type" : "/log";
-  const dayName = pastDay ? dayLabel(pastDay).toLowerCase() : "today";
+  const label = pastDay ? dayLabel(pastDay) : "Today";
+  const eatenLabel = label === "Today" || label === "Yesterday" ? `Eaten ${label.toLowerCase()}` : `Eaten on ${label}`;
+  const kcalLeft = day.target ? day.target.kcal - day.eaten.kcal : 0;
+  const logged = MEAL_TYPES.filter((t) => day.meals.some((m) => m.mealType === t && m.status === "CONFIRMED"));
 
   return (
-    <View style={{ gap: 16 }}>
-      {day.meals.length === 0 && (
-        <Card dark>
-          <View style={{ gap: 4 }}>
-            <Text variant="h2" size={22} color={c.white}>
-              {pastDay ? `Nothing logged for ${dayName}` : "Log your first meal"}
-            </Text>
-            <Text size={13} color="rgba(255,255,255,0.75)">
-              {pastDay
-                ? "Forgot to log? Type what you ate and it counts for that day."
-                : "Snap your plate and we'll find the foods, or type it in a line."}
-            </Text>
-          </View>
-          {/* Today: Snap first. A past day: Type first (the meal is long eaten). */}
-          <View style={{ flexDirection: pastDay ? "row-reverse" : "row", gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Button
-                variant={pastDay ? "ghostDark" : "primary"}
-                icon={Camera}
-                onPress={() => router.push({ pathname: "/log", params: logParams() })}
-              >
-                Snap
-              </Button>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button
-                variant={pastDay ? "primary" : "ghostDark"}
-                icon={Keyboard}
-                onPress={() => router.push({ pathname: "/log/type", params: logParams() })}
-              >
-                Type
-              </Button>
-            </View>
-          </View>
+    <View style={{ gap: 20 }}>
+      <DailySummary day={day} eatenLabel={eatenLabel} />
+      {canLog ? (
+        <QuickLog date={pastDay} />
+      ) : (
+        <Card>
+          <Text variant="labelMedium" color={c.ink2}>
+            Meals can be added up to {MEAL_BACKFILL_DAYS} days back. This day is read-only.
+          </Text>
         </Card>
       )}
-
-      {MEAL_TYPES.map((t) => {
-        const meals = day.meals.filter((m) => m.mealType === t);
-        if (meals.length === 0) return null;
-        const kcal = meals.reduce((sum, m) => sum + (m.status === "CONFIRMED" ? m.totalKcal : 0), 0);
-        return (
-          <AnimatedRow key={t} style={{ gap: 8 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-              <Text weight={600}>{MEAL_LABEL[t]}</Text>
-              <Text weight={600} size={13} color={c.ink3} tabular>
-                {formatInt(kcal)} kcal
-              </Text>
-            </View>
-            {meals.map((m) => (
-              <AnimatedRow key={m.id}>
-                <MealRow
-                  onPress={() => router.push(`/log/${m.id}`)}
-                  photoUrl={m.photoUrl}
-                  meta={`${MEAL_LABEL[m.mealType]} · ${formatTime(m.createdAt, day.timezone)}`}
-                  title={mealTitle(
-                    m.items.map((i) => i.name),
-                    m.source === "TEXT" ? (m.inputText ?? "Typed meal") : "Photo",
-                  )}
-                  kcal={m.totalKcal}
-                  status={m.status}
-                />
-              </AnimatedRow>
-            ))}
-          </AnimatedRow>
-        );
-      })}
-
-      {day.meals.length > 0 && (
-        <AnimatedRow>
-          <Button variant="dashed" icon={Plus} onPress={() => router.push({ pathname: logPath, params: logParams() })}>
-            Log food
-          </Button>
-        </AnimatedRow>
-      )}
+      {MEAL_TYPES.map((t) => (
+        <MealSlotCard
+          key={t}
+          type={t}
+          meals={day.meals.filter((m) => m.mealType === t)}
+          timezone={day.timezone}
+          pastDay={pastDay}
+          canLog={canLog}
+          suggestedKcal={day.target ? slotShareKcal(kcalLeft, t, logged) : null}
+        />
+      ))}
     </View>
   );
 }

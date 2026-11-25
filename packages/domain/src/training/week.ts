@@ -842,9 +842,12 @@ function strengthWhy(
     return `Every main muscle in one session: the best use of ${n} days a week.${where}`;
   if (template.startsWith("lower"))
     return `Legs and hips, the biggest muscles you have. The hardest session of the week, so tomorrow stays easy.${where}`;
-  const goal =
-    input.goal === "lose"
-      ? "Keeps your strength while you eat in a deficit."
+  // "Deficit" only when the plan really eats below maintenance (`input.deficit`, spec §2's
+  // < 95 % of TDEE): the same flag that sets the rest-day cardio, so the two never disagree.
+  const goal = input.deficit
+    ? "Keeps your strength while you eat in a deficit."
+    : input.goal === "lose"
+      ? "Keeps your strength while you slowly lose fat."
       : input.goal === "gain"
         ? "Gives the extra food a job: building upper-body muscle."
         : "Builds upper-body strength while your weight holds steady.";
@@ -896,3 +899,39 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** "Monday" for a date in a week (UTC date-only). */
 export const weekdayName = (date: string) =>
   WEEKDAY[(new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7];
+
+const ACTIVITY_WORD: Partial<Record<DayType, string>> = {
+  run: "running",
+  hiit: "running",
+  cycle: "cycling",
+  yoga: "yoga",
+};
+
+/**
+ * The week's plan in a few words, for the Workout tab's eyebrow ("Rest day · Full body A/B"): the
+ * strength split ("Full body A/B", "Upper / lower", "Strength" when templates mix), or the one
+ * activity the week trains ("Running", "Cycling", "Yoga", "Walking"); a week that trains more than
+ * one kind of thing is a "Mixed plan".
+ */
+export function trainingPlanName(days: readonly Pick<TrainingDay, "type" | "template">[]): string {
+  const templates = new Set(
+    days.flatMap((d) => (d.type === "gym" && d.template ? [d.template] : [])),
+  );
+  const gymDays = days.some((d) => d.type === "gym");
+  const parts: string[] = [];
+  if (gymDays) {
+    const full = [...templates].filter((t) => t.startsWith("full_"));
+    if (templates.size > 0 && full.length === templates.size)
+      parts.push(full.length > 1 ? "Full body A/B" : "Full body");
+    else if (templates.size > 0 && full.length === 0) parts.push("Upper / lower");
+    else parts.push("Strength");
+  }
+  for (const d of days) {
+    const word = ACTIVITY_WORD[d.type];
+    if (word && !parts.includes(word)) parts.push(word);
+  }
+  if (!parts.length) parts.push(days.some((d) => d.type === "walk") ? "walking" : "rest");
+  if (parts.length > 1) return "Mixed plan";
+  const name = parts[0]!;
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}

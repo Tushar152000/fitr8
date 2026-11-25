@@ -3,17 +3,19 @@ import * as Sharing from "expo-sharing";
 import { Download } from "lucide-react-native";
 import { useState } from "react";
 import { Platform } from "react-native";
-import { LinkRow, RowError } from "./rows";
+import { MenuRow } from "@/components/ui";
 import { apiText, errorMessage } from "@/lib/api";
-import { useColors } from "@/lib/theme";
 
-/** Design 13 "Export CSV": written to a cache file and handed to the share sheet. */
+/**
+ * Privacy & data → "Export my data": every log as CSV, written to a cache file and handed to the
+ * share sheet (a download on the web preview). Errors show in the row's subtitle.
+ */
 export function ExportRow() {
-  const c = useColors();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function exportCsv() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -40,13 +42,11 @@ export function ExportRow() {
   }
 
   return (
-    <>
-      <LinkRow
-        label={busy ? "Preparing…" : "Export as CSV"}
-        icon={<Download size={20} color={c.ink2} />}
-        onPress={exportCsv}
-      />
-      {error && <RowError>{error}</RowError>}
-    </>
+    <MenuRow
+      icon={Download}
+      title="Export my data"
+      subtitle={busy ? "Preparing…" : (error ?? "Your meals and weigh-ins as a CSV file")}
+      onPress={exportCsv}
+    />
   );
 }

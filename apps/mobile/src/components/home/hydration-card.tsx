@@ -1,7 +1,7 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
 import { FieldError, PressableScale, Text } from "@/components/ui";
@@ -11,9 +11,10 @@ import { useWater } from "@/lib/use-water";
 
 const L = (ml: number) => (Math.round(ml / 100) / 10).toFixed(1);
 
-// The card is always dark (both themes): bg/inverse into data/hydration-1, fixed like the camera screens.
-const GRADIENT = ["#0c0c0c", "#0c1014", "#164a5f", "#2f97c1"] as const;
-const GRADIENT_AT = [0, 0.45, 0.85, 1] as const;
+// The card is always dark (both themes): bg/inverse with the Figma hydration glow (blurred aqua
+// strokes along the bottom edge), exported from the design as a 350 × 137 image and stretched to fit.
+const INVERSE = "#0c0c0c";
+const GLOW = require("../../../assets/home/hydration-glow.png");
 
 /**
  * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
@@ -28,11 +29,25 @@ export function HydrationCard() {
   const error = water.add.error ?? water.undo.error;
 
   return (
-    <LinearGradient colors={GRADIENT} locations={GRADIENT_AT} style={styles.card}>
+    <View style={styles.card}>
+      <Image source={GLOW} style={StyleSheet.absoluteFill} contentFit="fill" accessibilityIgnoresInvertColors />
       <View style={styles.head}>
-        <Text size={13} weight={500} color="rgba(255,255,255,0.85)">
-          Current hydration
-        </Text>
+        <View style={{ flex: 1, gap: 0 }}>
+          <Text variant="labelMedium" color="#ffffff" style={{ letterSpacing: -0.24 }}>
+            Current hydration
+          </Text>
+          {d ? (
+            <Text weight={600} size={22} color="#ffffff" tabular accessibilityLiveRegion="polite" style={styles.big}>
+              {d.consumedMl >= d.targetMl ? "Target reached" : `${L(d.targetMl - d.consumedMl)} L left`}
+              <Text weight={500} size={14} color="rgba(255,255,255,0.65)" tabular style={styles.big}>
+                {" "}
+                of {L(d.targetMl)} L
+              </Text>
+            </Text>
+          ) : (
+            <View style={{ height: 27 }} />
+          )}
+        </View>
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={`Glass size ${glass} ml. Change`}
@@ -40,22 +55,16 @@ export function HydrationCard() {
           hitSlop={10}
           style={styles.size}
         >
-          <Glass full still size={16} />
-          <Text size={12} color="rgba(255,255,255,0.85)" tabular>
+          <Glass full still size={15} />
+          <Text variant="labelRegular" color="#ffffff" tabular style={{ letterSpacing: -0.24 }}>
             = {glass} ml
           </Text>
-          <Pencil size={13} color="rgba(255,255,255,0.85)" />
+          <Pencil size={13} color="#ffffff" />
         </PressableScale>
       </View>
 
       {d ? (
         <>
-          <Text weight={700} size={26} color="#ffffff" tabular accessibilityLiveRegion="polite">
-            {d.consumedMl >= d.targetMl ? "Target reached" : `${L(d.targetMl - d.consumedMl)} L left`}
-            <Text size={13} color="rgba(255,255,255,0.6)" tabular>
-              {"  "}of {L(d.targetMl)} L
-            </Text>
-          </Text>
           <Glasses
             consumedMl={d.consumedMl}
             targetMl={d.targetMl}
@@ -69,7 +78,7 @@ export function HydrationCard() {
           {error && <FieldError>{error.message || "Couldn't save. Try again."}</FieldError>}
         </>
       ) : (
-        <View style={{ height: 78 }} />
+        <View style={{ height: 44 }} />
       )}
 
       <Sheet open={sizing} onClose={() => setSizing(false)} title="Glass size">
@@ -87,7 +96,7 @@ export function HydrationCard() {
           ))}
         </View>
       </Sheet>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -126,7 +135,7 @@ function Glasses({
             hitSlop={4}
             style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
           >
-            <Glass full={full} size={32} />
+            <Glass full={full} size={34} />
           </Pressable>
         );
       })}
@@ -152,11 +161,20 @@ function SizeChip({ ml, selected, onPress }: { ml: number; selected: boolean; on
 }
 
 const useStyles = makeStyles((c) => ({
-  card: { borderRadius: radius.card, padding: 16, gap: 12, overflow: "hidden" },
-  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  size: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32 },
-  glasses: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
-  glass: { minWidth: 32, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  card: {
+    minHeight: 137,
+    borderRadius: radius.card,
+    padding: 18,
+    gap: 18,
+    overflow: "hidden",
+    backgroundColor: INVERSE,
+    boxShadow: "0 20px 20px rgba(0, 119, 255, 0.02)",
+  },
+  head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
+  big: { letterSpacing: -0.56 },
+  size: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 15 },
+  glasses: { flexDirection: "row", justifyContent: "space-between", marginVertical: -5 },
+  glass: { minWidth: 34, minHeight: 44, alignItems: "center", justifyContent: "center" },
   sizes: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 },
   chip: {
     minWidth: 92,

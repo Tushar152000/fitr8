@@ -3,6 +3,7 @@ import { waterTarget } from "@fitr8/domain/nutrition";
 import { AppError, notFound } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { WorkoutsService } from "../workouts/workouts.service.js";
+import { HAS_WEIGHT, weighedOne } from "../progress/weigh-ins.js";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -21,11 +22,13 @@ export class WaterService {
         where: { userId },
         select: { activityLevel: true, medicalFlag: true, remindWater: true },
       }),
-      this.prisma.bodyMetric.findFirst({
-        where: { userId },
-        orderBy: { date: "desc" },
-        select: { weightKg: true },
-      }),
+      this.prisma.bodyMetric
+        .findFirst({
+          where: { userId, ...HAS_WEIGHT },
+          orderBy: { date: "desc" },
+          select: { weightKg: true },
+        })
+        .then(weighedOne),
       this.prisma.goal.findFirst({
         where: { userId, status: "ACTIVE" },
         orderBy: { createdAt: "desc" },

@@ -1,6 +1,8 @@
+import { REMINDER_SCHEDULE, type MealTypeValue } from "@fitr8/contracts";
 import { isRunningInExpoGo } from "expo";
 import type * as NotificationsModule from "expo-notifications";
 import { Platform } from "react-native";
+import { planMealReminders } from "./meal-reminder-plan";
 
 /**
  * Where reminders can run. Not on web, and not in Expo Go on Android: since SDK 53 expo-notifications
@@ -152,6 +154,99 @@ export async function sendReminderConfirmation(next: Date | null) {
 }
 
 /**
+ * The built-in meal and weekly weigh-in reminders (Reminders screen switches, `remindMeals` /
+ * `remindWeighIn`) at contracts `REMINDER_SCHEDULE`. Meals are one-off notifications for the next 7
+ * days (like water) so today's can be dropped once that meal is logged (`planMealReminders`); the
+ * weigh-in repeats weekly. Re-planned at launch, on foreground, after a meal is logged today and
+ * whenever a switch changes (`useReminderSync` in (tabs)/_layout.tsx). Water has its own schedule.
+ */
+const MEAL_PREFIX = "meal-";
+const WEIGH_IN_PREFIX = "weighin-";
+
+/** One line per meal time (breakfast, lunch, dinner), in REMINDER_SCHEDULE.meals order. */
+const MEAL_COPY = [
+  { title: "Breakfast time", body: "Snap your breakfast to log it in seconds." },
+  { title: "Lunch check-in", body: "Had lunch? Log it while you still remember." },
+  { title: "Dinner check-in", body: "Log dinner to close out your day." },
+] as const;
+const WEIGH_IN_COPY = {
+  title: "Weekly weigh-in",
+  body: "Step on the scale before breakfast and log it to keep your trend honest.",
+  // Tapped: Measurements with the weight field open (`useNotificationLinks`).
+  data: { url: "/measurements?add=weightKg" },
+};
+
+const hm = (time: string) => {
+  const [hour, minute] = time.split(":").map(Number);
+  return { hour: hour!, minute: minute! };
+};
+
+async function cancelPrefixed(Notifications: typeof NotificationsModule, prefixes: string[]) {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => prefixes.some((p) => n.identifier.startsWith(p)))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+  );
+}
+
+let routineQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Make the phone's meal and weigh-in reminders match the switches: cancel ours, schedule the ones
+ * that are on (none without permission). Runs serialized, like the custom reminders.
+ */
+export function syncRoutineReminders({
+  meals,
+  weighIn,
+  loggedToday,
+}: {
+  meals: boolean;
+  weighIn: boolean;
+  /** Meal types already logged today: their reminder is skipped today. */
+  loggedToday: readonly MealTypeValue[];
+}): Promise<void> {
+  const run = async () => {
+    const Notifications = notifications();
+    if (!Notifications) return;
+    await cancelPrefixed(Notifications, [MEAL_PREFIX, WEIGH_IN_PREFIX]);
+    if ((!meals && !weighIn) || !(await Notifications.getPermissionsAsync()).granted) return;
+    const T = Notifications.SchedulableTriggerInputTypes;
+    if (meals) {
+      const plan = planMealReminders({ now: new Date(), times: REMINDER_SCHEDULE.meals, loggedToday });
+      for (const { slot, at } of plan) {
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${MEAL_PREFIX}${at.toISOString()}`,
+          content: MEAL_COPY[slot] ?? MEAL_COPY[0],
+          trigger: { type: T.DATE, date: at, channelId: CHANNEL },
+        });
+      }
+    }
+    if (weighIn) {
+      const { weekday, time } = REMINDER_SCHEDULE.weighIn;
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${WEIGH_IN_PREFIX}weekly`,
+        content: WEIGH_IN_COPY,
+        // REMINDER_SCHEDULE is ISO (1 = Monday … 7 = Sunday); expo-notifications counts 1 = Sunday … 7.
+        trigger: { type: T.WEEKLY, weekday: (weekday % 7) + 1, ...hm(time), channelId: CHANNEL },
+      });
+    }
+  };
+  const next = routineQueue.then(run, run);
+  routineQueue = next.catch(() => undefined);
+  return next;
+}
+
+/** On sign-out / account delete. */
+export async function cancelRoutineReminders() {
+  const Notifications = notifications();
+  if (Notifications)
+    await (routineQueue = routineQueue
+      .then(() => cancelPrefixed(Notifications, [MEAL_PREFIX, WEIGH_IN_PREFIX]))
+      .catch(() => undefined));
+}
+
+/**
  * The user's own reminders (Reminders screen). The server only stores the rules; the phone repeats
  * the fixed ones (`slots`: daily / weekly / monthly on a date) and schedules changing dates such as
  * "the second-last day of the month" as exact one-off times (`upcoming`), re-planned at every launch.
@@ -251,4 +346,26 @@ export async function notificationStatus(): Promise<"granted" | "denied" | "unde
   const p = await Notifications.getPermissionsAsync();
   if (p.granted) return "granted";
   return p.canAskAgain ? "undetermined" : "denied";
+}
+
+/**
+ * Where a tapped notification goes: its `data.url` (an in-app path), e.g. the weekly weigh-in opens
+ * `/measurements?add=weightKg`. Handles a tap that launched the app and taps while it runs. Mount
+ * once below the signed-in guard.
+ */
+export function listenForNotificationLinks(open: (url: string) => void): () => void {
+  const Notifications = notifications();
+  if (!Notifications) return () => {};
+  const go = (r: NotificationsModule.NotificationResponse | null) => {
+    const url = r?.notification.request.content.data?.url;
+    if (typeof url === "string" && url.startsWith("/")) open(url);
+  };
+  Notifications.getLastNotificationResponseAsync()
+    .then((r) => {
+      go(r);
+      if (r) Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    })
+    .catch(() => {});
+  const sub = Notifications.addNotificationResponseReceivedListener(go);
+  return () => sub.remove();
 }

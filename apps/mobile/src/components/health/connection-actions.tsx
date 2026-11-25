@@ -1,69 +1,54 @@
-import { Settings2, Unlink, type LucideIcon } from "lucide-react-native";
-import { Pressable, View } from "react-native";
-import { Text } from "@/components/ui";
-import { radius, useColors } from "@/lib/theme";
+import { RefreshCw, Settings2, Trash2, Unlink } from "lucide-react-native";
+import { MenuGroup, MenuRow } from "@/components/ui";
+import { threeLetterMonths } from "@/lib/profile-summary";
 
-/** Choose what the health app shares, disconnect, or disconnect and delete what FITR8 synced. */
+/** "25 Nov, 9:41 am" */
+const syncedAt = (iso: string) =>
+  threeLetterMonths(
+    new Date(iso).toLocaleString("en-IN", { hour: "numeric", minute: "2-digit", day: "numeric", month: "short" }),
+  );
+
+/**
+ * The connected health app's actions: sync now (with the last sync time), choose what it shares,
+ * disconnect, or disconnect and delete what FITR8 synced.
+ */
 export function ConnectionActions({
   label,
+  lastSyncAt,
+  syncing,
   disconnecting,
+  onSync,
   onOpenSettings,
   onDisconnect,
 }: {
   label: string;
+  lastSyncAt: string | null;
+  syncing: boolean;
   disconnecting: boolean;
+  onSync: () => void;
   onOpenSettings: () => void;
   onDisconnect: (deleteData: boolean) => void;
 }) {
-  const c = useColors();
   return (
-    <View style={{ borderRadius: radius.card, backgroundColor: c.surface }}>
-      <Row icon={Settings2} label={`Choose what ${label} shares`} onPress={onOpenSettings} />
-      <Row icon={Unlink} label="Disconnect" onPress={() => onDisconnect(false)} disabled={disconnecting} />
-      <Row
-        icon={Unlink}
-        label="Disconnect and delete synced data"
-        danger
-        onPress={() => onDisconnect(true)}
-        disabled={disconnecting}
+    <MenuGroup>
+      <MenuRow
+        icon={RefreshCw}
+        accent
+        title={syncing ? "Syncing…" : "Sync now"}
+        subtitle={lastSyncAt ? `Last synced ${syncedAt(lastSyncAt)}` : "First sync in progress"}
+        disabled={syncing}
+        onPress={onSync}
       />
-    </View>
-  );
-}
-
-function Row({
-  icon: Icon,
-  label,
-  onPress,
-  danger,
-  disabled,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  const c = useColors();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => ({
-        minHeight: 52,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingHorizontal: 16,
-        backgroundColor: pressed ? c.sunken : "transparent",
-        borderRadius: radius.card,
-      })}
-    >
-      <Icon size={18} color={danger ? c.danger : c.ink2} />
-      <Text weight={600} color={danger ? c.danger : c.ink}>
-        {label}
-      </Text>
-    </Pressable>
+      <MenuRow icon={Settings2} title={`Choose what ${label} shares`} onPress={onOpenSettings} />
+      <MenuRow icon={Unlink} title="Disconnect" disabled={disconnecting} onPress={() => onDisconnect(false)} />
+      <MenuRow
+        icon={Trash2}
+        title="Disconnect and delete synced data"
+        danger
+        chevron={false}
+        disabled={disconnecting}
+        onPress={() => onDisconnect(true)}
+      />
+    </MenuGroup>
   );
 }

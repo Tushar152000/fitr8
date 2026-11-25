@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react-native";
 import { useState } from "react";
 import { Alert, Platform, View } from "react-native";
 import { Sheet } from "@/components/sheet";
-import { Button, Chip, FieldError, PressableScale, Text, TextField } from "@/components/ui";
+import { Button, Chip, FieldError, MenuGroup, MenuRow, Text, TextField } from "@/components/ui";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/query";
 import { fonts, makeStyles, useColors } from "@/lib/theme";
@@ -71,22 +71,20 @@ export function DangerZone({ onDeleted, onSignOut }: { onDeleted: () => void; on
 
   return (
     <>
-      <PressableScale
-        accessibilityRole="button"
-        onPress={() => setOpen(true)}
-        style={{ minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-      >
-        <Trash2 size={16} color={c.brandText} />
-        <Text weight={600} color={c.brandText}>
-          Delete account
-        </Text>
-      </PressableScale>
+      <MenuGroup>
+        <MenuRow
+          icon={Trash2}
+          title="Delete account"
+          subtitle="Removes your account and all your data"
+          onPress={() => setOpen(true)}
+        />
+      </MenuGroup>
       <Sheet open={open} onClose={close} title={step === "why" ? "Before you go" : "Delete your account?"}>
         {step === "why" ? (
           <>
             <Text color={c.ink2}>
               Deleting removes your meals, weigh-ins, workouts, streak, saved meals and plan for good. We can&apos;t
-              bring them back. You can download a copy first from &ldquo;Your data&rdquo;.
+              bring them back. You can download a copy first from Settings → Privacy &amp; data.
             </Text>
             <Text size={13} color={c.cautionText}>
               Paying for FITR8 Premium through the App Store or Google Play? Cancel it there too: deleting your account

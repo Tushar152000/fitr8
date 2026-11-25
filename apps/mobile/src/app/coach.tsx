@@ -86,5 +86,5 @@ export default function CoachScreen() {
 }
 
 const useStyles = makeStyles(() => ({
-  thread: { flexGrow: 1, paddingHorizontal: gutter, paddingVertical: 20, gap: 16 },
+  thread: { flexGrow: 1, paddingHorizontal: gutter, paddingTop: 0, paddingBottom: 20, gap: 16 },
 }));

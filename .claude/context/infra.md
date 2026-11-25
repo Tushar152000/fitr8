@@ -42,3 +42,5 @@ On successful CI `workflow_run` on main (or manual, input `all`). WIF auth, no k
 ## Turbo
 
 `turbo.json`: build `^build`, outputs dist/.next; test passes `TEST_DATABASE_URL`. Read installed turbo docs before changing config (AGENTS.md).
+
+- 2026-11-26: `apps/mobile/app.json` expo-camera / expo-image-picker permission strings now also mention the profile photo (native change → takes effect in the next store build; 0.5.0 needs one anyway). Font packages changed (Inter added, Figtree removed) — JS only, OTA-safe.

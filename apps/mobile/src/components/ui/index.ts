@@ -25,3 +25,7 @@ export { Section } from "./section";
 export { StatTile } from "./stat-tile";
 export { TextField } from "./text-field";
 export { GradientFab } from "./gradient-fab";
+export { IconButton, PageHeader, goBack } from "./page-header";
+export { IconTile, MenuGroup, MenuRow, SectionLabel, StatusPill } from "./menu";
+export { PillButton } from "./pill-button";
+export { Avatar } from "./avatar";
