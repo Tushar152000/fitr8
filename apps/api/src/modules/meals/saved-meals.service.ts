@@ -3,8 +3,9 @@ import type { LogSavedMealInput, SavedMealInput } from "@fitr8/contracts";
 import { sumMacros } from "@fitr8/domain/nutrition";
 import { AppError, notFound } from "../../common/errors.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
+import { visibleFoodTo } from "../foods/food-visibility.js";
 import { UsersService } from "../users/users.service.js";
-import { MealItemsService, type BuiltItem } from "./meal-items.service.js";
+import { MealItemsService, PRICING_SELECT, type BuiltItem } from "./meal-items.service.js";
 import { MealsService } from "./meals.service.js";
 
 /** Saved meals per account; plenty for real repeat meals, and keeps the picker readable. */
@@ -113,19 +114,17 @@ export class SavedMealsService {
     }
   }
 
-  /** Price items like meal review does; a food id must be one this user may see. */
+  /** Price items like meal review does; a food id must be one this user may see. One food query. */
   private async build(userId: string, input: SavedMealInput["items"]) {
     const ids = [...new Set(input.flatMap((i) => (i.foodId ? [i.foodId] : [])))];
-    if (ids.length) {
-      const visible = await this.prisma.food.count({
-        where: {
-          id: { in: ids },
-          OR: [{ source: { not: "LABEL_SCAN" } }, { verified: true }, { submittedById: userId }],
-        },
-      });
-      if (visible !== ids.length) throw notFound("Food");
-    }
-    return Promise.all(input.map((i) => this.items.buildItem(i, { trustGrams: true })));
+    const foods = ids.length
+      ? await this.prisma.food.findMany({
+          where: { id: { in: ids }, ...visibleFoodTo(userId) },
+          select: PRICING_SELECT,
+        })
+      : [];
+    if (foods.length !== ids.length) throw notFound("Food");
+    return this.items.buildItems(input, { trustGrams: true }, foods);
   }
 }
 
@@ -145,9 +144,6 @@ function toDto(row: Row) {
     proteinG: Math.round(row.totalProtein),
     carbsG: Math.round(row.totalCarbs),
     fatG: Math.round(row.totalFat),
-    timesLogged: row.timesLogged,
-    lastLoggedAt: row.lastLoggedAt,
-    createdAt: row.createdAt,
     items: row.items.map((i) => ({
       id: i.id,
       foodId: i.foodId,

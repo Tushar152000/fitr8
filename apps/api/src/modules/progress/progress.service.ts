@@ -39,16 +39,38 @@ export class ProgressService {
     private readonly users: UsersService,
   ) {}
 
-  /** GET /progress for the user's local today. */
+  /** GET /progress for the user's local today: only what the Progress screen and card read. */
   async get(userId: string) {
+    const p = await this.getProgress(userId, await this.users.today(userId));
+    return {
+      ...p,
+      latest: p.latest && { weightKg: p.latest.weightKg, waistCm: p.latest.waistCm },
+      target: p.target && { kcal: p.target.kcal },
+    };
+  }
+
+  /** The coach's view: the same, with the latest measurements and the target's reason. */
+  async details(userId: string) {
     return this.getProgress(userId, await this.users.today(userId));
   }
 
-  /** Weigh-ins, plan line, weekly trend vs plan, last-7-day intake. */
+  /** Weigh-ins (the newest 120, oldest first), plan line, weekly trend vs plan, last-7-day intake. */
   async getProgress(userId: string, today: Date) {
     const since7 = new Date(today.getTime() - 6 * DAY);
-    const [metrics, { plan, goal }, target, meals] = await Promise.all([
-      this.prisma.bodyMetric.findMany({ where: { userId }, orderBy: { date: "asc" }, take: 120 }),
+    const [newestFirst, { plan, goal }, target, meals] = await Promise.all([
+      this.prisma.bodyMetric.findMany({
+        where: { userId },
+        orderBy: { date: "desc" },
+        take: 120,
+        select: {
+          date: true,
+          weightKg: true,
+          waistCm: true,
+          neckCm: true,
+          hipCm: true,
+          bodyFatPct: true,
+        },
+      }),
       this.targets.computePlan(userId),
       this.targets.currentTarget(userId, today),
       this.prisma.mealLog.groupBy({
@@ -57,6 +79,7 @@ export class ProgressService {
         _sum: { totalKcal: true },
       }),
     ]);
+    const metrics = newestFirst.reverse();
 
     const points = sevenDayAverages(metrics);
     const thisWeek = weekMean(metrics, today.getTime());

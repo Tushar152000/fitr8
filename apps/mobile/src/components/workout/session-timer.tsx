@@ -1,0 +1,148 @@
+import type { TrainingDayDto } from "@fitr8/contracts";
+import { router } from "expo-router";
+import { Pause, Play, Square } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
+import { AppState, Vibration, View } from "react-native";
+import { Button, Card, FieldError, PressableScale, Text } from "@/components/ui";
+import { track } from "@/lib/analytics";
+import { errorMessage } from "@/lib/api";
+import { handlePremiumError } from "@/lib/premium";
+import { useColors } from "@/lib/theme";
+import { showToast } from "@/lib/toast";
+import { dayColors, logSession, SESSION_VERB, sessionMinutes } from "@/lib/training";
+import { TrackBar } from "./track-bar";
+
+/** "m:ss" */
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+
+/**
+ * The guided session: the current block, time left in it, what's next. Time comes from the start
+ * timestamp, so it stays right if the phone locks or the app is in the background.
+ */
+export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () => void }) {
+  const c = useColors();
+  const col = dayColors(c, day.type);
+  const verbs = SESSION_VERB[day.type]!;
+  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [pausedMs, setPausedMs] = useState(0);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lastBlock = useRef(0);
+
+  useEffect(() => {
+    track("training_session_started", { type: day.type, minutes: day.minutes });
+  }, [day.type, day.minutes]);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    const sub = AppState.addEventListener("change", () => setNow(Date.now()));
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, []);
+
+  const elapsedMs = Math.max(0, (pausedAt ?? now) - startedAt - pausedMs);
+  const elapsedMin = elapsedMs / 60_000;
+  let acc = 0;
+  let index = day.blocks.length;
+  for (let i = 0; i < day.blocks.length; i++) {
+    if (elapsedMin < acc + day.blocks[i]!.minutes) {
+      index = i;
+      break;
+    }
+    acc += day.blocks[i]!.minutes;
+  }
+  const done = index >= day.blocks.length;
+  const block = day.blocks[Math.min(index, day.blocks.length - 1)]!;
+  const leftSec = done ? 0 : Math.ceil((acc + block.minutes - elapsedMin) * 60);
+  const next = day.blocks[index + 1];
+
+  useEffect(() => {
+    if (index !== lastBlock.current) {
+      lastBlock.current = index;
+      Vibration.vibrate(done ? [0, 300, 150, 300] : 250);
+    }
+  }, [index, done]);
+
+  async function finish() {
+    const minutes = sessionMinutes(elapsedMin);
+    setBusy(true);
+    setError(null);
+    try {
+      await logSession(day, minutes);
+      showToast(`Logged ${minutes} min`);
+      onStop();
+      if (router.canGoBack()) router.back();
+    } catch (e) {
+      if (!handlePremiumError(e)) setError(errorMessage(e, "Couldn't log it. Try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={{ gap: 16 }}>
+      <View style={{ alignItems: "center", gap: 4 }}>
+        <Text variant="meta">{done ? "All blocks done" : `Block ${index + 1} of ${day.blocks.length}`}</Text>
+        <Text variant="h2" size={22} center>
+          {done ? "Nice work" : block.label}
+        </Text>
+        <Text
+          size={56}
+          weight={700}
+          tabular
+          color={block.intensity === "hard" && !done ? c.fat : col.fg}
+          accessibilityLiveRegion="polite"
+        >
+          {clock(leftSec)}
+        </Text>
+        <Text size={13} color={c.ink3} tabular>
+          {clock(Math.floor(elapsedMs / 1000))} of {day.minutes}:00
+          {next && !done ? ` · next: ${next.label}` : ""}
+        </Text>
+      </View>
+      <TrackBar>
+        <View style={{ flex: Math.min(1, elapsedMin / day.minutes), backgroundColor: col.fg }} />
+        <View style={{ flex: Math.max(0, 1 - elapsedMin / day.minutes), backgroundColor: c.track }} />
+      </TrackBar>
+      {error && <FieldError>{error}</FieldError>}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Button
+            variant="secondary"
+            icon={pausedAt ? Play : Pause}
+            onPress={() => {
+              if (pausedAt) {
+                setPausedMs((p) => p + (Date.now() - pausedAt));
+                setPausedAt(null);
+              } else setPausedAt(Date.now());
+            }}
+          >
+            {pausedAt ? "Resume" : "Pause"}
+          </Button>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button icon={Square} loading={busy} onPress={finish} disabled={elapsedMs < 30_000}>
+            {verbs.done}
+          </Button>
+        </View>
+      </View>
+      <PressableScale
+        accessibilityRole="button"
+        onPress={() => {
+          setStartedAt(Date.now());
+          setPausedMs(0);
+          setPausedAt(null);
+          onStop();
+        }}
+        style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
+      >
+        <Text weight={600} color={c.ink3}>
+          Cancel without logging
+        </Text>
+      </PressableScale>
+    </Card>
+  );
+}

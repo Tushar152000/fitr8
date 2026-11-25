@@ -84,10 +84,7 @@ export function mealTitle(names: string[], fallback: string): string {
   return sentenceCase(rest > 0 ? `${shown} +${rest} more` : shown);
 }
 
-/** The meal to offer next: first unlogged from the current time of day onwards, then any missed earlier one, else a snack. */
-export function nextMealType(logged: Iterable<MealType>, hour: number): MealType {
-  const done = new Set(logged);
-  const start = MEAL_TYPES.indexOf(mealTypeForHour(hour));
-  const ordered = [...MEAL_TYPES.slice(start), ...MEAL_TYPES.slice(0, start)];
-  return ordered.find((t) => t !== "SNACK" && !done.has(t)) ?? "SNACK";
+/** 1499 → "₹1,499": a whole-unit price in the given currency. */
+export function money(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }

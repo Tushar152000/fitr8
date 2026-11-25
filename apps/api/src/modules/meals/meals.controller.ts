@@ -9,6 +9,7 @@ import {
   RecheckSchema,
   RelogSchema,
   UploadUrlSchema,
+  type ConfirmedMealDto,
   type ConfirmMealInput,
   type CreatedDto,
   type CreateMealDto,
@@ -16,7 +17,6 @@ import {
   type LogItemsInput,
   type MealDetailDto,
   type MealListDto,
-  type MealLogDto,
   type ParsedItemsDto,
   type ParseItemsInput,
   type QuickAddInput,
@@ -46,12 +46,8 @@ export class MealsController {
 
   /** Photo scans used today, the daily limit and when it resets; meals typed today and this month. */
   @Get("usage")
-  async usage(@UserId() userId: string): Promise<UsageDto> {
-    const [scans, typedMeals] = await Promise.all([
-      this.quota.scanUsage(userId),
-      this.quota.typedMeals(userId),
-    ]);
-    return { ...scans, typedMeals };
+  usage(@UserId() userId: string): Promise<UsageDto> {
+    return this.quota.usage(userId);
   }
 
   /** Step 1 of photo logging: get a signed URL, then PUT the (compressed) image to it. */
@@ -73,7 +69,7 @@ export class MealsController {
   ): Promise<CreateMealDto> {
     const { status, body } = await this.meals.create(userId, input);
     res.status(status);
-    return wire(body);
+    return body;
   }
 
   @Get("meals")
@@ -136,8 +132,8 @@ export class MealsController {
     @UserId() userId: string,
     @Param("id") id: string,
     @ZodBody(ConfirmMealSchema) input: ConfirmMealInput,
-  ): Promise<MealLogDto> {
-    return wire(this.meals.confirm(userId, id, input));
+  ): Promise<ConfirmedMealDto> {
+    return this.meals.confirm(userId, id, input);
   }
 
   @Delete("meals/:id")

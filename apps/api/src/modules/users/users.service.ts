@@ -14,6 +14,27 @@ import { WELCOME_EMAIL_QUEUE, type WelcomeEmailData } from "./welcome-email.js";
 
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 
+/** The profile as GET /me sends it: everything the apps read, no owner id or row timestamps. */
+const ME_PROFILE_SELECT = {
+  sex: true,
+  birthDate: true,
+  heightCm: true,
+  activityLevel: true,
+  dietType: true,
+  experience: true,
+  equipment: true,
+  trainingDaysPerWeek: true,
+  sessionMinutes: true,
+  injuries: true,
+  medicalFlag: true,
+  medicalNote: true,
+  timezone: true,
+  remindLunch: true,
+  remindDinner: true,
+  remindWater: true,
+  onboardedAt: true,
+} as const;
+
 export interface NewUser {
   email: string;
   name: string | null;
@@ -140,13 +161,15 @@ export class UsersService {
         email: true,
         image: true,
         lastActiveAt: true,
-        profile: true,
+        profile: { select: ME_PROFILE_SELECT },
       },
     });
     const { profile, lastActiveAt, ...rest } = user;
     const activity = { onboardedAt: profile?.onboardedAt ?? null, lastActiveAt };
-    if (shouldTouchActivity(activity, now)) await this.markActive(userId, now);
-    const plan = await this.billing.plan(userId);
+    const [plan] = await Promise.all([
+      this.billing.plan(userId),
+      shouldTouchActivity(activity, now) ? this.markActive(userId, now) : null,
+    ]);
     return {
       ...rest,
       onboarded: Boolean(profile?.onboardedAt),

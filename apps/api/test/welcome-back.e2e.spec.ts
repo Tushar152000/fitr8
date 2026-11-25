@@ -122,12 +122,15 @@ describe("welcome back", () => {
     const res = await agent.post("/api/welcome-back").send(refresh()).expect(200);
     expect(res.body).toMatchObject({
       goalPassed: false,
-      summary: {
-        target: { userId, reason: "Updated after a break: new weight and routine" },
-        plan: { feasible: expect.any(Boolean) },
-      },
+      summary: { target: { kcal: expect.any(Number) }, plan: { feasible: expect.any(Boolean) } },
     });
-    expect(res.body.summary.target.id).not.toBe(targetBefore.id);
+    const targetAfter = (await agent.get("/api/targets").expect(200)).body.target;
+    expect(targetAfter).toMatchObject({
+      ...res.body.summary.target,
+      userId,
+      reason: "Updated after a break: new weight and routine",
+    });
+    expect(targetAfter.id).not.toBe(targetBefore.id);
 
     const profile = await t.prisma.profile.findUniqueOrThrow({ where: { userId } });
     expect(profile).toMatchObject({
@@ -147,9 +150,7 @@ describe("welcome back", () => {
     expect(goals[0].id).toBe(goalBefore.id);
     const plan = await agent.get("/api/plan").expect(200);
     expect(plan.body.metric.weightKg).toBe(78);
-    expect((await agent.get("/api/targets").expect(200)).body.target.id).toBe(
-      res.body.summary.target.id,
-    );
+    expect((await agent.get("/api/targets").expect(200)).body.target.id).toBe(targetAfter.id);
 
     expect((await agent.get("/api/me").expect(200)).body.welcomeBack).toBe(false);
   });

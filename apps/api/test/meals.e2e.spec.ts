@@ -92,10 +92,16 @@ describe("meals", () => {
   it("logs a typed meal inline, priced from the food database", async () => {
     const { userId, agent } = await user();
     const res = await textMeal(agent);
-    expect(res.body).toMatchObject({ userId, status: "READY", source: "TEXT", mealType: "LUNCH" });
-    const roti = res.body.items.find((i: { name: string }) => i.name === "roti");
+    // Clients only open the meal by id: the create response is just that and its status.
+    expect(res.body).toEqual({ id: expect.any(String), status: "READY" });
+    expect((await t.prisma.mealLog.findUniqueOrThrow({ where: { id: res.body.id } })).userId).toBe(
+      userId,
+    );
+    const meal = (await agent.get(`/api/meals/${res.body.id}`).expect(200)).body;
+    expect(meal).toMatchObject({ status: "READY", source: "TEXT", mealType: "LUNCH" });
+    const roti = meal.items.find((i: { name: string }) => i.name === "roti");
     expect(roti).toMatchObject({ quantity: 2, unit: "piece", approximate: false });
-    expect(res.body.totalKcal).toBeGreaterThan(0);
+    expect(meal.totalKcal).toBeGreaterThan(0);
     const calls = await t.prisma.aiCall.findMany({ where: { userId } });
     expect(calls).toMatchObject([
       { type: "MEAL_TEXT", success: true, countsAsScan: false, provider: "mock" },
@@ -113,7 +119,9 @@ describe("meals", () => {
       .post("/api/meals")
       .send({ source: "MANUAL", mealType: "DINNER" })
       .expect(201);
-    expect(res.body).toMatchObject({ status: "READY", source: "TEXT", items: [] });
+    expect(res.body).toEqual({ id: expect.any(String), status: "READY" });
+    const meal = (await agent.get(`/api/meals/${res.body.id}`).expect(200)).body;
+    expect(meal).toMatchObject({ status: "READY", source: "TEXT", items: [] });
     expect(await t.prisma.aiCall.count({ where: { userId } })).toBe(0);
   });
 
@@ -147,18 +155,57 @@ describe("meals", () => {
         .send({ source: "PHOTO", mealType: "LUNCH", photoKey })
         .expect(201);
       expect(getImage).toHaveBeenCalledWith(photoKey);
-      expect(res.body).toMatchObject({
-        status: "READY",
-        photoKey,
-        aiNotes: expect.stringContaining("Oil or ghee"),
-      });
-      expect(res.body.items).toHaveLength(4);
-      // Every item of the plate is a seeded food, so all are priced from the database, not the model.
-      expect(res.body.items.filter((i: { approximate: boolean }) => i.approximate)).toEqual([]);
+      expect(res.body).toEqual({ id: expect.any(String), status: "READY" });
       expect((await agent.get("/api/usage").expect(200)).body).toMatchObject({ used: 1, left: 9 });
 
       const one = await agent.get(`/api/meals/${res.body.id}`).expect(200);
       expect(one.body.photoUrl).toEqual(expect.stringContaining(photoKey));
+      expect(one.body).toMatchObject({
+        status: "READY",
+        aiNotes: expect.stringContaining("Oil or ghee"),
+        // The model's output is cut down to the one hint clients read (the ghee switch).
+        aiRaw: { hiddenFatLikely: true },
+      });
+      // Polled every second while analysing: only what the review screen reads.
+      expect(Object.keys(one.body).sort()).toEqual(
+        [
+          "id",
+          "date",
+          "mealType",
+          "source",
+          "inputText",
+          "status",
+          "aiRaw",
+          "aiNotes",
+          "note",
+          "error",
+          "totalKcal",
+          "createdAt",
+          "items",
+          "photoUrl",
+        ].sort(),
+      );
+      expect(one.body.items).toHaveLength(4);
+      expect(Object.keys(one.body.items[0]).sort()).toEqual(
+        [
+          "id",
+          "foodId",
+          "name",
+          "quantity",
+          "unit",
+          "grams",
+          "kcal",
+          "proteinG",
+          "carbsG",
+          "fatG",
+          "aiConfidence",
+          "approximate",
+          "edited",
+          "isLiquid",
+        ].sort(),
+      );
+      // Every item of the plate is a seeded food, so all are priced from the database, not the model.
+      expect(one.body.items.filter((i: { approximate: boolean }) => i.approximate)).toEqual([]);
     });
 
     it("records a failed analysis when storage is down, without using a scan", async () => {
@@ -167,7 +214,8 @@ describe("meals", () => {
         .post("/api/meals")
         .send({ source: "PHOTO", mealType: "LUNCH", photoKey: `meals/${userId}/gone.jpg` })
         .expect(201);
-      expect(res.body).toMatchObject({
+      expect(res.body).toEqual({ id: expect.any(String), status: "FAILED" });
+      expect((await agent.get(`/api/meals/${res.body.id}`).expect(200)).body).toMatchObject({
         status: "FAILED",
         error: "Analysis failed. You can retry or log by text.",
       });
@@ -228,22 +276,24 @@ describe("meals", () => {
       .put(`/api/meals/${meal.id}`)
       .send({ items, note: "extra ghee" })
       .expect(200);
-    expect(confirmed.body).toMatchObject({
+    // Clients discard the body and refetch the day: just the id and status.
+    expect(confirmed.body).toEqual({ id: meal.id, status: "CONFIRMED" });
+    const saved = (await owner.agent.get(`/api/meals/${meal.id}`).expect(200)).body;
+    expect(saved).toMatchObject({
       status: "CONFIRMED",
       note: "extra ghee",
       items: [{ name: "roti", edited: true }],
     });
-    expect(confirmed.body.totalKcal).toBeCloseTo(confirmed.body.items[0].kcal, 1);
+    expect(saved.totalKcal).toBeCloseTo(saved.items[0].kcal, 1);
 
     // Moved to another slot after logging; without mealType the slot stays.
-    const moved = await owner.agent
-      .put(`/api/meals/${meal.id}`)
-      .send({ items, mealType: "DINNER" })
-      .expect(200);
-    expect(moved.body.mealType).toBe("DINNER");
+    const slot = async () =>
+      (await owner.agent.get(`/api/meals/${meal.id}`).expect(200)).body.mealType;
+    await owner.agent.put(`/api/meals/${meal.id}`).send({ items, mealType: "DINNER" }).expect(200);
+    expect(await slot()).toBe("DINNER");
     await owner.agent.put(`/api/meals/${meal.id}`).send({ items, mealType: "BRUNCH" }).expect(400);
-    const kept = await owner.agent.put(`/api/meals/${meal.id}`).send({ items }).expect(200);
-    expect(kept.body.mealType).toBe("DINNER");
+    await owner.agent.put(`/api/meals/${meal.id}`).send({ items }).expect(200);
+    expect(await slot()).toBe("DINNER");
 
     await stranger.agent.delete(`/api/meals/${meal.id}`).expect(404);
     await owner.agent.delete(`/api/meals/${meal.id}`).expect(204);
@@ -324,6 +374,26 @@ describe("meals", () => {
         items: [{ foodId: "nope", quantity: 1, unit: "piece", grams: 118 }],
       })
       .expect(404, { error: "Food not found" });
+    // Someone else's unreviewed label scan can't be logged by id (same rule as quick-add).
+    await owner.agent
+      .post("/api/meals/log-items")
+      .send({
+        mealType: "SNACK",
+        items: [
+          { foodId: banana.id, quantity: 1, unit: "piece", grams: 118 },
+          { foodId: privateFood.id, quantity: 1, unit: "piece", grams: 25 },
+        ],
+      })
+      .expect(404, { error: "Food not found" });
+    expect(await t.prisma.mealLog.count({ where: { userId: owner.userId } })).toBe(0);
+    // Its submitter can.
+    await stranger.agent
+      .post("/api/meals/log-items")
+      .send({
+        mealType: "SNACK",
+        items: [{ foodId: privateFood.id, quantity: 1, unit: "piece", grams: 25 }],
+      })
+      .expect(201);
     const logged = await owner.agent
       .post("/api/meals/log-items")
       .send({

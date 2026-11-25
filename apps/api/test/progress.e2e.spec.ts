@@ -87,17 +87,28 @@ describe("progress", () => {
     await confirmedMeal(stranger.userId, today, 999);
 
     const res = await agent.get("/api/dashboard").expect(200);
-    expect(res.body).toMatchObject({
+    expect(res.body).toEqual({
       date: ymd(today),
-      target: { kcal: plan.target.kcal, reason: "Initial targets from onboarding" },
-      eaten: { kcal: 500, proteinG: 20 },
-      remainingKcal: plan.target.kcal - 500,
+      target: plan.target,
+      eaten: { kcal: 500, proteinG: 20, carbsG: expect.any(Number), fatG: expect.any(Number) },
+      meals: [expect.any(Object)],
       streak: 2,
       timezone: "Asia/Kolkata",
     });
-    expect(res.body.meals).toHaveLength(1);
-    expect(res.body.meals[0].aiRaw).toBeUndefined();
-    expect(res.body.meals[0].photoUrl).toEqual(expect.stringContaining(`meals/${userId}/p.jpg`));
+    // Only what the day's meal list reads: no owner, photo key, raw AI output or other totals.
+    const [meal] = res.body.meals;
+    expect(meal).toEqual({
+      id: expect.any(String),
+      date: `${ymd(today)}T00:00:00.000Z`,
+      mealType: "LUNCH",
+      source: "PHOTO",
+      inputText: null,
+      status: "CONFIRMED",
+      totalKcal: 500,
+      createdAt: expect.any(String),
+      items: [{ name: "dal tadka" }],
+      photoUrl: expect.stringContaining(`meals/${userId}/p.jpg`),
+    });
 
     const yesterday = await agent
       .get(`/api/dashboard?date=${ymd(new Date(today.getTime() - DAY))}`)
@@ -113,7 +124,7 @@ describe("progress", () => {
     expect(res.body).toMatchObject({
       date: yesterday,
       target: { kcal: plan.target.kcal },
-      remainingKcal: plan.target.kcal,
+      eaten: { kcal: 0 },
     });
     const week = await agent.get("/api/history").expect(200);
     expect(
@@ -159,12 +170,35 @@ describe("progress", () => {
     const res = await agent.get("/api/progress").expect(200);
     expect(res.body).toMatchObject({
       points: [{ weightKg: 82, avg7: 82 }],
-      latest: { weightKg: 82 },
       plan: { startWeightKg: 82, targetWeightKg: 76, goalType: "FAT_LOSS" },
       weeklyChange: null,
-      target: { kcal: expect.any(Number), effectiveFrom: ymd(localToday()) },
       avgIntake: 1700,
       daysLogged: 1,
     });
+    // Only what the check-in form and the target line read.
+    expect(res.body.latest).toEqual({ weightKg: 82, waistCm: null });
+    expect(res.body.target).toEqual({ kcal: expect.any(Number) });
+  });
+
+  it("trends the newest weigh-ins once there are more than it shows", async () => {
+    const { userId, agent } = await t.signIn();
+    await onboard(agent);
+    const today = localToday();
+    // 130 older weigh-ins (more than the 120 shown), then today's at onboarding (82 kg).
+    await t.prisma.bodyMetric.createMany({
+      data: Array.from({ length: 130 }, (_, i) => ({
+        userId,
+        date: new Date(today.getTime() - (i + 1) * DAY),
+        weightKg: 90 + (i % 3),
+      })),
+    });
+    await agent.post("/api/checkins").send({ weightKg: 79.5, waistCm: 88 }).expect(201);
+
+    const res = await agent.get("/api/progress").expect(200);
+    expect(res.body.points).toHaveLength(120);
+    // Oldest first, ending with today's weigh-in.
+    expect(res.body.points.at(-1)).toMatchObject({ date: ymd(today), weightKg: 79.5 });
+    expect(res.body.points[0].date).toBe(ymd(new Date(today.getTime() - 119 * DAY)));
+    expect(res.body.latest).toEqual({ weightKg: 79.5, waistCm: 88 });
   });
 });

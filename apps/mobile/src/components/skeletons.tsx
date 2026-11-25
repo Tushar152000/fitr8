@@ -88,21 +88,6 @@ export function TodaySkeleton() {
   );
 }
 
-/** The dark workout card on Today. */
-export function WorkoutCardSkeleton() {
-  const styles = useStyles();
-  return (
-    <Box dark style={styles.mealRow}>
-      <Skeleton height={48} width={48} radius={12} tone="dark" />
-      <View style={{ flex: 1, gap: 8 }}>
-        <Line width="25%" height={11} tone="dark" />
-        <Line width="50%" height={15} tone="dark" />
-        <Line width="80%" height={12} tone="dark" />
-      </View>
-    </Box>
-  );
-}
-
 /** Screen 10a. */
 export function BriefingSkeleton() {
   return (

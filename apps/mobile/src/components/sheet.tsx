@@ -1,15 +1,17 @@
 import { X } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "@/components/ui";
+import { PressableScale, Text } from "@/components/ui";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import Animated from "react-native-reanimated";
 import { sheetIn } from "@/lib/motion";
 
 /**
  * Bottom sheet (radius 28) over a dimmed backdrop. Tapping the backdrop or × closes it. The backdrop
- * fades in while the panel rises (lib/motion `sheetIn`), so the dim layer never slides.
+ * fades in while the panel rises (lib/motion `sheetIn`), so the dim layer never slides. The panel
+ * rides up with the keyboard (padding on both platforms, as in `Screen`: Android is edge-to-edge),
+ * so a field or Save button inside a sheet is never covered.
  */
 export function Sheet({
   open,
@@ -27,7 +29,7 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.root}>
+      <KeyboardAvoidingView behavior="padding" style={styles.root}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
         <Animated.View entering={sheetIn} style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 8) }]}>
           <View style={styles.handle} />
@@ -35,15 +37,20 @@ export function Sheet({
             <Text variant="h2" style={{ flex: 1 }}>
               {title}
             </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.close}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={onClose}
+              style={styles.close}
+            >
               <X size={22} color={c.ink2} />
-            </Pressable>
+            </PressableScale>
           </View>
           <ScrollView contentContainerStyle={{ gap: 16 }} keyboardShouldPersistTaps="handled">
             {children}
           </ScrollView>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -141,7 +141,13 @@ export function planSummary<
   return {
     bmi: { value: round1(bmiValue), category: bmiCategory(bmiValue) },
     bodyFatPct: input.bodyFatPct != null ? round1(input.bodyFatPct) : null,
-    target: input.target,
+    // The numbers only; the full row (reason, dates) is GET /targets.
+    target: {
+      kcal: input.target.kcal,
+      proteinG: input.target.proteinG,
+      carbsG: input.target.carbsG,
+      fatG: input.target.fatG,
+    },
     plan: {
       bmr: Math.round(plan.bmr),
       tdee: Math.round(plan.tdee),

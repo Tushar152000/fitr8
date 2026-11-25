@@ -71,7 +71,27 @@ export class BarcodeService {
       });
     return {
       code: result.code,
-      food: await this.prisma.food.findUnique({ where: { id: result.foodId } }),
+      food: await this.prisma.food.findUnique({
+        where: { id: result.foodId },
+        // What the product screen shows and logs with.
+        select: {
+          id: true,
+          name: true,
+          source: true,
+          kcalPer100g: true,
+          proteinPer100g: true,
+          carbsPer100g: true,
+          fatPer100g: true,
+          isLiquid: true,
+          brand: true,
+          servingSizeG: true,
+          servingLabel: true,
+          imageUrl: true,
+          sugarPer100g: true,
+          sodiumMgPer100g: true,
+          verified: true,
+        },
+      }),
     };
   }
 
@@ -85,7 +105,19 @@ export class BarcodeService {
     if (!code) return { status: "invalid" };
     const candidates = code.length === 12 ? [code, `0${code}`] : [code];
 
-    const existing = await this.prisma.food.findFirst({ where: { barcode: { in: candidates } } });
+    const existing = await this.prisma.food.findFirst({
+      where: { barcode: { in: candidates } },
+      select: {
+        id: true,
+        source: true,
+        verified: true,
+        submittedById: true,
+        kcalPer100g: true,
+        proteinPer100g: true,
+        carbsPer100g: true,
+        fatPer100g: true,
+      },
+    });
     if (existing) {
       if (existing.verified || existing.submittedById === userId) {
         return { status: "found", code, foodId: existing.id };

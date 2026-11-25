@@ -1,7 +1,7 @@
 import type { HealthSummaryDto } from "@fitr8/contracts";
 import { BatteryCharging, Droplets, Footprints, HeartPulse, Moon, Scale, type LucideIcon } from "lucide-react-native";
 import { View } from "react-native";
-import { Text } from "@/components/ui";
+import { ProgressFill, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
@@ -137,11 +137,7 @@ function Tile({
         </Text>
       )}
       {progress != null && (
-        <View style={styles.track}>
-          <View
-            style={{ width: `${Math.round(progress * 100)}%`, height: "100%", backgroundColor: tint, borderRadius: 3 }}
-          />
-        </View>
+        <ProgressFill fraction={progress} color={tint} trackStyle={styles.track} fillStyle={{ borderRadius: 3 }} />
       )}
       <Text size={12} color={c.ink3} numberOfLines={1}>
         {line ?? "No data yet"}

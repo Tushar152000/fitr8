@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { localDate } from "@fitr8/domain/dates";
+import { localDate, parseDateOnly } from "@fitr8/domain/dates";
 import { sumMacros } from "@fitr8/domain/nutrition";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { StorageService } from "../../infra/storage/storage.service.js";
@@ -7,6 +7,35 @@ import { TargetsService } from "../plan/targets.service.js";
 import { UsersService } from "../users/users.service.js";
 
 const DAY_MS = 86_400_000;
+
+/** The meal columns a day needs: the list (title, photo, kcal) and the totals. Never the model's raw output. */
+const DAY_MEAL_SELECT = {
+  id: true,
+  date: true,
+  mealType: true,
+  source: true,
+  inputText: true,
+  status: true,
+  photoKey: true,
+  note: true,
+  totalKcal: true,
+  totalProtein: true,
+  totalCarbs: true,
+  totalFat: true,
+  createdAt: true,
+  items: {
+    select: {
+      name: true,
+      quantity: true,
+      unit: true,
+      grams: true,
+      kcal: true,
+      proteinG: true,
+      carbsG: true,
+      fatG: true,
+    },
+  },
+} as const;
 
 /** Screen 6 (Today): the day's targets, meals and totals, plus the logging streak. */
 @Injectable()
@@ -18,22 +47,55 @@ export class DashboardService {
     private readonly users: UsersService,
   ) {}
 
-  /** GET /dashboard for one date: the day's targets and meals (with 1 h photo links), streak and timezone. */
-  async getDay(userId: string, date: Date) {
-    const timezone = await this.users.timezone(userId);
-    const today = localDate(timezone);
-    const [day, streak] = await Promise.all([
-      this.dayTotals(userId, date),
-      this.loggingStreak(userId, today),
-    ]);
+  /**
+   * GET /dashboard?date=YYYY-MM-DD (default the user's today): the day's targets, eaten totals and
+   * meals (with 1 h photo links), streak and timezone — only what Today and Meals read.
+   */
+  async getDay(userId: string, ymd?: string) {
+    const { day, streak, timezone } = await this.withStreak(userId, ymd);
     const meals = await Promise.all(
       day.meals.map(async (m) => ({
-        ...m,
-        aiRaw: undefined, // raw model output isn't needed on the dashboard
+        id: m.id,
+        date: m.date,
+        mealType: m.mealType,
+        source: m.source,
+        inputText: m.inputText,
+        status: m.status,
+        totalKcal: m.totalKcal,
+        createdAt: m.createdAt,
+        items: m.items.map((i) => ({ name: i.name })),
         photoUrl: await this.storage.presignReadOrNull(m.photoKey, 3600),
       })),
     );
+    const target = day.target && {
+      kcal: day.target.kcal,
+      proteinG: day.target.proteinG,
+      carbsG: day.target.carbsG,
+      fatG: day.target.fatG,
+    };
+    return { date: day.date, target, eaten: day.eaten, meals, streak, timezone };
+  }
+
+  /**
+   * The coach's view of a day: target (with its reason), eaten, what's left, each meal with its
+   * items' amounts and macros, and the streak. No photo links.
+   */
+  async coachDay(userId: string, date: Date) {
+    const { day, streak, timezone } = await this.withStreak(userId, date);
+    const meals = day.meals.map(({ photoKey, ...m }) => ({ ...m, hasPhoto: photoKey != null }));
     return { ...day, meals, streak, timezone };
+  }
+
+  /** One timezone read gives both the default date and the streak's today. */
+  private async withStreak(userId: string, date: Date | string | undefined) {
+    const timezone = await this.users.timezone(userId);
+    const today = localDate(timezone);
+    const day = date instanceof Date ? date : date ? parseDateOnly(date) : today;
+    const [totals, streak] = await Promise.all([
+      this.dayTotals(userId, day),
+      this.loggingStreak(userId, today),
+    ]);
+    return { day: totals, streak, timezone };
   }
 
   /** Target, confirmed totals and every meal (any status) for the date. */
@@ -42,7 +104,7 @@ export class DashboardService {
       this.targets.targetForDay(userId, date),
       this.prisma.mealLog.findMany({
         where: { userId, date },
-        include: { items: true },
+        select: DAY_MEAL_SELECT,
         orderBy: { createdAt: "asc" },
       }),
     ]);

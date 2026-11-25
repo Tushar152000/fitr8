@@ -216,7 +216,19 @@ export class CoachService {
   async get(userId: string, id: string): Promise<CoachConversationView> {
     const conversation = await this.prisma.coachConversation.findFirst({
       where: { id, userId },
-      include: { messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+      select: {
+        id: true,
+        title: true,
+        updatedAt: true,
+        messages: {
+          // Tool results are the only user rows without text (typed messages are never empty, and
+          // persistStep stores tool results with text ""): skip them here instead of loading the
+          // transcript JSON to find them.
+          where: { NOT: { role: "user", text: "" } },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          select: { id: true, role: true, text: true, actions: true, createdAt: true },
+        },
+      },
     });
     if (!conversation) throw notFound("Conversation");
     return {
@@ -294,24 +306,15 @@ function titleFrom(message: string): string {
   return oneLine.length > 60 ? `${oneLine.slice(0, 57)}…` : oneLine;
 }
 
-/** Collapse the raw transcript into chat bubbles: user text, and one bubble per assistant reply. */
+/**
+ * Collapse the transcript (tool-result rows already left out) into chat bubbles: user text, and
+ * one bubble per assistant reply.
+ */
 function toViews(
-  rows: {
-    id: string;
-    role: string;
-    text: string;
-    actions: string[];
-    content: unknown;
-    createdAt: Date;
-  }[],
+  rows: { id: string; role: string; text: string; actions: string[]; createdAt: Date }[],
 ): CoachMessageView[] {
   const views: CoachMessageView[] = [];
   for (const row of rows) {
-    const isToolResults =
-      row.role === "user" &&
-      Array.isArray(row.content) &&
-      row.content.every((b: { type?: string }) => b.type === "tool_result");
-    if (isToolResults) continue;
     const prev = views.at(-1);
     if (row.role === "assistant" && prev?.role === "assistant") {
       // Steps of the same reply (tool calls, then the answer) render as one bubble.

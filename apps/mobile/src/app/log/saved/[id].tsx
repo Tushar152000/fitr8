@@ -1,23 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
 import type { SavedMealDto } from "@fitr8/contracts";
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus, Trash2 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
-import { AddItemSheet } from "@/components/log/add-item-sheet";
+import { StyleSheet, View } from "react-native";
 import { BackHeader } from "@/components/back-header";
+import { AddItemSheet } from "@/components/log/add-item-sheet";
+import { MealItemList } from "@/components/log/meal-item-list";
+import { MealNameField } from "@/components/log/meal-name-field";
 import { FormSkeleton } from "@/components/skeletons";
-import { Button, Card, Chip, FieldError, MealItemEditor, Screen, Text } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { Button, Card, Chip, FieldError, FormField, PressableScale, Screen, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
+import { api, ApiError, errorMessage } from "@/lib/api";
 import { confirmAction } from "@/lib/confirm";
 import { formatInt, MEAL_LABEL, MEAL_TYPES, type MealType } from "@/lib/format";
 import { mealFromParam } from "@/lib/meal-param";
-import { scaleRow, setRowGrams, totals, type Row } from "@/lib/meal-rows";
-import { queryClient } from "@/lib/query";
+import { totals, type Row } from "@/lib/meal-rows";
 import { savedMealsQuery } from "@/lib/queries";
+import { queryClient } from "@/lib/query";
 import { rowsFromSaved, toSavedPayload } from "@/lib/saved-meals";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { useColors } from "@/lib/theme";
 
 /** Build or edit a saved meal: a name, an optional usual slot, and the items. `id` is "new" to create. */
 export default function SavedMealRoute() {
@@ -51,7 +53,6 @@ export default function SavedMealRoute() {
 
 function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; defaultMeal: MealType | null }) {
   const c = useColors();
-  const styles = useStyles();
   const [name, setName] = useState(existing?.name ?? "");
   const [mealType, setMealType] = useState<MealType | null>(existing ? existing.mealType : defaultMeal);
   const [rows, setRows] = useState<Row[]>(() => (existing ? rowsFromSaved(existing) : []));
@@ -93,10 +94,13 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
       return;
     try {
       await api(`/api/saved-meals/${existing.id}`, { method: "DELETE" });
-      await queryClient.invalidateQueries({ queryKey: savedMealsQuery.queryKey });
+      queryClient.setQueryData(savedMealsQuery.queryKey, (old: SavedMealDto[] | undefined) =>
+        old?.filter((m) => m.id !== existing.id),
+      );
+      void queryClient.invalidateQueries({ queryKey: savedMealsQuery.queryKey });
       router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't delete. Try again.");
+      setError(errorMessage(e, "Couldn't delete. Try again."));
     }
   }
 
@@ -134,7 +138,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
     >
       <BackHeader>
         {existing && (
-          <Pressable
+          <PressableScale
             accessibilityRole="button"
             onPress={remove}
             style={[styles.delete, { alignSelf: "flex-end" }]}
@@ -144,7 +148,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
             <Text weight={600} size={13} color={c.ink3}>
               Delete
             </Text>
-          </Pressable>
+          </PressableScale>
         )}
       </BackHeader>
 
@@ -155,30 +159,18 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
         </Text>
       </View>
 
-      <View style={{ gap: 8 }}>
-        <Text weight={600} size={13} color={c.ink2}>
-          Name
-        </Text>
-        <TextInput
-          accessibilityLabel="Name"
+      <FormField label="Name" error={nameError} gap={8}>
+        <MealNameField
           value={name}
           onChangeText={(v) => {
             setName(v);
             setNameError(null);
           }}
-          maxLength={60}
           placeholder="e.g. Usual breakfast, Post-workout shake"
-          placeholderTextColor={c.ink3}
-          style={styles.input}
-          returnKeyType="done"
         />
-        {nameError && <FieldError>{nameError}</FieldError>}
-      </View>
+      </FormField>
 
-      <View style={{ gap: 8 }}>
-        <Text weight={600} size={13} color={c.ink2}>
-          Usually for (optional)
-        </Text>
+      <FormField label="Usually for (optional)" gap={8}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }} accessibilityLabel="Usually for">
           {MEAL_TYPES.map((t) => (
             <Chip key={t} selected={t === mealType} onPress={() => setMealType(t === mealType ? null : t)}>
@@ -186,7 +178,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
             </Chip>
           ))}
         </View>
-      </View>
+      </FormField>
 
       <View style={{ gap: 10 }}>
         <Text variant="h2">Items</Text>
@@ -198,15 +190,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
             </Text>
           </Card>
         )}
-        {rows.map((row, i) => (
-          <MealItemEditor
-            key={row.key}
-            item={row}
-            onQuantityChange={(q) => setRows((all) => all.map((r, j) => (j === i ? scaleRow(r, q) : r)))}
-            onAmountChange={(g) => setRows((all) => all.map((r, j) => (j === i ? setRowGrams(r, g) : r)))}
-            onRemove={() => setRows((all) => all.filter((_, j) => j !== i))}
-          />
-        ))}
+        <MealItemList rows={rows} onRowsChange={setRows} />
         <Button variant="dashed" icon={Plus} onPress={() => setAddOpen(true)}>
           {rows.length ? "Add another item" : "Add an item"}
         </Button>
@@ -226,18 +210,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
-    borderRadius: radius.input,
-    backgroundColor: c.surface,
-    paddingHorizontal: 16,
-    fontFamily: fonts.sans600,
-    fontSize: 17,
-    color: c.ink,
-  },
+const styles = StyleSheet.create({
   total: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
   delete: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
-}));
+});

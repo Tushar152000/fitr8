@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useColors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 /** 36 px pill with a 44 px hit area. Dark tone for the camera screen. */
 export function Chip({
@@ -22,7 +23,7 @@ export function Chip({
   // Dark tone sits on the always-dark camera, so its selected text is a fixed near-black on white.
   const fg = tone === "dark" ? (selected ? "#151724" : "rgba(255,255,255,0.85)") : selected ? c.onStrong : c.ink2;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
@@ -33,7 +34,7 @@ export function Chip({
       <Text weight={600} size={14} color={fg}>
         {children}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, View, type StyleProp, type ViewStyle } from "react-native";
+import { ActivityIndicator, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, radius, useColors, type Colors } from "@/lib/theme";
 import { Text } from "./text";
+import { PressableScale } from "./pressable-scale";
 
 export type ButtonVariant = "primary" | "strong" | "secondary" | "dashed" | "ghostDark" | "danger";
 
@@ -53,7 +54,7 @@ export function Button({
   const fills = bg(c)[variant];
   const off = disabled || loading;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: off, busy: loading }}
@@ -83,7 +84,7 @@ export function Button({
           )}
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 

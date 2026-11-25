@@ -1,22 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
 import type { LabelScanDto } from "@fitr8/contracts";
-import { ProductSkeleton } from "@/components/skeletons";
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { BadgeCheck, TriangleAlert } from "lucide-react-native";
 import { useState } from "react";
-import { TextInput, View } from "react-native";
+import { View } from "react-native";
 import { BackHeader } from "@/components/back-header";
-import { QueryError } from "@/components/query-error";
-import { Button, Card, FieldError, NumberField, Screen, Stepper, Text } from "@/components/ui";
-import { api } from "@/lib/api";
-import { track } from "@/lib/analytics";
+import { LabelCheck } from "@/components/log/label/label-check";
+import { Per100gFields } from "@/components/log/label/per-100g-fields";
 import { MealWhen } from "@/components/log/meal-when";
+import { TotalCard } from "@/components/log/total-card";
+import { QueryError } from "@/components/query-error";
+import { ProductSkeleton } from "@/components/skeletons";
+import { Button, Card, FieldError, FormField, NumberField, Screen, Stepper, Text, TextField } from "@/components/ui";
+import { track } from "@/lib/analytics";
+import { api, errorMessage } from "@/lib/api";
 import { formatInt, MEAL_LABEL } from "@/lib/format";
 import { labelAddsUp } from "@/lib/label";
 import { useMealChoice } from "@/lib/meal-param";
 import { refreshDay } from "@/lib/query";
+import { useColors } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 type ScanDto = LabelScanDto;
 
@@ -51,7 +53,6 @@ export default function CheckLabelScreen() {
 
 function CheckLabel({ scan }: { scan: ScanDto }) {
   const c = useColors();
-  const styles = useStyles();
   const { mealType, setMealType, date, dateBody, params } = useMealChoice();
   const [name, setName] = useState(scan.name);
   const [kcal, setKcal] = useState(str(scan.per100g.kcal));
@@ -99,7 +100,7 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
       showDay(date);
       router.dismissTo("/today");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save. Try again.");
+      setError(errorMessage(e, "Couldn't save. Try again."));
       setBusy(false);
     }
   }
@@ -108,22 +109,11 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
     <Screen
       footer={
         <>
-          <View style={styles.total}>
-            <View>
-              <Text weight={600} size={12} color={c.ink3}>
-                Total
-              </Text>
-              <Text variant="h1" size={26} tabular accessibilityLiveRegion="polite">
-                {formatInt(total)}{" "}
-                <Text weight={600} size={13} color={c.ink3}>
-                  kcal
-                </Text>
-              </Text>
-            </View>
+          <TotalCard kcal={total} live>
             <Text weight={600} size={13} color={c.ink3} tabular>
               {formatInt(grams)} g
             </Text>
-          </View>
+          </TotalCard>
           {error && <FieldError>{error}</FieldError>}
           <Button onPress={save} loading={busy} disabled={!canSave}>
             {`Save and add to ${MEAL_LABEL[mealType].toLowerCase()}`}
@@ -140,53 +130,25 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
       </View>
 
       <View style={{ gap: 16 }}>
-        <View style={{ gap: 6 }}>
-          <Text variant="label">Product name</Text>
-          <TextInput
+        <FormField label="Product name" gap={6}>
+          <TextField
             accessibilityLabel="Product name"
             value={name}
             onChangeText={setName}
             placeholder="e.g. Parle-G Gold"
-            placeholderTextColor={c.ink3}
-            style={styles.input}
           />
-        </View>
+        </FormField>
 
-        {check &&
-          (check.ok ? (
-            <View style={styles.ok}>
-              <BadgeCheck size={16} color={c.protein} />
-              <Text weight={600} size={13} color={c.protein}>
-                Numbers add up
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.warn}>
-              <TriangleAlert size={20} color={c.cautionText} />
-              <Text size={13} color={c.cautionText} style={{ flex: 1 }}>
-                <Text size={13} weight={700} color={c.cautionText}>
-                  Please check.
-                </Text>{" "}
-                Protein, carbs and fat add up to {formatInt(check.fromMacros)} kcal, but energy says{" "}
-                {formatInt(values.kcal)} kcal.
-              </Text>
-            </View>
-          ))}
+        {check && <LabelCheck ok={check.ok} fromMacros={check.fromMacros} kcal={values.kcal} />}
 
-        <View style={styles.grid}>
-          <View style={styles.cell}>
-            <NumberField label="Energy" unit="kcal" value={kcal} onValueChange={setKcal} />
-          </View>
-          <View style={styles.cell}>
-            <NumberField label="Protein" unit="g" value={protein} onValueChange={setProtein} />
-          </View>
-          <View style={styles.cell}>
-            <NumberField label="Carbs" unit="g" value={carbs} onValueChange={setCarbs} />
-          </View>
-          <View style={styles.cell}>
-            <NumberField label="Fat" unit="g" value={fat} onValueChange={setFat} />
-          </View>
-        </View>
+        <Per100gFields
+          fields={[
+            { label: "Energy", unit: "kcal", value: kcal, onChange: setKcal },
+            { label: "Protein", unit: "g", value: protein, onChange: setProtein },
+            { label: "Carbs", unit: "g", value: carbs, onChange: setCarbs },
+            { label: "Fat", unit: "g", value: fat, onChange: setFat },
+          ]}
+        />
 
         <Card>
           <NumberField
@@ -207,39 +169,3 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
     </Screen>
   );
 }
-
-const useStyles = makeStyles((c) => ({
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
-    borderRadius: radius.input,
-    backgroundColor: c.surface,
-    paddingHorizontal: 16,
-    fontFamily: fonts.sans400,
-    fontSize: 16,
-    color: c.ink,
-  },
-  ok: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: c.proteinSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  warn: { flexDirection: "row", gap: 10, borderRadius: radius.card, backgroundColor: c.cautionSoft, padding: 12 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  cell: { width: "47%", flexGrow: 1 },
-  total: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    borderRadius: radius.card,
-    backgroundColor: c.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-}));

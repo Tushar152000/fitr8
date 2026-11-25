@@ -98,6 +98,43 @@ describe("MealItemsService.buildItem", () => {
   });
 });
 
+describe("MealItemsService.buildItems", () => {
+  it("prices every food id with one query and reuses foods the caller already has", async () => {
+    const calls: unknown[] = [];
+    const prisma = {
+      food: {
+        findMany: async (args: { where: { id?: { in: string[] } } }) => {
+          calls.push(args.where);
+          return args.where.id?.in.includes(tea.id) ? [tea] : [];
+        },
+      },
+    } as unknown as PrismaService;
+    const s = new MealItemsService(prisma);
+    const items = await s.buildItems(
+      [
+        { foodId: tea.id, name: "chai", quantity: 1, unit: "cup", grams: 150 },
+        { foodId: tea.id, name: "chai", quantity: 2, unit: "cup", grams: 300 },
+        { foodId: "gone", name: "Old Food", quantity: 1, unit: "g", grams: 10 },
+      ],
+      { trustGrams: true },
+    );
+    expect(calls).toEqual([{ id: { in: [tea.id, "gone"] } }]);
+    expect(items.map((i) => [i.foodId, i.kcal])).toEqual([
+      [tea.id, 75],
+      [tea.id, 150],
+      [null, 0], // an unknown id prices as an estimate, as before
+    ]);
+
+    calls.length = 0;
+    await s.buildItems(
+      [{ foodId: tea.id, name: "chai", quantity: 1, unit: "cup", grams: 150 }],
+      {},
+      [tea],
+    );
+    expect(calls).toEqual([]);
+  });
+});
+
 describe("pickFood", () => {
   const f = (name: string, aliases: string[] = []) => ({ name, aliases });
   const coffees = [f("black coffee"), f("latte"), f("cold coffee"), f("filter coffee")];

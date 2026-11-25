@@ -10,11 +10,13 @@ import {
   SlidersHorizontal,
 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
-import { Button, Card, Text } from "@/components/ui";
+import { View } from "react-native";
+import { Card, PressableScale, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
-import { dayColors, DAY_LABEL, EFFORT_LABEL, GOAL_LABEL, kcalText, weekdayLetter, weekOf } from "@/lib/training";
+import { dayColors, DAY_LABEL, GOAL_LABEL, kcalText, weekdayLetter, weekOf } from "@/lib/training";
 import { makeStyles, radius, useColors } from "@/lib/theme";
+import { DayCard } from "./day-card";
+import { Stat } from "./stat";
 
 const DAY_MS = 86_400_000;
 const shiftWeek = (start: string, weeks: number) =>
@@ -49,7 +51,7 @@ export function TrainingWeekView({
           <Text variant="meta" style={{ flex: 1 }} tabular>
             Week of {weekOf(week.start)} · {GOAL_LABEL[week.goal]}
           </Text>
-          <Pressable
+          <PressableScale
             accessibilityRole="button"
             accessibilityLabel="Change your training setup"
             onPress={() => router.push("/training/setup")}
@@ -57,7 +59,7 @@ export function TrainingWeekView({
             style={styles.iconButton}
           >
             <SlidersHorizontal size={20} color={c.ink2} />
-          </Pressable>
+          </PressableScale>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text variant="h1" style={{ flex: 1 }}>
@@ -73,20 +75,20 @@ export function TrainingWeekView({
       </View>
 
       <View style={styles.weekNav}>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Previous week"
           onPress={() => onWeek(shiftWeek(week.start, -1))}
           style={styles.iconButton}
         >
           <ChevronLeft size={22} color={c.ink2} />
-        </Pressable>
-        <Pressable accessibilityRole="button" disabled={thisWeek} onPress={() => onWeek(null)} style={{ flex: 1 }}>
+        </PressableScale>
+        <PressableScale accessibilityRole="button" disabled={thisWeek} onPress={() => onWeek(null)} style={{ flex: 1 }}>
           <Text size={13} weight={600} color={thisWeek ? c.ink3 : c.brandText} center>
             {thisWeek ? "This week" : "Back to this week"}
           </Text>
-        </Pressable>
-        <Pressable
+        </PressableScale>
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Next week"
           disabled={isNext}
@@ -94,7 +96,7 @@ export function TrainingWeekView({
           style={[styles.iconButton, isNext && { opacity: 0.3 }]}
         >
           <ChevronRight size={22} color={c.ink2} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {week.recovery?.advice && (
@@ -112,9 +114,9 @@ export function TrainingWeekView({
       )}
 
       <View style={styles.stats}>
-        <Stat label="Sessions" value={`${week.sessions} + rest`} />
-        <Stat label="Burn this week" value={`${kcalText(week.totalKcal)} kcal`} />
-        <Stat label="≈ extra fat" value={`${week.fatKg.toFixed(2)} kg`} />
+        <Stat label="Sessions" value={`${week.sessions} + rest`} size={16} />
+        <Stat label="Burn this week" value={`${kcalText(week.totalKcal)} kcal`} size={16} />
+        <Stat label="≈ extra fat" value={`${week.fatKg.toFixed(2)} kg`} size={16} />
       </View>
 
       <View style={{ flexDirection: "row", gap: 6 }} accessibilityRole="tablist">
@@ -122,7 +124,7 @@ export function TrainingWeekView({
           const col = dayColors(c, d.type);
           const on = d.date === day.date;
           return (
-            <Pressable
+            <PressableScale
               key={d.date}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
@@ -148,7 +150,7 @@ export function TrainingWeekView({
               <Text size={9} weight={700} color={col.fg} numberOfLines={1}>
                 {DAY_LABEL[d.type]}
               </Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -172,144 +174,6 @@ export function TrainingWeekView({
         Calories burned are estimates. Your food target already counts your training, so don&apos;t eat them back.
       </Text>
     </>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  const c = useColors();
-  return (
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text size={12} weight={600} color={c.ink3}>
-        {label}
-      </Text>
-      <Text weight={700} size={16} tabular>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-/** The selected day: what, why, how long, and the one action for its type. */
-function DayCard({ day, today }: { day: TrainingDayDto; today: string }) {
-  const c = useColors();
-  const styles = useStyles();
-  const col = dayColors(c, day.type);
-  const isToday = day.date === today;
-  const logged = day.logs.length > 0;
-
-  const cta = (() => {
-    switch (day.type) {
-      case "gym":
-        return isToday ? { label: "Start workout", onPress: () => router.push("/workout-session") } : null;
-      case "run":
-      case "hiit":
-        return { label: "See run details", onPress: () => router.push(`/training/${day.date}`) };
-      case "cycle":
-        return { label: "See ride details", onPress: () => router.push(`/training/${day.date}`) };
-      case "yoga":
-        return {
-          label: day.title === "Mobility" ? "Start mobility" : "Start flow",
-          onPress: () => router.push({ pathname: "/training/[date]", params: { date: day.date, start: "1" } }),
-        };
-      default:
-        return {
-          label: day.type === "walk" ? "See walk plan" : "See rest-day plan",
-          onPress: () => router.push(`/training/${day.date}`),
-        };
-    }
-  })();
-
-  return (
-    <Card style={{ borderWidth: 1, borderColor: col.soft }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View style={[styles.badge, { backgroundColor: col.soft }]}>
-          <Text size={12} weight={700} color={col.fg}>
-            {DAY_LABEL[day.type]}
-          </Text>
-        </View>
-        <Text variant="meta">
-          {day.weekday}
-          {isToday ? " · Today" : ""}
-        </Text>
-        {day.status === "done" && (
-          <View style={[styles.badge, { backgroundColor: c.proteinSoft, marginLeft: "auto" }]}>
-            <Text size={12} weight={700} color={c.protein}>
-              Done
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={{ gap: 4 }}>
-        <Text variant="h2" size={22}>
-          {day.title}
-        </Text>
-        <Text size={14} color={c.ink2}>
-          {day.why}
-        </Text>
-      </View>
-
-      {day.type !== "rest" && (
-        <View style={styles.stats}>
-          <View style={{ flex: 1 }}>
-            <Text size={12} weight={600} color={c.ink3}>
-              Time
-            </Text>
-            <Text weight={700} tabular>
-              {day.minutes} min
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text size={12} weight={600} color={c.ink3}>
-              {logged ? "Burned about" : "Burns about"}
-            </Text>
-            <Text weight={700} tabular>
-              {kcalText(day.kcal)} kcal
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text size={12} weight={600} color={c.ink3}>
-              Effort
-            </Text>
-            <Text weight={700}>{EFFORT_LABEL[day.effort]}</Text>
-          </View>
-        </View>
-      )}
-
-      {day.steps.length > 0 && (
-        <View style={{ borderRadius: radius.input, backgroundColor: c.sunken }}>
-          {day.steps.map((s, i) => (
-            <View key={`${s.name}-${i}`} style={[styles.step, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}>
-              <Text weight={600} size={14} style={{ flex: 1 }}>
-                {s.name}
-              </Text>
-              <Text size={13} color={c.ink3} tabular style={{ flexShrink: 1, textAlign: "right" }}>
-                {s.detail}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {logged && (
-        <Text size={13} color={c.protein} weight={600}>
-          Logged:{" "}
-          {day.logs
-            .map((l) => `${DAY_LABEL[l.type]} ${l.minutes} min${l.distanceKm ? `, ${l.distanceKm} km` : ""}`)
-            .join(" · ")}
-        </Text>
-      )}
-      {cta ? (
-        <Button variant={isToday && !logged ? "primary" : "secondary"} onPress={cta.onPress}>
-          {cta.label}
-        </Button>
-      ) : (
-        <Text size={13} color={c.ink3} center>
-          {day.date > today
-            ? `Your ${day.title.toLowerCase()} session opens on ${day.weekday}.`
-            : "Gym sessions are logged on the day."}
-        </Text>
-      )}
-    </Card>
   );
 }
 
@@ -349,6 +213,4 @@ const useStyles = makeStyles((c) => ({
   },
   dot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5 },
   doneDot: { width: 14, height: 14, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  step: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
 }));

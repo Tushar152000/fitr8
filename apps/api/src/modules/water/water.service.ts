@@ -16,7 +16,7 @@ export class WaterService {
 
   /** The day's target (with the numbers behind it), what's been drunk, and each log for undo. */
   async getDay(userId: string, date: Date) {
-    const [profile, metric, goal, logs] = await Promise.all([
+    const [profile, metric, goal, logs, trainingDay] = await Promise.all([
       this.prisma.profile.findUnique({
         where: { userId },
         select: { activityLevel: true, medicalFlag: true, remindWater: true },
@@ -34,12 +34,12 @@ export class WaterService {
       this.prisma.waterLog.findMany({
         where: { userId, date },
         orderBy: { createdAt: "asc" },
-        select: { id: true, ml: true, createdAt: true },
+        select: { id: true, ml: true },
       }),
+      this.workouts.isTrainingDay(userId, date),
     ]);
     if (!profile || !metric) throw new AppError(404, "Finish onboarding first");
 
-    const trainingDay = await this.workouts.isTrainingDay(userId, date);
     const target = waterTarget({
       weightKg: metric.weightKg,
       activityLevel: profile.activityLevel,
@@ -54,15 +54,14 @@ export class WaterService {
       reason: target.reason,
       tip: target.tip,
       caution: target.caution,
-      trainingDay,
       consumedMl: logs.reduce((t, l) => t + l.ml, 0),
       logs,
       remind: profile.remindWater,
     };
   }
 
-  add(userId: string, date: Date, ml: number) {
-    return this.prisma.waterLog.create({ data: { userId, date, ml } });
+  async add(userId: string, date: Date, ml: number) {
+    await this.prisma.waterLog.create({ data: { userId, date, ml }, select: { id: true } });
   }
 
   /** Undo one tap. Only the owner's rows. */

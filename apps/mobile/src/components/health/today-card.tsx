@@ -3,8 +3,8 @@ import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { ChevronRight, HeartPulse, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Platform, Pressable, View } from "react-native";
-import { Skeleton, Text } from "@/components/ui";
+import { Platform, View } from "react-native";
+import { PressableScale, Skeleton, Text } from "@/components/ui";
 import { useMe } from "@/lib/auth";
 import { healthAdapter } from "@/lib/health";
 import { healthStatusQuery, healthSummaryQuery } from "@/lib/queries";
@@ -46,7 +46,7 @@ export function HealthTodayCard() {
   if (!connected) {
     if (hidden !== false) return null;
     return (
-      <Pressable accessibilityRole="button" onPress={() => router.push("/health")} style={styles.prompt}>
+      <PressableScale accessibilityRole="button" onPress={() => router.push("/health")} style={styles.prompt}>
         <View style={styles.icon}>
           <HeartPulse size={18} color={c.white} />
         </View>
@@ -56,7 +56,7 @@ export function HealthTodayCard() {
             See steps, sleep, heart rate and recovery here.
           </Text>
         </View>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Hide this"
           hitSlop={8}
@@ -72,14 +72,14 @@ export function HealthTodayCard() {
           style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", margin: -10 }}
         >
           <X size={18} color={c.ink3} />
-        </Pressable>
-      </Pressable>
+        </PressableScale>
+      </PressableScale>
     );
   }
 
   return (
     <View style={{ gap: 10 }}>
-      <Pressable
+      <PressableScale
         accessibilityRole="link"
         onPress={() => router.push("/health")}
         style={{ flexDirection: "row", alignItems: "center", minHeight: 44 }}
@@ -91,7 +91,7 @@ export function HealthTodayCard() {
           {adapter.label}
         </Text>
         <ChevronRight size={18} color={c.brandText} />
-      </Pressable>
+      </PressableScale>
       {summary.data ? <HealthMetrics s={summary.data} /> : <Skeleton height={250} radius={radius.card} />}
     </View>
   );

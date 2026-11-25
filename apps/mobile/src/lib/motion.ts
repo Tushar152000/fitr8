@@ -1,5 +1,15 @@
-import { Platform } from "react-native";
-import { Easing, FadeIn, FadeInDown, FadeInUp, FadeOut, FadeOutUp, SlideInDown } from "react-native-reanimated";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo, Platform } from "react-native";
+import {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  FadeOut,
+  FadeOutUp,
+  LinearTransition,
+  SlideInDown,
+} from "react-native-reanimated";
 
 /**
  * Use the native animation driver on phones. The web preview has none, and there
@@ -39,3 +49,31 @@ export const sheetIn = SlideInDown.duration(280).easing(easeOut);
 /** A toast dropping in and out at the top. */
 export const toastIn = FadeInUp.duration(220).easing(easeOut);
 export const toastOut = FadeOutUp.duration(180);
+/** Loaded content replacing its skeleton: a quick cross-fade so the swap never hard-cuts. */
+export const contentIn = FadeIn.duration(180).easing(easeOut);
+/** Rows in a list that grows or shrinks: new rows fade up, removed rows fade, the rest slide. */
+export const listLayout = LinearTransition.duration(200).easing(easeOut);
+/** A chat bubble arriving. No layout transition: it would fight the scroll to the end. */
+export const bubbleIn = FadeInDown.duration(180).easing(easeOut);
+
+/** Press feedback (docs/DESIGN.md "Motion"): controls sink to 98 % for 120 ms. */
+export const PRESS_SCALE = 0.98;
+export const PRESS_MS = 120;
+/** Value changes on rings and bars. */
+export const VALUE_MS = 220;
+
+/**
+ * The phone's Reduce Motion setting, kept live. Reanimated layout animations and `withTiming`
+ * follow it on their own; RN `Animated` loops (skeleton sweep, scan line, pulse) must check this.
+ */
+export function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduce)
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduce);
+    return () => sub.remove();
+  }, []);
+  return reduce;
+}

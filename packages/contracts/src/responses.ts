@@ -67,9 +67,8 @@ export interface CreatedDto {
 
 // ── Auth and users ────────────────────────────────────────────────────────
 
-/** The `profiles` row. */
+/** The `profiles` row as GET /api/me sends it (no owner id or row timestamps). */
 export interface ProfileDto {
-  userId: string;
   sex: Sex;
   birthDate: string;
   heightCm: number;
@@ -87,8 +86,6 @@ export interface ProfileDto {
   remindDinner: boolean;
   remindWater: boolean;
   onboardedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 /** GET /api/me */
@@ -144,7 +141,8 @@ export interface DailyTargetDto extends Macros {
 export interface PlanSummaryDto {
   bmi: { value: number; category: string };
   bodyFatPct: number | null;
-  target: DailyTargetDto;
+  /** The daily target's numbers (the full row is on GET /api/targets). */
+  target: Macros;
   plan: {
     bmr: number;
     tdee: number;
@@ -237,9 +235,35 @@ export interface MealLogDto {
   items: MealItemDto[];
 }
 
-/** GET /api/meals/:id — the log with a short-lived photo link. */
-export interface MealDetailDto extends MealLogDto {
+/** One item of GET /api/meals/:id. */
+export type MealDetailItemDto = Omit<MealItemDto, "mealLogId" | "aiGrams">;
+
+/**
+ * GET /api/meals/:id — the log with a short-lived photo link (polled while analysing, so only what
+ * the review screen reads).
+ */
+export interface MealDetailDto {
+  id: string;
+  date: string;
+  mealType: MealTypeValue;
+  source: MealSource;
+  inputText: string | null;
+  status: MealStatus;
+  /** Hints from the model's output; only `hiddenFatLikely` (turns the ghee switch on). */
+  aiRaw: { hiddenFatLikely?: boolean } | null;
+  aiNotes: string | null;
+  note: string | null;
+  error: string | null;
+  totalKcal: number;
+  createdAt: string;
+  items: MealDetailItemDto[];
   photoUrl: string | null;
+}
+
+/** PUT /api/meals/:id — the confirmed meal's id (clients refetch the day). */
+export interface ConfirmedMealDto {
+  id: string;
+  status: MealStatus;
 }
 
 /** GET /api/meals?date= */
@@ -247,14 +271,14 @@ export interface MealListDto {
   meals: MealLogDto[];
 }
 
-/** POST /api/meals when the analysis was queued (202). */
-export interface MealQueuedDto {
+/**
+ * POST /api/meals: 202 while queued (`PENDING`), or 201 once analysed inline (or an empty manual
+ * log). Clients open GET /api/meals/:id with the id.
+ */
+export interface CreateMealDto {
   id: string;
-  status: "PENDING";
+  status: MealStatus;
 }
-
-/** POST /api/meals: 202 queued, or 201 with the analysed (or empty manual) log. */
-export type CreateMealDto = MealLogDto | MealQueuedDto;
 
 /** POST /api/meals/:id/recheck: 202 queued, or 200 "DONE" when analysed inline. */
 export interface RecheckDto {
@@ -337,9 +361,6 @@ export interface SavedMealDto {
   proteinG: number;
   carbsG: number;
   fatG: number;
-  timesLogged: number;
-  lastLoggedAt: string | null;
-  createdAt: string;
   items: SavedMealItemDto[];
 }
 
@@ -383,8 +404,6 @@ export interface ReminderDto {
   upcoming: string[];
   /** When it next fires, wall-clock in the user's timezone; null if never. */
   nextAt: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface ReminderListDto {
@@ -405,20 +424,16 @@ export interface ReminderDraftDto {
 
 // ── Foods ─────────────────────────────────────────────────────────────────
 
-/** The `foods` row. */
+/** A `foods` row as the barcode product screen reads it (GET /api/foods/barcode/:code). */
 export interface FoodDto {
   id: string;
   name: string;
-  aliases: string[];
   source: FoodSource;
   kcalPer100g: number;
   proteinPer100g: number;
   carbsPer100g: number;
   fatPer100g: number;
-  fiberPer100g: number | null;
-  isVeg: boolean;
   isLiquid: boolean;
-  barcode: string | null;
   brand: string | null;
   servingSizeG: number | null;
   servingLabel: string | null;
@@ -426,8 +441,6 @@ export interface FoodDto {
   sugarPer100g: number | null;
   sodiumMgPer100g: number | null;
   verified: boolean;
-  submittedById: string | null;
-  createdAt: string;
 }
 
 /** One hit of GET /api/foods?q= */
@@ -472,17 +485,26 @@ export interface LabelScanDto {
 
 // ── Progress ──────────────────────────────────────────────────────────────
 
-/** GET /api/dashboard — one meal, without the raw model output. */
-export interface DashboardMealDto extends Omit<MealLogDto, "aiRaw"> {
+/** GET /api/dashboard — one meal as the day's meal list shows it. */
+export interface DashboardMealDto {
+  id: string;
+  date: string;
+  mealType: MealTypeValue;
+  source: MealSource;
+  inputText: string | null;
+  status: MealStatus;
+  totalKcal: number;
+  createdAt: string;
+  /** Item names, for the meal's title. */
+  items: { name: string }[];
   photoUrl: string | null;
 }
 
 /** GET /api/dashboard?date= */
 export interface DashboardDto {
   date: string;
-  target: (Macros & { reason: string }) | null;
+  target: Macros | null;
   eaten: Macros;
-  remainingKcal: number | null;
   meals: DashboardMealDto[];
   streak: number;
   timezone: string;
@@ -535,7 +557,8 @@ export interface CheckinsDto {
 /** GET /api/progress */
 export interface ProgressDto {
   points: { date: string; weightKg: number; avg7: number }[];
-  latest: BodyMetricDto | null;
+  /** The newest weigh-in (prefills the check-in form). */
+  latest: { weightKg: number; waistCm: number | null } | null;
   plan: {
     startDate: string;
     targetDate: string;
@@ -545,7 +568,7 @@ export interface ProgressDto {
     goalType: GoalType;
   };
   weeklyChange: number | null;
-  target: { kcal: number; reason: string; effectiveFrom: string } | null;
+  target: { kcal: number } | null;
   avgIntake: number | null;
   daysLogged: number;
 }
@@ -559,9 +582,8 @@ export interface WaterDayDto {
   reason: string;
   tip: string;
   caution: string | null;
-  trainingDay: boolean;
   consumedMl: number;
-  logs: { id: string; ml: number; createdAt: string }[];
+  logs: { id: string; ml: number }[];
   remind: boolean;
 }
 

@@ -24,6 +24,16 @@ import { UsersService } from "../users/users.service.js";
 /** Turning words into a reminder is cheap but not free; this only stops runaway use. */
 const PARSE_DAILY_CAP = 30;
 
+/** The reminder columns the app reads (no owner id or row timestamps). */
+const REMINDER_SELECT = {
+  id: true,
+  title: true,
+  description: true,
+  crons: true,
+  enabled: true,
+  prompt: true,
+} as const;
+
 type ReminderRow = {
   id: string;
   title: string;
@@ -31,8 +41,6 @@ type ReminderRow = {
   crons: string[];
   enabled: boolean;
   prompt: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 /**
@@ -50,11 +58,15 @@ export class RemindersService {
   ) {}
 
   async list(userId: string) {
-    const [rows, now] = await Promise.all([
-      this.prisma.reminder.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+    const [rows, now, { reminders: max }] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+        select: REMINDER_SELECT,
+      }),
       this.localNow(userId),
+      this.billing.limits(userId),
     ]);
-    const { reminders: max } = await this.billing.limits(userId);
     return { reminders: rows.map((r) => toDto(r, now)), max };
   }
 
@@ -84,6 +96,7 @@ export class RemindersService {
         enabled: input.enabled ?? true,
         prompt: input.prompt || null,
       },
+      select: REMINDER_SELECT,
     });
     return toDto(row, await this.localNow(userId));
   }
@@ -101,7 +114,7 @@ export class RemindersService {
     });
     if (!count) throw notFound("Reminder");
     const [row, now] = await Promise.all([
-      this.prisma.reminder.findUniqueOrThrow({ where: { id } }),
+      this.prisma.reminder.findUniqueOrThrow({ where: { id }, select: REMINDER_SELECT }),
       this.localNow(userId),
     ]);
     return toDto(row, now);
@@ -224,9 +237,18 @@ function toDto(row: ReminderRow, now: LocalDateTime) {
   // Stored rules were checked on write; a row that no longer parses (rules tightened) is shown but
   // not scheduled, so the user can fix or delete it.
   const parsed = parseRules(row.crons);
+  // Explicit fields: never leak a column that isn't part of the DTO. `crons` stays (shipped apps read it).
+  const base = {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    crons: row.crons,
+    enabled: row.enabled,
+    prompt: row.prompt,
+  };
   if (!parsed.ok) {
     return {
-      ...row,
+      ...base,
       summary: "Schedule needs updating",
       rules: [],
       slots: [],
@@ -235,7 +257,7 @@ function toDto(row: ReminderRow, now: LocalDateTime) {
     };
   }
   const { summary, rules, slots, upcoming, nextAt } = scheduleView(parsed.rules, now);
-  return { ...row, summary, rules, slots, upcoming, nextAt };
+  return { ...base, summary, rules, slots, upcoming, nextAt };
 }
 
 /** The user's wall-clock now, in their profile timezone. */

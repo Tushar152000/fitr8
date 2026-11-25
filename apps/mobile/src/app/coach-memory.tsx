@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { CoachMemoryView } from "@fitr8/contracts";
-import { Trash2 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { BackHeader } from "@/components/back-header";
+import { MemoryList } from "@/components/coach/memory-list";
 import { QueryError } from "@/components/query-error";
 import { ListSkeleton } from "@/components/skeletons";
 import { Card, FieldError, Screen, Text } from "@/components/ui";
@@ -11,13 +11,14 @@ import { api } from "@/lib/api";
 import { confirmAction } from "@/lib/confirm";
 import { queryClient } from "@/lib/query";
 import { coachMemoriesQuery } from "@/lib/queries";
-import { makeStyles, radius, useColors } from "@/lib/theme";
+import { useColors } from "@/lib/theme";
+import { usePullRefresh } from "@/lib/use-pull-refresh";
 
 /** What the coach remembers about the user across chats. Each fact can be deleted. */
 export default function CoachMemoryScreen() {
   const c = useColors();
-  const styles = useStyles();
   const list = useQuery(coachMemoriesQuery);
+  const pull = usePullRefresh(() => list.refetch());
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +41,7 @@ export default function CoachMemoryScreen() {
 
   const memories = list.data ?? [];
   return (
-    <Screen refreshing={list.isRefetching} onRefresh={() => list.refetch()}>
+    <Screen refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
       <BackHeader />
       <View style={{ gap: 6 }}>
         <Text variant="h1">What your coach remembers</Text>
@@ -64,30 +65,8 @@ export default function CoachMemoryScreen() {
           </Text>
         </Card>
       ) : (
-        <View style={styles.list}>
-          {memories.map((m, i) => (
-            <View key={m.id} style={[styles.row, i > 0 && styles.divider]}>
-              <Text style={{ flex: 1 }}>{m.text}</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Forget: ${m.text}`}
-                disabled={removing === m.id}
-                onPress={() => forget(m)}
-                hitSlop={8}
-                style={{ opacity: removing === m.id ? 0.4 : 1 }}
-              >
-                <Trash2 size={18} color={c.ink3} />
-              </Pressable>
-            </View>
-          ))}
-        </View>
+        <MemoryList memories={memories} removing={removing} onForget={forget} />
       )}
     </Screen>
   );
 }
-
-const useStyles = makeStyles((c) => ({
-  list: { backgroundColor: c.surface, borderRadius: radius.card, borderWidth: 1, borderColor: c.line },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
-  divider: { borderTopWidth: 1, borderTopColor: c.line },
-}));

@@ -1,6 +1,5 @@
 import { Check } from "lucide-react-native";
 import { useState } from "react";
-import { TextInput } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Button, FieldError, Text } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -10,7 +9,8 @@ import type { Row } from "@/lib/meal-rows";
 import { queryClient } from "@/lib/query";
 import { savedMealsQuery } from "@/lib/queries";
 import { toSavedPayload } from "@/lib/saved-meals";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { useColors } from "@/lib/theme";
+import { MealNameField } from "./meal-name-field";
 
 /** "Save as a meal" on meal review: the items as they are now, under a name, for one-tap logging later. */
 export function SaveMealSheet({
@@ -52,7 +52,6 @@ function SaveMealForm({
   initialName: string;
 }) {
   const c = useColors();
-  const styles = useStyles();
   const [name, setName] = useState(initialName);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,8 +78,7 @@ function SaveMealForm({
         Next time, add these {rows.length} {rows.length === 1 ? "item" : "items"} with one tap from &quot;Type&quot; —
         no photo, no AI scan.
       </Text>
-      <TextInput
-        accessibilityLabel="Name"
+      <MealNameField
         autoFocus
         value={name}
         onChangeText={(v) => {
@@ -88,11 +86,7 @@ function SaveMealForm({
           setError(null);
         }}
         onSubmitEditing={save}
-        maxLength={60}
         placeholder="e.g. Usual breakfast"
-        placeholderTextColor={c.ink3}
-        style={styles.input}
-        returnKeyType="done"
       />
       {error && <FieldError>{error}</FieldError>}
       <Button icon={Check} onPress={save} loading={busy}>
@@ -101,17 +95,3 @@ function SaveMealForm({
     </>
   );
 }
-
-const useStyles = makeStyles((c) => ({
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
-    borderRadius: radius.input,
-    backgroundColor: c.surface,
-    paddingHorizontal: 16,
-    fontFamily: fonts.sans600,
-    fontSize: 17,
-    color: c.ink,
-  },
-}));

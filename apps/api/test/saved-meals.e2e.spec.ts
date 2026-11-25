@@ -65,8 +65,6 @@ describe("saved meals", () => {
       name: "Morning fuel",
       mealType: "BREAKFAST",
       kcal: 105 + 152,
-      timesLogged: 0,
-      lastLoggedAt: null,
       items: [
         { name: "banana", foodId: banana.id, approximate: false, kcal: 105 },
         { name: "protein shake", foodId: null, approximate: true, kcal: 152, isLiquid: true },
@@ -116,9 +114,13 @@ describe("saved meals", () => {
       totalKcal: 210,
     });
     expect(meal.items).toMatchObject([{ foodId: banana.id, quantity: 2, grams: 236 }]);
-    const after = (await owner.agent.get("/api/saved-meals").expect(200)).body.savedMeals[0];
+    // Counted for the list order (not sent: no client reads it).
+    const after = await t.prisma.savedMeal.findUniqueOrThrow({ where: { id } });
     expect(after.timesLogged).toBe(1);
-    expect(after.lastLoggedAt).toEqual(expect.any(String));
+    expect(after.lastLoggedAt).toEqual(expect.any(Date));
+    const listed = (await owner.agent.get("/api/saved-meals").expect(200)).body.savedMeals[0];
+    for (const key of ["timesLogged", "lastLoggedAt", "createdAt"])
+      expect(listed).not.toHaveProperty(key);
 
     await owner.agent.delete(`/api/saved-meals/${id}`).expect(204);
     await owner.agent.delete(`/api/saved-meals/${id}`).expect(404);

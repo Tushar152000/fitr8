@@ -24,6 +24,32 @@ const GOAL: Record<string, TrainingGoal> = {
 export const toTrainingTypes = (types: TrainingProfile["types"]): TrainingType[] =>
   types.map((t) => t.toLowerCase() as TrainingType);
 
+/** The plan maths (profile, latest weigh-in, goal), as `TargetsService.computePlan` returns it. */
+export type ComputedPlan = Awaited<ReturnType<TargetsService["computePlan"]>>;
+
+/**
+ * What one request already knows or will need more than once, so building a week doesn't re-read
+ * it: the user's local today and the plan (the planner and the strength engine both need it).
+ * Both are read lazily, at most once.
+ */
+export interface PlanningContext {
+  today: () => Promise<Date>;
+  plan: () => Promise<ComputedPlan>;
+}
+
+export function planningContext(
+  deps: { targets: TargetsService; users: UsersService },
+  userId: string,
+  today?: Date,
+): PlanningContext {
+  let todayP: Promise<Date> | undefined = today ? Promise.resolve(today) : undefined;
+  let planP: Promise<ComputedPlan> | undefined;
+  return {
+    today: () => (todayP ??= deps.users.today(userId)),
+    plan: () => (planP ??= deps.targets.computePlan(userId)),
+  };
+}
+
 export interface PlannedWeek {
   week: TrainingWeek;
   profile: TrainingProfile;
@@ -49,17 +75,23 @@ export class TrainingPlanner {
   }
 
   /** The week starting `monday`, or null when the user hasn't set up training (16b). */
-  async week(userId: string, monday: Date): Promise<PlannedWeek | null> {
-    const profile = await this.profile(userId);
+  async week(
+    userId: string,
+    monday: Date,
+    ctx: PlanningContext = planningContext({ targets: this.targets, users: this.users }, userId),
+  ): Promise<PlannedWeek | null> {
+    const [profile, today] = await Promise.all([this.profile(userId), ctx.today()]);
     if (!profile) return null;
-    const today = await this.users.today(userId);
-    const input = await this.inputs(userId, profile, monday, today);
+    const [input, stored] = await Promise.all([
+      this.inputs(userId, profile, monday, today, ctx),
+      this.prisma.trainingWeek.findUnique({
+        where: { userId_weekStart: { userId, weekStart: monday } },
+        select: { inputsKey: true, plan: true },
+      }),
+    ]);
     const inputsKey = createHash("sha256").update(JSON.stringify(input)).digest("hex");
     const meta = { profile, goal: input.goal, weightKg: input.weightKg };
 
-    const stored = await this.prisma.trainingWeek.findUnique({
-      where: { userId_weekStart: { userId, weekStart: monday } },
-    });
     const past = monday.getTime() < weekStart(today).getTime();
     if (stored && (stored.inputsKey === inputsKey || past)) {
       return { ...meta, week: stored.plan as unknown as TrainingWeek };
@@ -80,9 +112,10 @@ export class TrainingPlanner {
     profile: TrainingProfile,
     monday: Date,
     today: Date,
+    ctx: PlanningContext,
   ): Promise<TrainingWeekInput> {
     const [{ plan, profile: body, metric, goal }, target, runs] = await Promise.all([
-      this.targets.computePlan(userId),
+      ctx.plan(),
       this.targets.targetForDay(userId, today),
       this.prisma.trainingLog.findMany({
         where: { userId, type: "RUN", distanceKm: { not: null } },

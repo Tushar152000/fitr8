@@ -20,12 +20,6 @@ export function normalizePhone(input: string): string | null {
   return null;
 }
 
-/** "+919876543210" → "+91 98765 43210"; other countries stay as stored. */
-export function formatPhone(e164: string): string {
-  const m = /^\+91(\d{5})(\d{5})$/.exec(e164);
-  return m ? `+91 ${m[1]} ${m[2]}` : e164;
-}
-
 /** A country in the phone picker: ISO 3166 code, name, calling code without "+". */
 export interface PhoneCountry {
   iso: string;

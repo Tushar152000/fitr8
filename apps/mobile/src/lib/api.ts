@@ -25,6 +25,11 @@ export class ApiError extends Error {
 
 const OFFLINE = "No connection. Check your internet and try again.";
 
+/** The message to show for a failed call: the server's (or the thrown error's) text, else `fallback`. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 const authHeader = (): Record<string, string> => (token ? { Authorization: `Bearer ${token}` } : {});
 
 /** Turns a non-2xx response into an ApiError with the server's message; a 401 signs the user out. */
