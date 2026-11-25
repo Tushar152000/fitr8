@@ -21,7 +21,7 @@ SafeArea → QueryClientProvider → AuthProvider; splash until auth not "loadin
 
 | Screen     | Endpoints                                                                                                                                                                                                                     |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| today      | dashboard (`?date=` for a past day), progress (card, today only), water (+POST/DELETE water, optimistic in `lib/use-water.ts`)                                                                   |
+| today      | dashboard (`?date=` for a past day), progress (card, today only), water (+POST/DELETE water, optimistic in `lib/use-water.ts`)                                                                                                |
 | workout    | workouts/today; POST workouts/logs (set state local only)                                                                                                                                                                     |
 | progress   | progress (`progressQuery`, shared with Today's Progress card); POST checkins                                                                                                                                                  |
 | profile    | plan, usage, dashboard, reminders, billing (if PRO); PATCH profile/reminders; export CSV → share; DELETE account (2 sheets: why + reasons/note + "sign out instead" → type DELETE → native alert; body `{reasons, feedback}`) |
@@ -128,6 +128,7 @@ None in apps/mobile. Copies of web/domain logic (`src/lib/onboarding-draft.ts`, 
 ## Code layout after the 2026-11-25 split (screens compose, components render, lib holds state)
 
 Screens in `src/app` are thin; sub-components live in `src/components/<area>/`, state/side effects in `src/lib/use-*.ts`, pure helpers in `src/lib/*.ts`.
+
 - Coach: `lib/use-coach-chat.ts` (thread load, SSE stream, send/stop/new chat, draft, problem); `components/coach/` coach-header, coach-menu, composer, intro, bubble (+ ThreadSkeleton), tool-status-chip, problem-notice, memory-list.
 - Reminders: `lib/reminder-format.ts` (clock, toCron, describe, formatNext), `lib/use-notification-status.ts`; `components/reminders/` reminder-card, reminder-sheet (+ ReminderDraft), schedule-fields, round-button, permission-note, new-reminder-card, reminder-prompt.
 - Onboarding / welcome back / plan / progress: `lib/use-onboarding-form.ts` (screen passes the scroll ref in), `lib/onboarding-hints.ts`, `lib/welcome-back-draft.ts`, `lib/plan-pace.ts`, `lib/progress-insight.ts`; `components/onboarding/` details-step, goal-step, about-step, about-you-step, training-step, fold-section, steps-bar, form-footer, field-grid, medical-check, routine-fields, body-now-card, goal-passed, plan-badge, projection-line, target-card, too-fast, profile-options, plan-builder; `components/progress/` checkin-form, weight-trend-card, trend-chart.
