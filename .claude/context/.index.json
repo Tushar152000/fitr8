@@ -449,8 +449,8 @@
   }
  },
  "mobile": {
-  "syncedAt": "2026-11-26T13:15:18.783Z",
-  "head": "dc224e3",
+  "syncedAt": "2026-11-26T20:19:21.938Z",
+  "head": "a8a209e",
   "files": {
    "apps/mobile/.claude/settings.json": "14b797af98bf",
    "apps/mobile/.gitignore": "1b3d2a4eff0b",
@@ -639,7 +639,7 @@
    "apps/mobile/src/components/sheet.tsx": "0299e15434d2",
    "apps/mobile/src/components/skeletons.tsx": "38c52b40999c",
    "apps/mobile/src/components/support/faqs.ts": "335ade99f3d7",
-   "apps/mobile/src/components/swipe-tabs.tsx": "a20be4f97489",
+   "apps/mobile/src/components/swipe-tabs.tsx": "909c88e6d855",
    "apps/mobile/src/components/tab-bar.tsx": "c2a630205c74",
    "apps/mobile/src/components/toast.tsx": "f510aa89812c",
    "apps/mobile/src/components/ui/animated-row.tsx": "6bd14a3a88d6",

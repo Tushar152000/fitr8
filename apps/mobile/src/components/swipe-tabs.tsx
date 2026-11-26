@@ -138,7 +138,9 @@ function SwipeTabNavigator({ tabBar, ...options }: Props) {
       <View style={styles.root}>
         <GestureDetector gesture={pan}>
           <View style={styles.viewport}>
-            <Animated.View style={[styles.row, row]}>
+            {/* As wide as all tabs together: Android only delivers touches inside a view's own bounds, so
+                pages laid out past a screen-wide row couldn't scroll or be tapped. */}
+            <Animated.View style={[styles.row, { width: width * count }, row]}>
               {state.routes.map((route, i) => {
                 const focused = i === index;
                 return (
@@ -166,7 +168,7 @@ function SwipeTabNavigator({ tabBar, ...options }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   viewport: { flex: 1, overflow: "hidden" },
-  row: { flex: 1 },
+  row: { position: "absolute", top: 0, bottom: 0, left: 0 },
   page: { position: "absolute", top: 0, bottom: 0 },
 });
 
