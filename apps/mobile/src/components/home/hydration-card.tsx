@@ -1,11 +1,11 @@
 import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
 import { FieldError, PressableScale, Text } from "@/components/ui";
-import { GLASS_SIZES, glassRow, ROW_SLOTS, setGlassMl, useGlassMl, type GlassRow } from "@/lib/glass-size";
+import { GLASS_SIZES, glassRow, setGlassMl, useGlassMl, type GlassRow } from "@/lib/glass-size";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
 
@@ -18,8 +18,8 @@ const GLOW = require("../../../assets/home/hydration-glow.png");
 
 /**
  * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
- * full one takes it back off (undo). The pencil changes the glass size (a phone setting). A target
- * of more than 8 glasses runs in rounds of the row ("Round 2 of 2" beside the title).
+ * full one takes it back off (undo). The pencil changes the glass size (a phone setting). All glasses
+ * show in one row; a target of more than 8 glasses shares 8 glasses, so a tap fills part of one.
  */
 export function HydrationCard() {
   const styles = useStyles();
@@ -28,7 +28,7 @@ export function HydrationCard() {
   const [sizing, setSizing] = useState(false);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
-  const row = useShownRow(d ? glassRow(d.consumedMl, d.targetMl, glass) : null);
+  const row = d ? glassRow(d.consumedMl, d.targetMl, glass) : null;
 
   return (
     <View style={styles.card}>
@@ -37,11 +37,6 @@ export function HydrationCard() {
         <View style={{ flex: 1, gap: 0 }}>
           <Text variant="labelMedium" color="#ffffff" style={{ letterSpacing: -0.24 }}>
             Current hydration
-            {d && row && row.rounds > 1 ? (
-              <Text variant="labelMedium" color="rgba(255,255,255,0.65)" tabular>
-                {` · Round ${row.round + 1} of ${row.rounds}`}
-              </Text>
-            ) : null}
           </Text>
           {d ? (
             <Text weight={600} size={22} color="#ffffff" tabular accessibilityLiveRegion="polite" style={styles.big}>
@@ -107,25 +102,6 @@ export function HydrationCard() {
   );
 }
 
-/**
- * The row to draw. When a tap completes a round, the full row stays on screen while the 8th glass
- * fills (900 ms), then the next round appears; going back a round (undo) shows at once.
- */
-function useShownRow(row: GlassRow | null): GlassRow | null {
-  const [shownRound, setShownRound] = useState(row?.round ?? 0);
-  const round = row?.round ?? 0;
-  useEffect(() => {
-    if (round === shownRound) return;
-    const t = setTimeout(() => setShownRound(round), round > shownRound ? 900 : 0);
-    return () => clearTimeout(t);
-  }, [round, shownRound]);
-  if (!row || shownRound >= row.round) return row;
-  // Still showing the round just completed: 8 whole glasses, all full (only the final round has a
-  // fractional glass).
-  const glasses = Array.from({ length: ROW_SLOTS }, () => ({ level: 1, capacity: 1 }));
-  return { glasses, next: -1, last: ROW_SLOTS - 1, round: shownRound, rounds: row.rounds };
-}
-
 const GLASS = 34;
 /** The last glass of an uneven target is drawn smaller: capacity 0.6 → 60 % size (never under 40 %). */
 const glassSize = (capacity: number) => Math.round(GLASS * Math.max(0.4, capacity));
@@ -147,32 +123,35 @@ function Glasses({
   onUndo: () => void;
 }) {
   const styles = useStyles();
-  const { glasses, next, last, round } = row;
+  const { glasses, next, last } = row;
+  // Undo lives on the last glass with water that isn't the one the next tap fills: when glasses are
+  // shared, the part-filled glass is both, so undo moves to the full glass before it. The first
+  // part-filled glass (nothing before it) undoes with a long press.
+  const undoAt = next === -1 ? last : last === next ? next - 1 : last;
+  const undoOnNext = canUndo && last === next && next === 0;
   return (
-    <View style={styles.glasses}>
+    <View style={[styles.glasses, glasses.length < 6 && styles.glassesShort]}>
       {glasses.map((g, i) => {
         const adds = i === next;
-        const undoes = !adds && i === last && canUndo;
-        // The target's final glass adds only what's left (e.g. 150 ml for a 0.6 glass); others add a glass.
-        const final = row.round === row.rounds - 1 && i === glasses.length - 1;
-        // The API takes at least 50 ml.
-        const ml = final ? Math.max(50, Math.round(Math.min(glass, leftMl))) : glass;
+        const undoes = !adds && i === undoAt && canUndo;
+        // A tap adds one glass of water, or only what's left near the target (API minimum 50 ml).
+        const ml = Math.max(50, Math.round(Math.min(glass, leftMl)));
         const label = adds
-          ? `Add a glass, ${ml} ml`
-          : i === last
+          ? `Add a glass, ${ml} ml${undoOnNext && adds ? ". Long press to remove the last one" : ""}`
+          : i === undoAt
             ? "Remove the last glass"
             : g.level > 0
               ? `Glass ${i + 1}, drunk`
               : `Glass ${i + 1}`;
         return (
           <Pressable
-            // A new round gets fresh glasses (they start empty instead of draining).
-            key={`${round}-${i}`}
+            key={i}
             accessibilityRole="button"
             accessibilityLabel={label}
             accessibilityState={{ disabled: !adds && !undoes }}
             disabled={!adds && !undoes}
             onPress={adds ? () => onAdd(ml) : onUndo}
+            onLongPress={adds && undoOnNext ? onUndo : undefined}
             hitSlop={4}
             style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
           >
@@ -180,10 +159,6 @@ function Glasses({
           </Pressable>
         );
       })}
-      {/* A shorter last round keeps the same glass spacing as a full row of 8. */}
-      {Array.from({ length: ROW_SLOTS - glasses.length }, (_, i) => (
-        <View key={`pad-${i}`} style={styles.glass} />
-      ))}
     </View>
   );
 }
@@ -219,6 +194,8 @@ const useStyles = makeStyles((c) => ({
   big: { letterSpacing: -0.56 },
   size: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 15 },
   glasses: { flexDirection: "row", justifyContent: "space-between", marginVertical: -5 },
+  // A short row (small target or big glass) sits at the left instead of stretching across.
+  glassesShort: { justifyContent: "flex-start", gap: 14 },
   glass: { minWidth: 34, minHeight: 44, alignItems: "center", justifyContent: "flex-end", paddingBottom: 5 },
   sizes: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 8 },
   chip: {

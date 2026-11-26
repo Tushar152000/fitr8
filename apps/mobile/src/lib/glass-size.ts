@@ -59,7 +59,7 @@ export function setGlassMl(ml: number) {
   }
 }
 
-/** Glasses in one row of the Home hydration card. */
+/** Most glasses the Home hydration card's row can show. */
 export const ROW_SLOTS = 8;
 
 export type GlassSlot = {
@@ -70,46 +70,42 @@ export type GlassSlot = {
 };
 
 export type GlassRow = {
-  /** The glasses of this round (8, fewer in the last round). */
   glasses: GlassSlot[];
-  /** Index (in `glasses`) of the glass the next tap fills, or -1 when the round/target is done. */
+  /** Index of the glass the next tap fills, or -1 when the target is reached. */
   next: number;
   /** Index of the last glass with water in it (undo target), or -1. */
   last: number;
-  /** 0-based round; a target of more than 8 glasses takes several rounds. */
-  round: number;
-  rounds: number;
+  /** Water one drawn glass stands for (ml): the glass size, or more when the target is doubled up. */
+  perGlassMl: number;
 };
 
 const EPS = 1e-6;
 
 /**
- * The glass row on the card (user decisions 2026-11-26). The target is `targetMl / glass` glasses,
- * e.g. 3.4 L / 250 ml = 13.6: 13 whole glasses and a last, smaller glass worth 0.6. Glasses run in
- * rounds of 8: every tap fills the next glass, after the 8th the next round starts. Water that isn't
- * a whole number of glasses (the glass size changed during the day) fills a glass part way.
+ * The glass row on the card (user decisions 2026-11-26): all glasses in one row, no rounds.
+ * - Target fits in 8 glasses: one drawn glass per glass of water, e.g. 1.9 L / 250 ml = 7.6 → 7
+ *   glasses and a last, smaller glass worth 0.6. One tap fills one glass.
+ * - More than 8: the 8 glasses share the target ("doubled up"), e.g. 3.4 L → 425 ml each, so one
+ *   250 ml tap fills ~59 % of a glass and the next tap finishes it and starts the next.
+ * Water that isn't a whole glass always shows as a part-filled glass.
  */
 export function glassRow(consumedMl: number, targetMl: number, glass: number): GlassRow {
-  const total = Math.max(targetMl / glass, EPS); // glasses in the target, may be fractional
-  const count = Math.max(1, Math.ceil(total - EPS));
-  const rounds = Math.ceil(count / ROW_SLOTS);
-  const drunk = consumedMl / glass; // glasses drunk, may be fractional
-  const capacity = (i: number) => (i === count - 1 ? Math.min(1, total - (count - 1)) : 1);
-  // First glass that isn't full yet; = count when the target is reached.
-  let first = 0;
-  while (first < count && drunk - first + EPS >= capacity(first)) first++;
-  const round = Math.min(Math.floor(first / ROW_SLOTS), rounds - 1);
-  const start = round * ROW_SLOTS;
-  const end = Math.min(count, start + ROW_SLOTS);
+  const total = Math.max(targetMl / glass, EPS); // glasses of water in the target
+  const fits = total <= ROW_SLOTS + EPS;
+  const count = fits ? Math.max(1, Math.ceil(total - EPS)) : ROW_SLOTS;
+  const perGlassMl = fits ? glass : targetMl / ROW_SLOTS;
+  const capacity = (i: number) => (fits && i === count - 1 ? Math.min(1, total - (count - 1)) : 1);
+  const drunk = consumedMl / perGlassMl; // drawn glasses drunk, may be fractional
   const glasses: GlassSlot[] = [];
-  for (let i = start; i < end; i++) {
+  for (let i = 0; i < count; i++) {
     const cap = capacity(i);
     glasses.push({ capacity: cap, level: Math.max(0, Math.min(1, (drunk - i) / cap)) });
   }
-  const next = first < end ? first - start : -1;
+  const reached = consumedMl + EPS >= targetMl;
+  const next = reached ? -1 : glasses.findIndex((g) => g.level < 1 - EPS);
   let last = -1;
   glasses.forEach((g, i) => {
     if (g.level > EPS) last = i;
   });
-  return { glasses, next, last, round, rounds };
+  return { glasses, next, last, perGlassMl };
 }
