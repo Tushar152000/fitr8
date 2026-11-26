@@ -1,50 +1,172 @@
-name: Deploy
+name: CI/CD
 
-# After CI passes on main: images → database migrations → API (Cloud Run) → web (Vercel) and app OTA.
+# The one pipeline (2026-11-27: replaces ci.yml, deploy.yml and mobile-release.yml).
+#
+# Every pull request and push: checks (format, Prisma, migration drift, lint/typecheck/test/build,
+# workflow + shell lint); pull requests also build the Docker images.
+# Push to main (and a manual run on main): after the checks pass, deploy in order
+# images → database migrations → API (Cloud Run, smoke-tested) → web (Vercel) and app OTA update.
 # Each step starts only when the one before succeeded, so clients never call an API that isn't live.
 # Only services whose code changed since the last fully successful deploy are deployed (`changes`);
-# run it by hand with "all" to deploy everything.
+# a manual run with "Deploy everything" ships all of them.
+# Manual run with "Store build": a new native build on EAS (optionally submitted to the stores).
 #
 # Everything environment-specific is a repository variable or secret; nothing here needs editing.
 # The full list, and the one-time setup that fills it in, is docs/RELEASE.md (infra/gcp/setup.sh sets
 # the GCP variables; infra/release-check.sh verifies all of it).
-#
 # GitHub signs in to Google with OIDC (Workload Identity Federation): no service account keys.
 # App secrets live only in Secret Manager and are mounted by name: never stored in GitHub or logged.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  pull_request:
+  push:
     branches: [main]
   workflow_dispatch:
     inputs:
-      all:
+      deploy:
+        description: Deploy (main only) what changed since the last successful deploy
+        type: boolean
+        default: true
+      deploy_all:
         description: Deploy every service, changed or not
         type: boolean
         default: false
+      store_build:
+        description: Store build on EAS (needed when native code changed; bump `version` in apps/mobile/app.json first)
+        type: choice
+        options: [none, all, ios, android]
+        default: none
+      store_profile:
+        description: Store build profile (eas.json)
+        type: choice
+        options: [production, preview]
+        default: production
+      submit:
+        description: Submit the store build to App Store Connect / Google Play when done (production only)
+        type: boolean
+        default: false
 
+# Pull requests: a newer push cancels the older run. main: runs queue, so deploys never overlap.
 concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
-  packages: write
-  id-token: write
-  actions: read
 
 env:
-  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  SHA: ${{ github.sha }}
   REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/fitlens
 
 jobs:
+  # ─── Checks ──────────────────────────────────────────────────────────────────────────────────
+  check:
+    name: Lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: fitlens
+          POSTGRES_PASSWORD: fitlens
+          POSTGRES_DB: fitlens
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fitlens" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # e2e tests create/migrate/seed this database themselves
+      TEST_DATABASE_URL: postgresql://fitlens:fitlens@localhost:5432/fitlens_test?schema=public
+      DATABASE_URL: postgresql://fitlens:fitlens@localhost:5432/fitlens?schema=public
+      # Scratch database for the migration drift check (Prisma may wipe it).
+      SHADOW_DATABASE_URL: postgresql://fitlens:fitlens@localhost:5432/fitlens_shadow?schema=public
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-turbo-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Formatting
+        run: pnpm format:check
+
+      - name: Prisma schema
+        run: pnpm --filter @fitr8/db exec prisma validate
+
+      # Fails when schema.prisma changed without a migration (or a migration was edited by hand):
+      # production would otherwise run code against a database that doesn't match it.
+      - name: Migrations match the schema
+        run: |
+          PGPASSWORD=fitlens psql -h localhost -U fitlens -d fitlens -c "CREATE DATABASE fitlens_shadow"
+          pnpm db:drift
+
+      - name: Lint, typecheck, test, build (all workspaces)
+        run: pnpm turbo run lint typecheck test build --cache-dir=.turbo
+
+      - name: Repo scripts (local bootstrap helpers)
+        run: pnpm test:scripts
+
+  workflows:
+    name: Workflows and shell scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # actionlint also runs shellcheck on every `run:` script.
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+      - name: shellcheck (infra scripts)
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.10.0 infra/gcp/*.sh infra/*.sh
+
+  # Pull requests only: catches a broken Dockerfile before merge (main builds and pushes the real
+  # images in `api-images`).
+  docker:
+    name: Docker images build
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        app: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          build-args: ${{ matrix.app == 'web' && 'NEXT_PUBLIC_API_URL=https://api.fitr8.com' || '' }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # ─── Deploy (main) ───────────────────────────────────────────────────────────────────────────
   # What changed since the last deploy that fully succeeded? A failed or partial deploy doesn't count,
   # so anything it didn't ship is compared again next time. Shared packages and the lockfile count for
   # every service that uses them; a change to this workflow redeploys the API and the web.
   changes:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    name: "Deploy: what changed"
+    needs: [check, workflows]
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       api: ${{ steps.diff.outputs.api }}
       web: ${{ steps.diff.outputs.web }}
@@ -52,15 +174,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.SHA }}
           fetch-depth: 0
       - id: diff
         env:
           GH_TOKEN: ${{ github.token }}
-          ALL: ${{ inputs.all || false }}
+          ALL: ${{ inputs.deploy_all || false }}
         run: |
-          prev="$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --branch main \
-            --status success --limit 1 --json headSha --jq '.[0].headSha // empty')"
+          # The last fully successful run on main that deployed (a push, or a manual run on main).
+          prev="$(gh run list --repo "${{ github.repository }}" --workflow ci-cd.yml --branch main \
+            --status success --limit 20 --json headSha,event \
+            --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0].headSha // empty')"
           everything=false
           if [ "$ALL" = true ]; then
             echo "Deploying everything (requested)"; everything=true
@@ -72,21 +195,23 @@ jobs:
           changed() { [ "$everything" = true ] || ! git diff --quiet "$prev" "$SHA" -- "$@"; }
           shared=(packages/domain packages/contracts packages/tsconfig pnpm-lock.yaml package.json turbo.json)
           api=false web=false app=false
-          changed apps/api packages/db "${shared[@]}" .github/workflows/deploy.yml && api=true
-          changed apps/web "${shared[@]}" .github/workflows/deploy.yml && web=true
+          changed apps/api packages/db "${shared[@]}" .github/workflows/ci-cd.yml && api=true
+          changed apps/web "${shared[@]}" .github/workflows/ci-cd.yml && web=true
           changed apps/mobile packages/contracts && app=true
           echo "api=$api web=$web app=$app" | tee -a "$GITHUB_STEP_SUMMARY"
           { echo "api=$api"; echo "web=$web"; echo "app=$app"; } >> "$GITHUB_OUTPUT"
 
   api-images:
+    name: "Deploy: API images"
     needs: changes
     if: ${{ vars.GCP_PROJECT_ID != '' && needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.SHA }}
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
@@ -113,10 +238,17 @@ jobs:
           cache-from: type=gha,scope=api
 
   migrate:
+    name: "Deploy: database migrations"
     needs: api-images
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
+    concurrency:
+      group: deploy-production-migrate
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: google-github-actions/auth@v3
         with:
@@ -137,10 +269,17 @@ jobs:
           --execute-now --wait
 
   api:
+    name: "Deploy: API (Cloud Run)"
     needs: migrate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
+    concurrency:
+      group: deploy-production-api
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: google-github-actions/auth@v3
         with:
@@ -239,11 +378,18 @@ jobs:
   # After the API, so new pages never call endpoints that aren't live yet. Vercel's own Git
   # deployments for main are off (apps/web/vercel.json); this job is the production web deploy.
   web:
+    name: "Deploy: web (Vercel)"
     needs: [changes, api-images, migrate, api]
     if: ${{ !cancelled() && needs.changes.outputs.web == 'true' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
+    concurrency:
+      group: deploy-production-web
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
     env:
       HAS_VERCEL: ${{ secrets.VERCEL_TOKEN != '' }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -251,8 +397,6 @@ jobs:
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.SHA }}
 
       - uses: pnpm/action-setup@v4
         if: env.HAS_VERCEL == 'true'
@@ -306,11 +450,12 @@ jobs:
           else echo "::warning::No VERCEL_TOKEN or WEB_DEPLOY_HOOK_URL: the web was built but not deployed"; fi
 
   # Over-the-air JS update for installed app builds, after the API they call is live (or unchanged).
-  # Only when app code changed since the last successful deploy (`changes`). Native changes need a new store build instead
-  # (mobile-release.yml, after bumping `version` in apps/mobile/app.json).
+  # Only when app code changed since the last successful deploy (`changes`). Native changes need a new
+  # store build instead (`store-build` below, after bumping `version` in apps/mobile/app.json).
   # Depends on the API only: the app never calls the web, so a web (Vercel) failure must not hold back
   # phone updates.
   app-update:
+    name: "Deploy: app OTA update (${{ matrix.channel }})"
     needs: [changes, api]
     if: ${{ !cancelled() && needs.changes.outputs.app == 'true' && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
@@ -322,8 +467,6 @@ jobs:
         channel: [preview, production]
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.SHA }}
 
       - name: Expo token
         id: changed
@@ -353,7 +496,47 @@ jobs:
         if: steps.changed.outputs.app == 'true'
         working-directory: apps/mobile
         env:
-          COMMIT_MESSAGE: ${{ github.event.workflow_run.head_commit.message || github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.sha }}
         run: >-
           eas update --channel ${{ matrix.channel }} --environment ${{ matrix.channel }}
           --message "$(printf '%s\n' "$COMMIT_MESSAGE" | head -n 1)" --non-interactive
+
+  # ─── Store build (manual) ────────────────────────────────────────────────────────────────────
+  # New native app builds on EAS, optionally sent to App Store Connect / Google Play when done.
+  # Run from Actions → CI/CD → Run workflow → "Store build". Needed when native code changed (a new
+  # Expo module, permission or SDK): bump `version` in apps/mobile/app.json first, since OTA updates
+  # only reach builds with the same runtime version. Needs: secret EXPO_TOKEN; EAS environment
+  # variables per profile (EXPO_PUBLIC_REVENUECAT_*); store credentials and submit settings in EAS.
+  store-build:
+    name: "Store build (${{ inputs.store_build }}, ${{ inputs.store_profile }})"
+    needs: check
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.store_build != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: store-build-${{ inputs.store_profile }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: pnpm install --frozen-lockfile
+      # Builds run on EAS servers; --no-wait returns once queued (follow it on expo.dev). With
+      # --auto-submit, EAS submits the finished build using the submit profile of the same name.
+      - name: Queue EAS build
+        working-directory: apps/mobile
+        env:
+          PLATFORM: ${{ inputs.store_build }}
+          PROFILE: ${{ inputs.store_profile }}
+          SUBMIT: ${{ inputs.submit && inputs.store_profile == 'production' }}
+        run: |
+          args=(--platform "$PLATFORM" --profile "$PROFILE" --non-interactive --no-wait)
+          if [ "$SUBMIT" = true ]; then args+=(--auto-submit); fi
+          eas build "${args[@]}"

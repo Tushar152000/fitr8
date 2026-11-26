@@ -1,19 +1,16 @@
 # Infra, CI, deploy, local
 
-## CI `.github/workflows/ci.yml`
+## CI/CD `.github/workflows/ci-cd.yml` (the only workflow, 2026-11-27; replaced ci.yml, deploy.yml, mobile-release.yml)
 
-Every PR + push to main. Job `check` (Postgres 17): frozen install → `format:check` → `prisma validate` → **`pnpm db:drift`** (migrations vs schema, shadow DB `fitlens_shadow`; exit 2 = drift) → `turbo run lint typecheck test build` → `pnpm test:scripts`. Job `workflows`: actionlint 1.7.7 (also shellchecks `run:` blocks) + shellcheck on `infra/**/*.sh`. Job `docker`: api + web images (web with `NEXT_PUBLIC_API_URL`). `pnpm check` locally skips format, drift, build, docker, workflow lint. `apps/web/turbo.json` and `packages/db/turbo.json` make `typecheck` depend on the package's own `build` (they share `.next` / `src/generated`; in parallel they raced).
+Triggers: every PR, push to main, manual (`workflow_dispatch` inputs: `deploy` (default on, main only), `deploy_all`, `store_build` none/all/ios/android, `store_profile` production/preview, `submit`). Concurrency `ci-cd-<ref>`: PR runs cancel older ones; main runs queue (deploys never overlap).
 
-## Deploy `.github/workflows/deploy.yml` (single ordered pipeline)
-
-On successful CI `workflow_run` on main (or manual, input `all`). WIF auth, no keys. `changes` → `api-images` → `migrate` (Cloud Run job) → `api` → `web` → `app-update`.
-
-- `changes`: diffs against the last fully successful Deploy run's SHA (none/unknown or `all` ⇒ everything). api = apps/api, packages/db, shared (domain, contracts, tsconfig, lockfile, root package.json, turbo.json), deploy.yml; web = apps/web + shared + deploy.yml; app = apps/mobile, packages/contracts. Skipped upstream jobs don't block web/app (`!contains(needs.*.result, 'failure')`).
-
+- Checks: job `check` (Postgres 17): frozen install → `format:check` → `prisma validate` → **`pnpm db:drift`** (migrations vs schema, shadow DB `fitlens_shadow`; exit 2 = drift) → `turbo run lint typecheck test build` → `pnpm test:scripts`. Job `workflows`: actionlint 1.7.7 (also shellchecks `run:` blocks) + shellcheck on `infra/**/*.sh`. Job `docker` (PRs only): api + web images (web with `NEXT_PUBLIC_API_URL`). `pnpm check` locally skips format, drift, build, docker, workflow lint. `apps/web/turbo.json` and `packages/db/turbo.json` make `typecheck` depend on the package's own `build` (they share `.next` / `src/generated`; in parallel they raced).
+- Deploy (push to main / manual run on main, after `check` + `workflows` pass): WIF auth, no keys. `changes` → `api-images` → `migrate` (Cloud Run job) → `api` → `web` → `app-update`. Job-level `permissions` (id-token/packages/actions only where needed).
+- `changes`: diffs against the SHA of the last fully successful `ci-cd.yml` run on main from a push or manual run (none/unknown or `deploy_all` ⇒ everything; the first run after the switch deploys everything once). api = apps/api, packages/db, shared (domain, contracts, tsconfig, lockfile, root package.json, turbo.json), ci-cd.yml; web = apps/web + shared + ci-cd.yml; app = apps/mobile, packages/contracts. Skipped upstream jobs don't block web/app (`!contains(needs.*.result, 'failure')`).
 - `api`: a shell step builds `--update-env-vars`/`--update-secrets` from repo vars: `AI_PROVIDER` picks the key secret; `APPLE_CLIENT_ID` set ⇒ Apple secrets mounted; `REVENUECAT_ENABLED=true` ⇒ RevenueCat secrets; `SMTP_USER` set ⇒ `SMTP_HOST` (var, default smtp.gmail.com) + `SMTP_USER` envs and `SMTP_PASS` secret (contact form; `setup.sh` asks for it as optional, `release-check.sh` requires it when the var is set); `PAYWALL_ENABLED`. Always `PUBLIC_URL API_PUBLIC_URL AUTH_COOKIE_DOMAIN`. `--min-instances ${API_MIN_INSTANCES:-1}`, `--max-instances ${API_MAX_INSTANCES:-3}`, `--cpu-boost`. Smoke: run.app `/api/health` + `$API_PUBLIC_URL/api/health`.
 - `web`: Vercel CLI (`pull/build --prod/deploy --prebuilt`) when secret `VERCEL_TOKEN` (+ vars `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`); else ghcr image (build arg `NEXT_PUBLIC_API_URL`) + `WEB_DEPLOY_HOOK_URL`. `apps/web/vercel.json` disables Vercel's own Git deploys of `main` (PR previews stay).
-- `app-update`: matrix `preview`/`production`; when `changes.app` and secret `EXPO_TOKEN`; `eas update --channel X --environment X`.
-- The old ungated `eas-update.yml` is deleted. Store builds: `mobile-release.yml` (manual: platform, profile, optional auto-submit).
+- `app-update`: matrix `preview`/`production`; when `changes.app` and secret `EXPO_TOKEN`; `eas update --channel X --environment X`, message = push's head commit.
+- `store-build` (manual, `store_build` ≠ none; after `check`): `eas build --platform --profile --no-wait` (+ `--auto-submit` when `submit` and production).
 - 2026-11-17: `apps/mobile/app.json` version 0.4.0 (`userInterfaceStyle: automatic` for dark mode). runtimeVersion = appVersion, so OTA updates from this commit on reach only 0.4.0 store builds; 0.3.0 installs keep their JS until updated from the store. API changes in the same release are additive (MeDto.welcomeBack, new routes), so 0.3.0 keeps working.
 
 ## Provisioning and checks
@@ -37,7 +34,7 @@ On successful CI `workflow_run` on main (or manual, input `all`). WIF auth, no k
 
 ## Env templates
 
-`.env.example` covers API vars (except `REVENUECAT_ENTITLEMENT`) + web/test/ports. `.env.production.example` has the web/API URL trio + PAYWALL/RevenueCat + `ADMIN_EMAILS` (production: GitHub repo variable or secret `ADMIN_EMAILS`; `deploy.yml` passes it with `;` separators, unset = Cloud Run value kept); still omits COACH_FREE/AI_PRO limits, AI model overrides, AUTH_DEV_LOGIN (defaults are right). Undocumented: web `APP_STORE_URL`/`PLAY_STORE_URL`/`NEXT_PUBLIC_SITE_URL` (docs/BLOG.md); mobile `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REVENUECAT_*`.
+`.env.example` covers API vars (except `REVENUECAT_ENTITLEMENT`) + web/test/ports. `.env.production.example` has the web/API URL trio + PAYWALL/RevenueCat + `ADMIN_EMAILS` (production: GitHub repo variable or secret `ADMIN_EMAILS`; `ci-cd.yml` (job `api`) passes it with `;` separators, unset = Cloud Run value kept); still omits COACH_FREE/AI_PRO limits, AI model overrides, AUTH_DEV_LOGIN (defaults are right). Undocumented: web `APP_STORE_URL`/`PLAY_STORE_URL`/`NEXT_PUBLIC_SITE_URL` (docs/BLOG.md); mobile `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REVENUECAT_*`.
 
 ## Turbo
 

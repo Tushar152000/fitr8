@@ -52,7 +52,7 @@ PROJECT_ID=fitlens-prod BILLING_ACCOUNT=XXXXXX-XXXXXX-XXXXXX \
 - enables the APIs; creates Artifact Registry and Cloud SQL (instance, `fitlens` database and user);
 - stores secrets in Secret Manager: `DATABASE_URL` (Cloud SQL socket form) and `AUTH_SECRET` (both generated), and asks with hidden input for `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY` with `AI_PROVIDER=anthropic`), `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (R2). Values are piped straight into Secret Manager, never echoed or written to disk, and never stored in GitHub;
 - creates two service accounts: `fitlens-api` runs the service (Cloud SQL client, reads those secrets), `fitlens-deployer` is what GitHub Actions becomes through Workload Identity Federation (only `main` of this repo; no JSON keys);
-- sets the GitHub repository variables the Deploy workflow reads (with `gh`, or prints them). None of them are secret;
+- sets the GitHub repository variables the CI/CD workflow reads (with `gh`, or prints them). None of them are secret;
 - ends with a list of any secrets still missing (run it from a terminal to enter them).
 
 Rotate a secret with `gcloud secrets versions add NAME --data-file=-`; the next deploy picks up `latest`.
@@ -83,7 +83,7 @@ The run summary prints the Cloud Run URL (`https://fitlens-api-….run.app`); th
 
 ## 4. API configuration
 
-The Deploy workflow sets these on every rollout (see `.github/workflows/deploy.yml`):
+The CI/CD workflow sets these on every rollout (see `.github/workflows/ci-cd.yml`, job `api`):
 
 | Variable                                                                  | Value                                                                                                       |
 | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -127,7 +127,7 @@ When no source has the nutrition, the app goes to "photograph the label" (prefil
 ## 6. Sign in with Apple (iOS app)
 
 Set `APPLE_CLIENT_ID=com.fitr8.app`, `APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY` (the
-`.p8` contents, from Secret Manager) on the Cloud Run service in the console; the Deploy workflow
+`.p8` contents, from Secret Manager) on the Cloud Run service in the console; the CI/CD workflow
 leaves them alone. With `APPLE_CLIENT_ID` set, production refuses to boot without the other three:
 account deletion revokes Apple sign-ins. Full steps: [STORE.md §2](STORE.md).
 
@@ -137,9 +137,9 @@ Authorised redirect URI: `https://api.fitr8.com/api/auth/callback/google` (`$API
 
 ## 8. Release flow
 
-Push to `main` → CI (format, migration drift, lint, typecheck, tests, workflow lint, image builds) → Deploy workflow: API and migrate images pushed to Artifact Registry → `fitlens-migrate` job runs `prisma migrate deploy` → `fitlens-api` rolls out and is smoke-tested (Cloud Run URL and `API_PUBLIC_URL`) → web deployed to Vercel (`VERCEL_TOKEN`; otherwise the ghcr image + hook) → EAS update. Migrations run before the new code starts, so write them backwards-compatible (add columns nullable/defaulted first, drop in a later release). Roll back with `gcloud run services update-traffic fitlens-api --to-revisions=<previous>=100`.
+Push to `main` → CI/CD workflow (`ci-cd.yml`): checks (format, migration drift, lint, typecheck, tests, workflow lint) → deploy jobs: API and migrate images pushed to Artifact Registry → `fitlens-migrate` job runs `prisma migrate deploy` → `fitlens-api` rolls out and is smoke-tested (Cloud Run URL and `API_PUBLIC_URL`) → web deployed to Vercel (`VERCEL_TOKEN`; otherwise the ghcr image + hook) → EAS update. Migrations run before the new code starts, so write them backwards-compatible (add columns nullable/defaulted first, drop in a later release). Roll back with `gcloud run services update-traffic fitlens-api --to-revisions=<previous>=100`.
 
-Mobile: the Deploy workflow's last job publishes an EAS update to the `preview` and `production` channels (with that EAS environment's variables) when `apps/mobile` or `packages/contracts` changed since the last successful deploy. Store builds: Actions → "Mobile release".
+Mobile: the CI/CD workflow's `app-update` job publishes an EAS update to the `preview` and `production` channels (with that EAS environment's variables) when `apps/mobile` or `packages/contracts` changed since the last successful deploy. Store builds: Actions → CI/CD → Run workflow → "Store build".
 
 ## 9. Check
 

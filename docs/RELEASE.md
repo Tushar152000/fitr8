@@ -4,11 +4,11 @@ Everything is automated except tokens and settings that only a person with the a
 Do the steps in order once; after that every merge to `main` releases by itself.
 
 ```
-merge to main → CI (format, schema + migration drift, lint, typecheck, tests, build, workflow lint, images)
+merge to main → CI/CD workflow `.github/workflows/ci-cd.yml`: checks (format, schema + migration drift, lint, typecheck, tests, build, workflow lint)
              → Deploy: images → migrations → API (Cloud Run) → web (Vercel) → app OTA (EAS)
                only the services whose code changed since the last successful deploy
-               (Actions → Deploy → Run workflow → "all" deploys everything)
-store builds → Actions → "Mobile release" (manual, when native code changed)
+               (Actions → CI/CD → Run workflow → "Deploy everything")
+store builds → Actions → CI/CD → Run workflow → "Store build" (manual, when native code changed)
 ```
 
 ## 0. Access
@@ -33,7 +33,7 @@ Safe to re-run; it skips what exists. It:
 - grants the API's service account access to them;
 - creates the API's load balancer and certificate for `api.fitr8.com` (`infra/gcp/api-domain.sh`) and
   prints its IP;
-- sets every GitHub repository variable the Deploy workflow reads (`GCP_*`, `PUBLIC_URL`,
+- sets every GitHub repository variable the CI/CD workflow reads (`GCP_*`, `PUBLIC_URL`,
   `API_PUBLIC_URL`, `AUTH_COOKIE_DOMAIN`, `S3_BUCKET`, `AI_PROVIDER`, `API_MIN_INSTANCES`,
   `APPLE_CLIENT_ID` when Apple is set up, `REVENUECAT_ENABLED`).
 
@@ -69,7 +69,7 @@ record below in Vercel DNS. That covers steps 2 and 4.
 - [ ] GitHub variables **`VERCEL_ORG_ID`** (team settings → Team ID) and **`VERCEL_PROJECT_ID`** (project
       settings → General → Project ID).
 
-Vercel no longer deploys `main` from Git by itself (`apps/web/vercel.json`); the Deploy workflow does,
+Vercel no longer deploys `main` from Git by itself (`apps/web/vercel.json`); the CI/CD workflow's deploy jobs do,
 after the API, so pages never call endpoints that aren't live. Pull-request previews still work.
 
 ## 5. Expo / EAS (app)
@@ -99,7 +99,7 @@ PROJECT_ID=fitlens-prod infra/release-check.sh
 ```
 
 Read-only. Every line must be ✅ (⚠️ are advice) before merging. Then merge to `main` and watch
-Actions → CI → Deploy. After it finishes:
+Actions → CI/CD (checks, then the deploy jobs). After it finishes:
 
 ```bash
 LIVE_ONLY=1 PUBLIC_URL=https://www.fitr8.com API_PUBLIC_URL=https://api.fitr8.com infra/release-check.sh

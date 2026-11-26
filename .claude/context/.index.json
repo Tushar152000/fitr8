@@ -946,14 +946,12 @@
   }
  },
  "infra": {
-  "syncedAt": "2026-11-26T22:27:49.400Z",
-  "head": "3155274",
+  "syncedAt": "2026-11-26T22:30:47.769Z",
+  "head": "db32d3b",
   "files": {
+   ".github/workflows/ci-cd.yml": "351496c8dd39",
    ".env.example": "42506fe3fcde",
    ".env.production.example": "bd14e92dcb3b",
-   ".github/workflows/ci.yml": "04026a5c3ce9",
-   ".github/workflows/deploy.yml": "15eedbb7bb27",
-   ".github/workflows/mobile-release.yml": "3c0c1ba5c223",
    "apps/api/Dockerfile": "5008ec25a6d3",
    "apps/mobile/app.json": "2b30600fe431",
    "apps/mobile/eas.json": "74e24f9b0253",
