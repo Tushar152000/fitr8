@@ -3,23 +3,34 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { LabelCheck } from "@/components/log/label/label-check";
 import { Per100gFields } from "@/components/log/label/per-100g-fields";
 import { MealWhen } from "@/components/log/meal-when";
 import { TotalCard } from "@/components/log/total-card";
 import { QueryError } from "@/components/query-error";
 import { ProductSkeleton } from "@/components/skeletons";
-import { Button, Card, FieldError, FormField, NumberField, Screen, Stepper, Text, TextField } from "@/components/ui";
+import {
+  Button,
+  FieldError,
+  FormField,
+  NumberField,
+  PageHeader,
+  Screen,
+  Stepper,
+  Text,
+  TextField,
+} from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, errorMessage } from "@/lib/api";
 import { formatInt, MEAL_LABEL } from "@/lib/format";
 import { labelAddsUp } from "@/lib/label";
 import { useMealChoice } from "@/lib/meal-param";
 import { refreshDay } from "@/lib/query";
-import { useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
 import { haptic } from "@/lib/haptics";
+import { useLeaveLog } from "@/lib/use-leave-log";
+import { OnSurface } from "@/components/ui/surface";
 
 type ScanDto = LabelScanDto;
 
@@ -36,7 +47,7 @@ export default function CheckLabelScreen() {
   if (scan.isPending) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader title="Check the label values" />
         <ProductSkeleton />
       </Screen>
     );
@@ -44,7 +55,7 @@ export default function CheckLabelScreen() {
   if (scan.isError) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader title="Check the label values" />
         <QueryError error={scan.error} onRetry={() => scan.refetch()} />
       </Screen>
     );
@@ -54,6 +65,9 @@ export default function CheckLabelScreen() {
 
 function CheckLabel({ scan }: { scan: ScanDto }) {
   const c = useColors();
+  const styles = useStyles();
+  // After saving or deleting: back where logging started (Home, Meals …), not always Home.
+  const leaveLog = useLeaveLog();
   const { mealType, setMealType, date, dateBody, params } = useMealChoice();
   const [name, setName] = useState(scan.name);
   const [kcal, setKcal] = useState(str(scan.per100g.kcal));
@@ -100,7 +114,7 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
       haptic.success();
       refreshDay();
       showDay(date);
-      router.dismissTo("/today");
+      leaveLog();
     } catch (e) {
       setError(errorMessage(e, "Couldn't save. Try again."));
       setBusy(false);
@@ -112,7 +126,7 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
       footer={
         <>
           <TotalCard kcal={total} live>
-            <Text weight={600} size={13} color={c.ink3} tabular>
+            <Text variant="labelMedium" color={c.ink2} tabular>
               {formatInt(grams)} g
             </Text>
           </TotalCard>
@@ -123,12 +137,12 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
         </>
       }
     >
-      <BackHeader onBack={() => router.replace({ pathname: "/log/label", params })} />
-      <View style={{ gap: 4 }}>
-        <Text variant="h1" size={26}>
-          Check the label values
+      {/* Back retakes the photo (the camera was replaced by this screen). */}
+      <View style={{ gap: 12 }}>
+        <PageHeader title="Check the label values" onBack={() => router.replace({ pathname: "/log/label", params })} />
+        <Text variant="bodySm" color={c.ink2}>
+          We read these per 100 g. Fix anything that doesn&apos;t match the pack.
         </Text>
-        <Text color={c.ink2}>We read these per 100 g. Fix anything that doesn&apos;t match the pack.</Text>
       </View>
 
       <View style={{ gap: 16 }}>
@@ -152,22 +166,35 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
           ]}
         />
 
-        <Card>
-          <NumberField
-            label="Serving size"
-            unit="g"
-            value={serving}
-            onValueChange={setServing}
-            hint={scan.servingLabel ? `Label says: ${scan.servingLabel}` : undefined}
-          />
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text weight={600}>Servings</Text>
-            <Stepper label="Servings" value={servings} step={0.5} min={0.5} max={maxServings} onChange={setServings} />
-          </View>
-        </Card>
+        <View style={styles.card}>
+          <OnSurface>
+            <NumberField
+              label="Serving size"
+              unit="g"
+              value={serving}
+              onValueChange={setServing}
+              hint={scan.servingLabel ? `Label says: ${scan.servingLabel}` : undefined}
+            />
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text variant="bodyStrong">Servings</Text>
+              <Stepper
+                label="Servings"
+                value={servings}
+                step={0.5}
+                min={0.5}
+                max={maxServings}
+                onChange={setServings}
+              />
+            </View>
+          </OnSurface>
+        </View>
 
         <MealWhen mealType={mealType} onMealType={setMealType} date={date} />
       </View>
     </Screen>
   );
 }
+
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
+}));

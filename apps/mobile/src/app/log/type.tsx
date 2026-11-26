@@ -3,18 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Info, X } from "lucide-react-native";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TextInput, View } from "react-native";
 import { MealWhen } from "@/components/log/meal-when";
-import { ModeTabs } from "@/components/log/mode-tabs";
 import { SavedMealsSection, UsualsSection } from "@/components/log/quick-log-lists";
-import { Button, FieldError, PressableScale, Text } from "@/components/ui";
+import { Button, FieldError, IconButton, Screen, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, errorMessage } from "@/lib/api";
+import { useLeaveLog } from "@/lib/use-leave-log";
 import { useMealChoice } from "@/lib/meal-param";
 import { savedMealsQuery } from "@/lib/queries";
 import { queryClient, refreshDay } from "@/lib/query";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
 import { haptic } from "@/lib/haptics";
 
@@ -23,8 +22,8 @@ export default function TypeMealScreen() {
   const c = useColors();
   const styles = useStyles();
   const { mealType, mealChosen, setMealType, date, dateBody, params } = useMealChoice();
-  const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
   const [busy, setBusy] = useState<string | null>(null); // "text", a usual's mealId or a saved meal's id
   const [error, setError] = useState<string | null>(null);
   const usuals = useQuery({
@@ -32,6 +31,17 @@ export default function TypeMealScreen() {
     queryFn: () => api<{ usuals: UsualDto[] }>("/api/meals/usuals").then((r) => r.usuals),
   });
   const saved = useQuery(savedMealsQuery);
+
+  /**
+   * Close (user decision 2026-11-27): before "Get calories" it goes back one step (to the camera when
+   * Type came from it, else where it was opened from); once the meal is on its way it leaves the log
+   * flow, back where logging started.
+   */
+  const leaveLog = useLeaveLog();
+  function close() {
+    if (busy === "text" || !router.canGoBack()) leaveLog();
+    else router.back();
+  }
 
   async function submit() {
     const value = text.trim();
@@ -58,7 +68,7 @@ export default function TypeMealScreen() {
       haptic.success();
       refreshDay();
       showDay(date);
-      router.dismissTo("/today");
+      leaveLog();
     } catch (err) {
       setError(errorMessage(err, "Couldn't add that. Try again."));
       setBusy(null);
@@ -77,7 +87,7 @@ export default function TypeMealScreen() {
       refreshDay();
       queryClient.invalidateQueries({ queryKey: savedMealsQuery.queryKey });
       showDay(date);
-      router.dismissTo("/today");
+      leaveLog();
     } catch (err) {
       setError(errorMessage(err, "Couldn't add that. Try again."));
       setBusy(null);
@@ -85,79 +95,69 @@ export default function TypeMealScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, gap: 16 }}
-      >
-        <View style={styles.top}>
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={() => router.back()}
-            style={styles.close}
-          >
-            <X size={26} color={c.ink} />
-          </PressableScale>
-        </View>
-
-        <Text variant="h1">What did you eat?</Text>
-
-        <MealWhen mealType={mealType} onMealType={setMealType} date={date} />
-
-        <View style={{ gap: 8 }}>
-          <TextInput
-            accessibilityLabel="What did you eat?"
-            value={text}
-            onChangeText={setText}
-            multiline
-            maxLength={500}
-            placeholder="2 roti, 1 katori dal, half katori bhindi, 1 cup chai with 1 sachet sugar"
-            placeholderTextColor={c.ink3}
-            style={styles.textarea}
-            textAlignVertical="top"
-          />
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Info size={16} color={c.ink3} style={{ marginTop: 2 }} />
-            <Text size={13} color={c.ink3} style={{ flex: 1 }}>
-              Add amounts for better numbers: pieces, katori, cups, grams or ml. Typing never uses a photo scan.
-            </Text>
-          </View>
-          {error && <FieldError>{error}</FieldError>}
-        </View>
-
-        {saved.isSuccess && (
-          <SavedMealsSection
-            meals={saved.data}
-            busy={busy}
-            mealType={mealType}
-            mealChosen={mealChosen}
-            params={params}
-            onLog={logSaved}
-          />
-        )}
-
-        {(usuals.data?.length ?? 0) > 0 && (
-          <UsualsSection usuals={usuals.data!} busy={busy} mealType={mealType} onRelog={relog} />
-        )}
-      </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom) }]}>
+    <Screen
+      contentStyle={{ gap: 16 }}
+      footer={
         <Button onPress={submit} loading={busy === "text"} disabled={busy !== null && busy !== "text"}>
           Get calories
         </Button>
-        <ModeTabs current="type" params={params} tone="light" />
+      }
+    >
+      {/* Close, not back: it leaves Type (to the camera or where logging started), see close(). */}
+      <View style={styles.top}>
+        <IconButton label="Close" onPress={close} icon={<X size={20} color={c.ink} strokeWidth={2} />} />
+        <Text variant="heading1" accessibilityRole="header" numberOfLines={1} style={{ flex: 1 }}>
+          What did you eat?
+        </Text>
       </View>
-    </KeyboardAvoidingView>
+
+      <MealWhen mealType={mealType} onMealType={setMealType} date={date} />
+
+      <View style={{ gap: 10 }}>
+        <TextInput
+          {...INPUT_CARET}
+          accessibilityLabel="What did you eat?"
+          value={text}
+          onChangeText={setText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          multiline
+          maxLength={500}
+          placeholder="2 roti, 1 katori dal, half katori bhindi, 1 cup chai with 1 sachet sugar"
+          placeholderTextColor={c.ink3}
+          style={[styles.textarea, focused && { borderColor: c.ink }]}
+          textAlignVertical="top"
+        />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Info size={14} color={c.ink2} strokeWidth={2} style={{ marginTop: 2 }} />
+          <Text variant="labelRegular" color={c.ink2} style={{ flex: 1, lineHeight: 17 }}>
+            Add amounts for better numbers: pieces, katori, cups, grams or ml. Typing never uses a photo scan.
+          </Text>
+        </View>
+        {error && <FieldError>{error}</FieldError>}
+      </View>
+
+      {saved.isSuccess && (
+        <SavedMealsSection
+          meals={saved.data}
+          busy={busy}
+          mealType={mealType}
+          mealChosen={mealChosen}
+          params={params}
+          onLog={logSaved}
+        />
+      )}
+
+      {(usuals.data?.length ?? 0) > 0 && (
+        <UsualsSection usuals={usuals.data!} busy={busy} mealType={mealType} onRelog={relog} />
+      )}
+    </Screen>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  top: { flexDirection: "row", alignItems: "center", gap: 8 },
-  close: { width: 44, height: 44, marginLeft: -8, alignItems: "center", justifyContent: "center" },
+  top: { flexDirection: "row", alignItems: "center", gap: 12 },
+  // The v2 field (TextField): white, hairline, ink border on focus; as tall as a short meal list.
   textarea: {
     minHeight: 144,
     borderWidth: 1,
@@ -166,16 +166,9 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surface,
     padding: 16,
     fontFamily: fonts.sans400,
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 22,
     color: c.ink,
-  },
-  footer: {
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    gap: 16,
-    backgroundColor: c.ground,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.line,
+    outlineWidth: 0,
   },
 }));

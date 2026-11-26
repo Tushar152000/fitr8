@@ -90,7 +90,7 @@ export function InjuriesField({
         placeholderTextColor={fade(c.ink3, 0.6)}
       />
       {hint && (
-        <Text size={13} color={c.ink3}>
+        <Text variant="labelRegular" color={c.ink3}>
           {hint}
         </Text>
       )}

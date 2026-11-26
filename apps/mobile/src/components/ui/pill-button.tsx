@@ -10,7 +10,8 @@ import { Text } from "./text";
  * Figma "Button": a full-radius pill, 24 × 16 padding, Body/Strong label. `primary` is
  * gradient/primary with white text; `secondary` is a white pill; `soft` the canvas-grey pill used
  * on white cards ("Add food", "Go to today"); `link` is olive text only; `onDark` is the white pill
- * on always-dark surfaces (camera, workout day card): white with ink text in both themes.
+ * on always-dark surfaces (camera, workout day card): white with ink text in both themes; `danger`
+ * is the red pill for a destructive action (delete, log out) with white text.
  */
 export function PillButton({
   label,
@@ -25,7 +26,7 @@ export function PillButton({
 }: {
   label: string;
   onPress?: () => void;
-  variant?: "primary" | "secondary" | "soft" | "link" | "onDark";
+  variant?: "primary" | "secondary" | "soft" | "link" | "onDark" | "danger";
   icon?: LucideIcon;
   trailingIcon?: LucideIcon;
   loading?: boolean;
@@ -37,7 +38,15 @@ export function PillButton({
   const styles = useStyles();
   const off = disabled || loading;
   const color =
-    variant === "primary" ? c.white : variant === "link" ? c.brandText : variant === "onDark" ? ON_DARK_INK : c.ink;
+    variant === "primary"
+      ? c.white
+      : variant === "danger"
+        ? c.onDanger
+        : variant === "link"
+          ? c.brandText
+          : variant === "onDark"
+            ? ON_DARK_INK
+            : c.ink;
   const content = loading ? (
     <ActivityIndicator color={color} />
   ) : (
@@ -61,6 +70,7 @@ export function PillButton({
         variant === "secondary" && { backgroundColor: c.surface },
         variant === "soft" && { backgroundColor: c.ground },
         variant === "onDark" && { backgroundColor: c.white },
+        variant === "danger" && { backgroundColor: c.danger },
         off && { opacity: 0.5 },
         style,
       ]}

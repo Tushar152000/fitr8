@@ -1,8 +1,8 @@
 import type { FoodDto } from "@fitr8/contracts";
 import { View } from "react-native";
-import { Card, Segmented, Stepper, Text } from "@/components/ui";
+import { Segmented, Stepper, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
-import { useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Most grams/ml one item can log (QuickAddSchema). */
 export const MAX_GRAMS = 5000;
@@ -36,10 +36,11 @@ export function ProductAmount({
   amountG: number;
 }) {
   const c = useColors();
+  const styles = useStyles();
   const measure = food.isLiquid ? "ml" : "g";
   const maxServings = maxServingsOf(food);
   return (
-    <Card>
+    <View style={styles.card}>
       {food.servingSizeG ? (
         <Segmented
           label="Amount in"
@@ -77,10 +78,14 @@ export function ProductAmount({
             onChange={onGramsChange}
           />
         )}
-        <Text weight={600} size={13} color={c.ink3} tabular>
+        <Text variant="labelMedium" color={c.ink2} tabular>
           {mode === "SERVINGS" ? `${formatInt(amountG)} ${measure}` : measure}
         </Text>
       </View>
-    </Card>
+    </View>
   );
 }
+
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
+}));

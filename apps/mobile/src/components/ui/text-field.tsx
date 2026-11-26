@@ -1,22 +1,53 @@
-import type { Ref } from "react";
+import { useState, type Ref } from "react";
 import { TextInput, type TextInputProps } from "react-native";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, INPUT_CARET, makeStyles, radius, useColors } from "@/lib/theme";
+import { useOnSurface } from "./surface";
 
-/** The app's 52 px text input (surface, strong hairline, input radius). `invalid` turns the border amber. */
+/**
+ * The app's 52 px text input (surface, strong hairline, input radius). Focused, the border turns ink
+ * (as NumberField does; no browser focus ring, user decision 2026-11-27); `invalid` turns it amber.
+ * The cursor and selection use the brand olive.
+ */
 export function TextField({
   style,
   invalid,
   placeholderTextColor,
   ref,
+  onFocus,
+  onBlur,
+  filled,
   ...rest
-}: TextInputProps & { invalid?: boolean; ref?: Ref<TextInput> }) {
+}: TextInputProps & {
+  invalid?: boolean;
+  ref?: Ref<TextInput>;
+  /** Inside a white card or sheet: grey fill, no outline until focused (v2). */
+  filled?: boolean;
+}) {
   const c = useColors();
   const styles = useStyles();
+  const [focused, setFocused] = useState(false);
+  const onWhite = useOnSurface();
+  filled = filled ?? onWhite;
   return (
     <TextInput
       ref={ref}
       placeholderTextColor={placeholderTextColor ?? c.ink3}
-      style={[styles.input, invalid && { borderColor: c.caution }, style]}
+      {...INPUT_CARET}
+      onFocus={(e) => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        onBlur?.(e);
+      }}
+      style={[
+        styles.input,
+        filled && { backgroundColor: c.ground, borderColor: "transparent" },
+        focused && { borderColor: c.ink },
+        invalid && { borderColor: c.caution },
+        style,
+      ]}
       {...rest}
     />
   );

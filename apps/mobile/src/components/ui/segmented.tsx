@@ -1,12 +1,14 @@
 import { View } from "react-native";
-import { makeStyles, useColors } from "@/lib/theme";
-import { Text } from "./text";
-import { PressableScale } from "./pressable-scale";
 import { haptic } from "@/lib/haptics";
+import { makeStyles, useColors } from "@/lib/theme";
+import { PressableScale } from "./pressable-scale";
+import { Indicator, useSlidingIndicator } from "./sliding-indicator";
+import { Text } from "./text";
 
 /**
- * Sunken track; the selected option is a raised surface. `tone="dark"` is the Figma pill version on
- * the always-dark camera (glass track, white selected pill, 13 px labels).
+ * Sunken track; the selected option is a raised surface that slides to the option picked (user
+ * decision 2026-11-27: no jump between options; `useSlidingIndicator`). `tone="dark"` is the Figma
+ * pill version on the always-dark camera (solid dark track, white selected pill, 13 px labels).
  */
 export function Segmented<T extends string | number>({
   label,
@@ -24,22 +26,24 @@ export function Segmented<T extends string | number>({
   const c = useColors();
   const styles = useStyles();
   const dark = tone === "dark";
+  const slide = useSlidingIndicator(options.findIndex((o) => o.value === value));
+
   return (
     <View style={dark ? styles.darkTrack : styles.track} accessibilityRole="radiogroup" accessibilityLabel={label}>
-      {options.map((o) => {
+      <Indicator slide={slide} style={dark ? styles.darkSelected : styles.selected} />
+      {options.map((o, i) => {
         const selected = o.value === value;
         return (
           <PressableScale
             key={String(o.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
+            onLayout={slide.onLayout(i)}
             onPress={() => {
               if (o.value !== value) haptic.select();
               onChange(o.value);
             }}
-            style={
-              dark ? [styles.darkOption, selected && styles.darkSelected] : [styles.option, selected && styles.selected]
-            }
+            style={dark ? styles.darkOption : styles.option}
           >
             {dark ? (
               <Text weight={600} size={13} color={selected ? DARK_INK : DARK_MUTED} numberOfLines={1}>
@@ -71,8 +75,10 @@ const useStyles = makeStyles((c, shadows) => ({
     justifyContent: "center",
     paddingHorizontal: 12,
   },
-  selected: { backgroundColor: c.raised, ...shadows.seg },
-  darkTrack: { flexDirection: "row", gap: 4, padding: 4, borderRadius: 100, backgroundColor: "rgba(255,255,255,0.08)" },
+  selected: { backgroundColor: c.raised, borderRadius: 11, ...shadows.seg },
+  // Solid: white 8 % over the camera's #0c0c0c panel, as drawn before the preview went full
+  // screen (a see-through track vanished over a bright camera feed).
+  darkTrack: { flexDirection: "row", gap: 4, padding: 4, borderRadius: 100, backgroundColor: "#1f1f1f" },
   darkOption: { flex: 1, paddingVertical: 10, borderRadius: 100, alignItems: "center", justifyContent: "center" },
-  darkSelected: { backgroundColor: "#ffffff" },
+  darkSelected: { backgroundColor: "#ffffff", borderRadius: 100 },
 }));

@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { Card, Text } from "@/components/ui";
-import { MEAL_TYPES } from "@/lib/format";
+import { MEAL_TYPES, mealTypeForHour } from "@/lib/format";
 import { dayLabel, MEAL_BACKFILL_DAYS } from "@/lib/meal-param";
 import { slotShareKcal } from "@/lib/meal-slots";
 import { useColors } from "@/lib/theme";
@@ -37,6 +37,8 @@ export function DayMeals({ day, pastDay, canLog }: { day: Day; pastDay: string |
         <MealSlotCard
           key={t}
           type={t}
+          // Only the meal for the time of day (today) gets the big Snap / Add food buttons.
+          current={!pastDay && t === mealTypeForHour(new Date().getHours())}
           meals={day.meals.filter((m) => m.mealType === t)}
           timezone={day.timezone}
           pastDay={pastDay}

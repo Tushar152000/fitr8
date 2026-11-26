@@ -10,13 +10,13 @@ import { TargetCard } from "@/components/onboarding/target-card";
 import { TooFast } from "@/components/onboarding/too-fast";
 import { QueryError } from "@/components/query-error";
 import { PlanSkeleton } from "@/components/skeletons";
-import { Button, Card, Screen, StatTile, Text } from "@/components/ui";
+import { Button, Screen, StatTile, Text } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { longDate } from "@/lib/dates";
 import { formatInt } from "@/lib/format";
 import { paceLine } from "@/lib/plan-pace";
 import { planQuery } from "@/lib/queries";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Screens 5 / 5b: the plan computed at onboarding, or the two safe options when the goal is too fast. */
 export default function PlanScreen() {
@@ -35,7 +35,7 @@ export default function PlanScreen() {
 
   if (plan.isPending) {
     return (
-      <Screen gutter={24}>
+      <Screen>
         <StepsBar current={4} total={4} />
         <PlanSkeleton />
       </Screen>
@@ -43,7 +43,7 @@ export default function PlanScreen() {
   }
   if (plan.isError) {
     return (
-      <Screen gutter={24}>
+      <Screen>
         <QueryError error={plan.error} onRetry={() => plan.refetch()} />
       </Screen>
     );
@@ -58,7 +58,6 @@ export default function PlanScreen() {
   const pace = paceLine(summary.plan.weeklyChangeKg, metric.weightKg, summary.plan.targetWeightKg);
   return (
     <Screen
-      gutter={24}
       footer={
         <Button onPress={start} loading={starting}>
           Start my plan
@@ -67,7 +66,9 @@ export default function PlanScreen() {
     >
       <StepsBar current={4} total={4} />
       <View style={{ gap: 12 }}>
-        <Text variant="h1">Your plan</Text>
+        <Text variant="title" accessibilityRole="header">
+          Your plan
+        </Text>
         <PlanBadge
           icon={<CircleCheck size={16} color={c.protein} />}
           label={pace.atTarget && !recomp ? "At your target weight" : "Realistic goal"}
@@ -76,38 +77,34 @@ export default function PlanScreen() {
         />
       </View>
 
-      <View style={{ gap: 12 }}>
-        <Card>
+      <View style={{ gap: 16 }}>
+        <View style={styles.card}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <View>
-              <Text weight={600} size={12} color={c.ink3}>
-                Now
-              </Text>
-              <Text variant="h1" size={26} tabular>
+            <View style={{ gap: 2 }}>
+              <Text variant="labelMedium">Now</Text>
+              <Text variant="stat" tabular>
                 {metric.weightKg}{" "}
-                <Text weight={600} size={15} color={c.ink3}>
+                <Text variant="labelMedium" color={c.ink2}>
                   kg
                 </Text>
               </Text>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text weight={600} size={12} color={c.ink3}>
-                Goal · {longDate(goal.targetDate)}
-              </Text>
-              <Text variant="h1" size={26} tabular>
+            <View style={{ alignItems: "flex-end", gap: 2 }}>
+              <Text variant="labelMedium">Goal · {longDate(goal.targetDate)}</Text>
+              <Text variant="stat" tabular>
                 {recomp ? "Hold" : summary.plan.targetWeightKg}{" "}
-                <Text weight={600} size={15} color={c.ink3}>
+                <Text variant="labelMedium" color={c.ink2}>
                   {recomp ? "weight" : "kg"}
                 </Text>
               </Text>
             </View>
           </View>
           <ProjectionLine from={metric.weightKg} to={recomp ? metric.weightKg : summary.plan.targetWeightKg} />
-          <Text size={13} color={c.ink2}>
+          <Text variant="labelRegular" color={c.ink2} style={{ lineHeight: 18 }}>
             {recomp ? "Weight stays steady while you lose fat and build muscle." : pace.text}
             {goal.targetBodyFatPct != null && ` · body fat ${summary.bodyFatPct ?? "?"}% → ${goal.targetBodyFatPct}%`}
           </Text>
-        </Card>
+        </View>
 
         <TargetCard summary={summary} />
 
@@ -131,7 +128,7 @@ export default function PlanScreen() {
           {summary.plan.warnings.map((w) => (
             <View key={w} style={{ flexDirection: "row", gap: 8 }}>
               <View style={styles.bullet} />
-              <Text size={13} color={c.ink2} style={{ flex: 1 }}>
+              <Text variant="labelRegular" color={c.ink2} style={{ flex: 1, lineHeight: 18 }}>
                 {w}
               </Text>
             </View>
@@ -142,6 +139,8 @@ export default function PlanScreen() {
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
+  /** v2 summary card: white, radius 20, card lift, 20 padding. */
+  card: { backgroundColor: c.surface, borderRadius: radius.card, padding: 20, gap: 12, ...shadows.card },
   bullet: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.ink3, marginTop: 9 },
 }));

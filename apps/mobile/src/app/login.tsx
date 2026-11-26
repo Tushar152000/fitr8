@@ -1,211 +1,95 @@
-import { useQuery } from "@tanstack/react-query";
-import * as AppleAuthentication from "expo-apple-authentication";
-import type { ProvidersDto } from "@fitr8/contracts";
-import { LogIn } from "lucide-react-native";
-import { useEffect, useState } from "react";
-import { Platform, TextInput, useWindowDimensions, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
-import { HeroPlate } from "@/components/login/hero-plate";
-import { Button, FieldError, Logo, Screen, Text } from "@/components/ui";
-import { api, errorMessage } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
-import { openLegal } from "@/lib/legal";
-import { fonts, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
+import { Wordmark } from "@/components/brand/wordmark";
+import { SignInSheet, type SignInMode } from "@/components/login/sign-in-sheet";
+import { SlideDots, WelcomeSlides } from "@/components/login/welcome-slides";
+import { PressableScale, Text } from "@/components/ui";
+import { fonts } from "@/lib/theme";
 
-function useProviders() {
-  return useQuery({
-    queryKey: ["auth-providers"],
-    queryFn: () => api<ProvidersDto>("/api/auth/providers"),
-    staleTime: Infinity,
-    retry: false,
-  });
-}
-
-/** Sign in with Apple is offered on iOS devices that support it (App Store guideline 4.8). */
-function useAppleAvailable() {
-  const [available, setAvailable] = useState(false);
-  useEffect(() => {
-    if (Platform.OS !== "ios") return;
-    AppleAuthentication.isAvailableAsync().then(setAvailable, () => setAvailable(false));
-  }, []);
-  return available;
-}
+/** Figma frame size the layout is drawn in; everything scales by `s` to the phone. */
+const FRAME_W = 390;
+const FRAME_H = 844;
+/**
+ * Figma "Content" button: 177.73° black (10.6 %) → olive #718b00 (132.4 %), projected onto the
+ * 325 × 48 pill (so the bottom edge reaches #536600).
+ */
+const BUTTON = {
+  colors: ["#000000", "#000000", "#536600"] as const,
+  locations: [0, 0.106, 1] as const,
+  start: { x: 0.4963, y: -0.133 },
+  end: { x: 0.5037, y: 1.133 },
+};
+/** "Log In" ink as drawn (always-light screen). */
+const LOGIN_INK = "#050600";
 
 /**
- * Screen 1: welcome + sign-in. Apple (iOS) uses the system sheet; Google opens in the system browser
- * and hands a code back to the app.
+ * Login (Figma "iPhone 13 & 14 - 25 / 26 / 16", user decisions 2026-11-27): three sliding slides
+ * (photo, the app, a headline; auto + swipe, looping) under a fixed wordmark, olive page dots, the
+ * gradient "Sign Up For Free" pill and "Log In". Both buttons open the same sign-in sheet. Always
+ * light, whatever the phone's theme. Drawn on Figma's 390 × 844 frame and scaled to fit the screen
+ * (width first, then height), centred, so it matches the design on every phone.
  */
 export default function LoginScreen() {
-  const { signIn, appleSignIn } = useAuth();
-  const c = useColors();
-  const scheme = useScheme();
-  const styles = useStyles();
-  const { width } = useWindowDimensions();
-  const providers = useProviders();
-  const appleAvailable = useAppleAvailable();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const showApple = appleAvailable && Boolean(providers.data?.apple);
-
-  async function run(fn: () => Promise<void>) {
-    setBusy(true);
-    setError(null);
-    try {
-      await fn();
-    } catch (err) {
-      setError(errorMessage(err, "Sign-in failed. Try again."));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const { width, height } = useWindowDimensions();
+  const s = Math.min(width / FRAME_W, height / FRAME_H);
+  const pos = useSharedValue(0);
+  const [sheet, setSheet] = useState<SignInMode | null>(null);
+  const centre = (w: number) => width / 2 - (w / 2) * s;
 
   return (
-    <Screen
-      gutter={24}
-      footer={
-        <>
-          {showApple && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={
-                scheme === "dark"
-                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-              }
-              cornerRadius={radius.button}
-              onPress={() => !busy && run(appleSignIn)}
-              style={{ width: "100%", height: 48 }}
-            />
-          )}
-          <Button variant={showApple ? "secondary" : "strong"} onPress={() => run(signIn)} loading={busy}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <GoogleMark />
-              <Text variant="button" color={appleAvailable && providers.data?.apple ? c.ink : c.onStrong}>
-                Continue with Google
-              </Text>
-            </View>
-          </Button>
-          {error && <FieldError>{error}</FieldError>}
-          <DevSignIn />
-          <Text size={12} color={c.ink3} center>
-            By continuing you agree to our{" "}
-            <Text size={12} color={c.brandText} weight={600} onPress={() => openLegal("terms")}>
-              Terms
-            </Text>{" "}
-            and{" "}
-            <Text size={12} color={c.brandText} weight={600} onPress={() => openLegal("privacy")}>
-              Privacy Policy
-            </Text>
-            . FITR8 gives general fitness guidance and is not medical advice.
+    <View style={styles.root}>
+      {/* White status-bar icons over the photos. */}
+      <StatusBar style="light" />
+      <WelcomeSlides width={width} s={s} pos={pos} />
+
+      <View style={[styles.abs, { top: 105 * s, left: centre(185) }]} pointerEvents="none">
+        <Wordmark color="#ffffff" width={185 * s} />
+      </View>
+
+      <View style={[styles.abs, { top: (622 + 24 + 14) * s, left: centre(42) }]} pointerEvents="none">
+        <SlideDots pos={pos} s={s} />
+      </View>
+
+      <View
+        style={[styles.abs, { top: (622 + 24 + 14 + 10 + 32) * s, left: centre(325), width: 325 * s, gap: 10 * s }]}
+      >
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Sign up for free"
+          onPress={() => setSheet("signup")}
+          style={[styles.pill, { height: 48 * s }]}
+        >
+          <LinearGradient {...BUTTON} style={StyleSheet.absoluteFill} />
+          <Text style={[styles.buttonLabel, { fontSize: 16 * s, lineHeight: 20 * s }]} color="#ffffff">
+            Sign Up For Free
           </Text>
-        </>
-      }
-    >
-      <Logo size={30} />
-      <View style={styles.hero}>
-        <HeroPlate size={Math.min(240, width - 48 - 40)} />
+        </PressableScale>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Log in"
+          onPress={() => setSheet("login")}
+          hitSlop={6}
+          style={({ pressed }) => [styles.login, { paddingVertical: 10 * s }, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={[styles.buttonLabel, { fontSize: 16 * s, lineHeight: 20 * s }]} color={LOGIN_INK}>
+            Log In
+          </Text>
+        </Pressable>
       </View>
-      <View style={{ gap: 12 }}>
-        <Text variant="display">Snap your meal. Hit your goal.</Text>
-        <Text color={c.ink2}>
-          Take a photo of your thali. We find the foods and portions, you confirm, and calories and macros are logged
-          against targets built for your goal.
-        </Text>
-      </View>
-    </Screen>
-  );
-}
 
-/**
- * Local development only: the API offers email sign-in when it isn't deployed, so the app works on a
- * phone without Google (whose redirect can't reach a laptop's localhost). Hidden everywhere else.
- */
-function DevSignIn() {
-  const { devSignIn } = useAuth();
-  const c = useColors();
-  const styles = useStyles();
-  const providers = useProviders();
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  if (!providers.data?.dev) return null;
-
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      await devSignIn(email.trim());
-    } catch (err) {
-      setError(errorMessage(err, "Couldn't sign in. Try again."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <View style={{ gap: 12 }}>
-      <Text variant="label">Developer sign-in</Text>
-      <TextInput
-        accessibilityLabel="Email"
-        value={email}
-        onChangeText={setEmail}
-        onSubmitEditing={submit}
-        placeholder="you@example.com"
-        placeholderTextColor={c.ink3}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoComplete="email"
-        style={styles.input}
-      />
-      <Button variant="secondary" icon={LogIn} onPress={submit} loading={busy} disabled={!email.trim()}>
-        Sign in with email (dev)
-      </Button>
-      {error && <FieldError>{error}</FieldError>}
+      <SignInSheet mode={sheet} onClose={() => setSheet(null)} />
     </View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  hero: {
-    alignItems: "center",
-    borderRadius: radius.sheet,
-    backgroundColor: c.brand,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
-    borderRadius: radius.input,
-    backgroundColor: c.surface,
-    paddingHorizontal: 16,
-    fontFamily: fonts.sans500,
-    fontSize: 16,
-    color: c.ink,
-  },
-}));
-
-function GoogleMark() {
-  return (
-    <Svg viewBox="0 0 24 24" width={20} height={20}>
-      <Path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"
-      />
-      <Path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
-      />
-      <Path
-        fill="#FBBC05"
-        d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.94l3.66-2.84z"
-      />
-      <Path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.96 10.96 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"
-      />
-    </Svg>
-  );
-}
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#ffffff", overflow: "hidden" },
+  abs: { position: "absolute" },
+  pill: { borderRadius: 100, overflow: "hidden", alignItems: "center", justifyContent: "center", width: "100%" },
+  // Figma: Roboto Bold 16, tracking 0.1; the app's type is Inter, so Inter Bold.
+  buttonLabel: { fontFamily: fonts.sans700, letterSpacing: 0.1 },
+  login: { alignItems: "center", justifyContent: "center" },
+});

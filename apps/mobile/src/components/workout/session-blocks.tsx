@@ -1,6 +1,6 @@
 import type { SessionBlock, TrainingDayDto } from "@fitr8/contracts";
 import { View } from "react-native";
-import { Section, Text } from "@/components/ui";
+import { Text } from "@/components/ui";
 import { dayColors } from "@/lib/training";
 import { useColors, type Colors } from "@/lib/theme";
 import { TrackBar } from "./track-bar";
@@ -14,7 +14,10 @@ export function SessionBlocks({ day }: { day: TrainingDayDto }) {
   const col = dayColors(c, day.type);
   const total = day.blocks.reduce((t, b) => t + b.minutes, 0) || 1;
   return (
-    <Section title="The session">
+    <View style={{ gap: 10 }}>
+      <Text variant="heading2" accessibilityRole="header">
+        The session
+      </Text>
       <TrackBar accessible accessibilityLabel={day.blocks.map((b) => `${b.label} ${b.minutes} min`).join(", ")}>
         {day.blocks.map((b, i) => (
           <View
@@ -28,10 +31,10 @@ export function SessionBlocks({ day }: { day: TrainingDayDto }) {
         ))}
       </TrackBar>
       {day.pace && (
-        <Text size={13} color={c.ink2}>
+        <Text variant="bodySm" color={c.ink2}>
           Easy pace: {day.pace}. If you can&apos;t talk in full sentences, slow down.
         </Text>
       )}
-    </Section>
+    </View>
   );
 }

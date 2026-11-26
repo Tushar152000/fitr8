@@ -3,11 +3,11 @@ import { router } from "expo-router";
 import { Pause, Play, Square } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Vibration, View } from "react-native";
-import { Button, Card, FieldError, PressableScale, Text } from "@/components/ui";
+import { Button, FieldError, PressableScale, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { errorMessage } from "@/lib/api";
 import { handlePremiumError } from "@/lib/premium";
-import { useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 import { showToast } from "@/lib/toast";
 import { dayColors, logSession, SESSION_VERB, sessionMinutes } from "@/lib/training";
 import { TrackBar } from "./track-bar";
@@ -21,6 +21,7 @@ const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padSt
  */
 export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () => void }) {
   const c = useColors();
+  const styles = useStyles();
   const col = dayColors(c, day.type);
   const verbs = SESSION_VERB[day.type]!;
   const [startedAt, setStartedAt] = useState(() => Date.now());
@@ -83,10 +84,12 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
   }
 
   return (
-    <Card style={{ gap: 16 }}>
+    <View style={styles.card}>
       <View style={{ alignItems: "center", gap: 4 }}>
-        <Text variant="meta">{done ? "All blocks done" : `Block ${index + 1} of ${day.blocks.length}`}</Text>
-        <Text variant="h2" size={22} center>
+        <Text variant="labelStrong" color={c.ink2}>
+          {done ? "All blocks done" : `Block ${index + 1} of ${day.blocks.length}`}
+        </Text>
+        <Text variant="heading1" center>
           {done ? "Nice work" : block.label}
         </Text>
         <Text
@@ -98,7 +101,7 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
         >
           {clock(leftSec)}
         </Text>
-        <Text size={13} color={c.ink3} tabular>
+        <Text variant="labelMedium" color={c.ink2} tabular>
           {clock(Math.floor(elapsedMs / 1000))} of {day.minutes}:00
           {next && !done ? ` · next: ${next.label}` : ""}
         </Text>
@@ -139,10 +142,15 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
         }}
         style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
       >
-        <Text weight={600} color={c.ink3}>
+        <Text variant="bodyStrong" color={c.ink2}>
           Cancel without logging
         </Text>
       </PressableScale>
-    </Card>
+    </View>
   );
 }
+
+// The guided timer is the day's hero: v2 card, 20 px padding.
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 16, padding: 20, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
+}));

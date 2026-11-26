@@ -1,11 +1,11 @@
 import { Minus, Plus } from "lucide-react-native";
 import { View } from "react-native";
 import { formatQty } from "@/lib/format";
-import { fade, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, makeStyles, useColors } from "@/lib/theme";
 import { Text } from "./text";
 import { PressableScale } from "./pressable-scale";
 
-/** −/+ stepper with 44 px buttons on a sunken track. */
+/** −/+ stepper with 44 px buttons on a sunken pill track (v2). */
 export function Stepper({
   value,
   step,
@@ -54,6 +54,6 @@ export function Stepper({
 }
 
 const useStyles = makeStyles((c) => ({
-  track: { flexDirection: "row", alignItems: "center", borderRadius: radius.input, backgroundColor: c.sunken },
+  track: { flexDirection: "row", alignItems: "center", borderRadius: 100, backgroundColor: c.sunken },
   btn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
 }));

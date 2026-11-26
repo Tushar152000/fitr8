@@ -8,19 +8,19 @@ export function StatTile({ label, value, sub }: { label: string; value: string; 
   const styles = useStyles();
   return (
     <View style={styles.tile}>
-      <Text weight={600} size={12} color={c.ink3}>
+      <Text variant="labelStrong" color={c.ink2}>
         {label}
       </Text>
-      <Text variant="h2" size={22} tabular>
+      <Text variant="heading1" tabular>
         {value}
       </Text>
-      <Text size={12} color={c.ink3}>
+      <Text variant="labelRegular" color={c.ink2}>
         {sub}
       </Text>
     </View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  tile: { flex: 1, borderRadius: radius.card, backgroundColor: c.surface, padding: 16 },
+const useStyles = makeStyles((c, shadows) => ({
+  tile: { flex: 1, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, gap: 2, ...shadows.card },
 }));

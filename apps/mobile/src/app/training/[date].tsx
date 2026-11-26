@@ -4,10 +4,9 @@ import { useLocalSearchParams } from "expo-router";
 import { Play } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { QueryError } from "@/components/query-error";
 import { WorkoutSkeleton } from "@/components/skeletons";
-import { Button, Card, Screen, Text } from "@/components/ui";
+import { Button, PageHeader, Screen, Text } from "@/components/ui";
 import { CoachTips } from "@/components/workout/coach-tips";
 import { LogSheet } from "@/components/workout/log-sheet";
 import { LoggedRow } from "@/components/workout/logged-row";
@@ -16,28 +15,31 @@ import { SessionTimer } from "@/components/workout/session-timer";
 import { Stat } from "@/components/workout/stat";
 import { StepList } from "@/components/workout/step-list";
 import { track } from "@/lib/analytics";
+import { weekdayName } from "@/lib/dates";
 import { recentDays } from "@/lib/meal-param";
 import { trainingWeekQuery } from "@/lib/queries";
-import { dayColors, DAY_LABEL, EFFORT_LABEL, kcalText, SESSION_VERB } from "@/lib/training";
-import { makeStyles, useColors } from "@/lib/theme";
+import { DAY_LABEL, EFFORT_LABEL, kcalText, SESSION_VERB } from "@/lib/training";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /** 16d: one day of the week (runs, rides, yoga, walks, rest) with a guided timer and "log it". */
 export default function TrainingDayScreen() {
   const { date, start } = useLocalSearchParams<{ date: string; start?: string }>();
   const week = useQuery(trainingWeekQuery(date));
   const day = week.data?.days.find((d) => d.date === date);
+  // Until the day loads (or when it isn't in the plan), the header names the weekday of the link.
+  const heading = /^\d{4}-\d{2}-\d{2}$/.test(date ?? "") ? weekdayName(date) : "Training";
 
   if (week.isPending)
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader eyebrow="Your training week" title={heading} />
         <WorkoutSkeleton />
       </Screen>
     );
   if (week.isError || !day)
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader eyebrow="Your training week" title={heading} />
         <QueryError error={week.error ?? new Error("That day isn't in your plan.")} onRetry={() => week.refetch()} />
       </Screen>
     );
@@ -47,7 +49,6 @@ export default function TrainingDayScreen() {
 function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: string; autoStart: boolean }) {
   const c = useColors();
   const styles = useStyles();
-  const col = dayColors(c, day.type);
   const verbs = SESSION_VERB[day.type];
   // Sessions can be done and logged today or on the last 7 days (the API's window).
   const loggable = recentDays().includes(day.date);
@@ -61,28 +62,22 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
 
   return (
     <Screen>
-      <BackHeader>
-        <View style={{ flexDirection: "row" }}>
-          <View style={[styles.badge, { backgroundColor: col.soft }]}>
-            <Text size={12} weight={700} color={col.fg}>
-              {day.weekday} · {DAY_LABEL[day.type]}
-            </Text>
-          </View>
-        </View>
-      </BackHeader>
-
-      <View style={{ gap: 6 }}>
-        <Text variant="h1">{day.title}</Text>
-        <Text color={c.ink2}>{day.why}</Text>
+      <View style={{ gap: 12 }}>
+        <PageHeader eyebrow={`${day.weekday} · ${DAY_LABEL[day.type]}`} title={day.title} />
+        <Text variant="bodySm" color={c.ink2}>
+          {day.why}
+        </Text>
       </View>
 
       {day.type !== "rest" && (
-        <Card style={{ flexDirection: "row", gap: 12 }}>
-          <Stat label="Time" value={`${day.minutes} min`} />
-          {day.distanceKm != null && <Stat label="Running" value={`~${day.distanceKm} km`} />}
-          <Stat label={day.logs.length ? "Burned about" : "Burns about"} value={`${kcalText(day.kcal)} kcal`} />
-          {day.distanceKm == null && <Stat label="Effort" value={EFFORT_LABEL[day.effort]} />}
-        </Card>
+        <View style={styles.card}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Stat label="Time" value={`${day.minutes} min`} />
+            {day.distanceKm != null && <Stat label="Running" value={`~${day.distanceKm} km`} />}
+            <Stat label={day.logs.length ? "Burned about" : "Burns about"} value={`${kcalText(day.kcal)} kcal`} />
+            {day.distanceKm == null && <Stat label="Effort" value={EFFORT_LABEL[day.effort]} />}
+          </View>
+        </View>
       )}
 
       {timerOn ? (
@@ -97,12 +92,12 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
       {day.tips.length > 0 && !timerOn && <CoachTips tips={day.tips} />}
 
       {day.logs.length > 0 && (
-        <Card>
-          <Text weight={700}>Done</Text>
+        <View style={[styles.card, { gap: 8 }]}>
+          <Text variant="heading3">Done</Text>
           {day.logs.map((l) => (
             <LoggedRow key={l.id} log={l} />
           ))}
-        </Card>
+        </View>
       )}
 
       {!timerOn && verbs && (
@@ -117,14 +112,14 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
               {day.logs.length ? "Change what you logged" : verbs.did}
             </Button>
           ) : (
-            <Text size={13} color={c.ink3} center>
+            <Text variant="labelMedium" color={c.ink2} center>
               {day.date > today ? `This session is planned for ${day.weekday}.` : "This day is too long ago to log."}
             </Text>
           )}
         </View>
       )}
       {day.type === "rest" && (
-        <Text size={13} color={c.ink3} center>
+        <Text variant="labelMedium" color={c.ink2} center>
           Rest is part of the plan. Fancy a walk anyway? Log it from a walk day.
         </Text>
       )}
@@ -134,6 +129,6 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
   );
 }
 
-const useStyles = makeStyles(() => ({
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+const useStyles = makeStyles((c, shadows) => ({
+  card: { padding: 16, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
 }));

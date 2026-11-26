@@ -7,7 +7,7 @@ import { Button, FieldError, PressableScale, Text } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatInt, sentenceCase, type MealType } from "@/lib/format";
 import { rowFromFood, type Row } from "@/lib/meal-rows";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 
 export type FoodHit = FoodHitDto;
 
@@ -134,6 +134,7 @@ export function AddItemSheet({
           <View style={styles.search}>
             <Search size={20} color={c.ink3} />
             <TextInput
+              {...INPUT_CARET}
               accessibilityLabel="Search foods"
               value={q}
               onChangeText={(v) => {
@@ -186,15 +187,14 @@ export function AddItemSheet({
 }
 
 const useStyles = makeStyles((c) => ({
+  // Filled, no outline (user decision 2026-11-27): the sheet is white, so fields use the grey fill.
   portion: {
     minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: c.lineStrong,
     borderRadius: radius.input,
-    backgroundColor: c.surface,
+    backgroundColor: c.ground,
     paddingHorizontal: 16,
   },
   search: {
@@ -202,13 +202,12 @@ const useStyles = makeStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
     borderRadius: radius.input,
-    backgroundColor: c.surface,
+    backgroundColor: c.ground,
     paddingHorizontal: 16,
   },
-  searchInput: { flex: 1, fontFamily: fonts.sans400, fontSize: 16, color: c.ink, padding: 0 },
+  // No focus ring on the web either.
+  searchInput: { flex: 1, fontFamily: fonts.sans400, fontSize: 16, color: c.ink, padding: 0, outlineWidth: 0 },
   hit: {
     minHeight: 48,
     flexDirection: "row",

@@ -14,16 +14,38 @@ export const NATIVE_DRIVER = Platform.OS !== "web";
  * the bottom; tab switches cross-fade. Component animations are short and ease out, and follow the
  * phone's "reduce motion" setting (Reanimated's default).
  */
-export const stackMotion = {
-  animation: Platform.OS === "android" ? ("ios_from_right" as const) : ("default" as const),
-  gestureEnabled: true,
-  fullScreenGestureEnabled: true,
-};
+export const stackMotion =
+  Platform.OS === "web"
+    ? // components/app-stack.tsx: the JS stack on the web; slides in from the right, out on close.
+      { animation: "slide_from_right" as const, gestureEnabled: false }
+    : {
+        animation: Platform.OS === "android" ? ("ios_from_right" as const) : ("default" as const),
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true,
+      };
 
 export const modalMotion = {
   presentation: "modal" as const,
-  animation: Platform.OS === "android" ? ("slide_from_bottom" as const) : ("default" as const),
+  animation: Platform.OS === "ios" ? ("default" as const) : ("slide_from_bottom" as const),
 };
+
+/**
+ * A stack's screen background: `contentStyle` for the native stack, `cardStyle` for the web's JS
+ * stack (components/app-stack.tsx), so no screen flashes another colour while it slides. On the web
+ * it also pins the screen to the window's height so each screen's own ScrollView scrolls.
+ */
+export function stackBackground(color: string) {
+  return {
+    contentStyle: { backgroundColor: color },
+    ...(Platform.OS === "web"
+      ? // flex 1: the JS stack otherwise lets a screen grow past the window (it expects the page to
+        // scroll) and the screen's own ScrollView never scrolls.
+        { cardStyle: { flex: 1, backgroundColor: color } }
+      : {}),
+  } as {
+    contentStyle: { backgroundColor: string };
+  };
+}
 
 export const tabMotion = { animation: "fade" as const };
 

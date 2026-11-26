@@ -4,7 +4,7 @@ import { router, useIsFocused } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Crown, Image as ImageIcon, Keyboard, X, Zap } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
@@ -16,7 +16,6 @@ import { ScanGuide } from "@/components/log/camera/scan-guide";
 import { ScanHint } from "@/components/log/camera/scan-hint";
 import { MealWhen } from "@/components/log/meal-when";
 import { Text } from "@/components/ui";
-import { Glow } from "@/components/ui/glow";
 import { api, errorMessage } from "@/lib/api";
 import { BARCODE_TYPES, barcodeInPhoto } from "@/lib/barcode-photo";
 import { useMealChoice } from "@/lib/meal-param";
@@ -125,38 +124,11 @@ export default function CameraScreen() {
 
   const granted = permission?.granted;
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.header}>
-        <CameraTopButton icon={X} label="Close" onPress={() => router.back()} />
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text variant="heading2" color={cam.white} numberOfLines={1}>
-            Snap your meal
-          </Text>
-          {premium.isPremium && scans.data && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Crown size={12} color={cam.highlight} strokeWidth={2.4} absoluteStrokeWidth />
-              <Text variant="labelMedium" color={CAM_SUBTLE} tabular>
-                {scans.data.left} of {scans.data.limit} photo scans left today
-              </Text>
-            </View>
-          )}
-        </View>
-        <CameraTopButton
-          icon={Zap}
-          iconSize={18}
-          label="Flash"
-          on={torch}
-          disabled={!granted || !ready}
-          onPress={() => setTorch((t) => !t)}
-        />
-      </View>
-
-      <MealWhen tone="dark" mealType={mealType} onMealType={setMealType} date={date} />
-
-      <View style={styles.viewfinder}>
+    <View style={styles.root}>
+      {/* The camera fills the whole screen (user decision 2026-11-27); everything else sits on it. */}
+      <View style={StyleSheet.absoluteFill}>
         <LinearGradient colors={VIEWFINDER} style={StyleSheet.absoluteFill} />
-        <Glow tone="aqua" opacity={0.6} left={12} bottom={-13} />
-        {granted ? (
+        {granted && (
           <CameraView
             ref={camera}
             style={StyleSheet.absoluteFill}
@@ -166,64 +138,124 @@ export default function CameraScreen() {
             barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
             onBarcodeScanned={busy || !focused ? undefined : onBarcode}
           />
-        ) : (
-          <CameraPermission
-            title={permission?.canAskAgain === false ? "Camera access is off" : "Allow the camera to snap your plate"}
-            message={
-              permission?.canAskAgain === false
-                ? "Turn it on in Settings, or pick a photo from your gallery."
-                : "Photos are only used to read your meal."
-            }
-            canAsk={permission?.canAskAgain !== false}
-            onAllow={requestPermission}
-          />
         )}
-        {granted && <ScanGuide />}
-        <Corners color={seen ? cam.highlight : undefined} />
-        <ScanHint
-          locked={photoLocked && barcodeLocked}
-          seen={seen}
-          onUnlock={() => openPremium("photo_scan", logContext)}
-        />
-        {phase !== "idle" && <CameraBusy label={BUSY_LABEL[phase]} />}
       </View>
+      {/* Shades behind the top block (close, title, meal chips) and the bottom buttons: dark where
+          the content sits, fading out into the camera beyond it. */}
+      <LinearGradient
+        colors={SHADE_TOP}
+        locations={[0, (insets.top + TOP_CONTENT) / (insets.top + TOP_CONTENT + FADE), 1]}
+        style={[styles.shade, { top: 0, height: insets.top + TOP_CONTENT + FADE, pointerEvents: "none" }]}
+      />
+      <LinearGradient
+        colors={SHADE_BOTTOM}
+        locations={[0, FADE / (FADE + BOTTOM_CONTENT + insets.bottom), 1]}
+        style={[styles.shade, { bottom: 0, height: FADE + BOTTOM_CONTENT + insets.bottom, pointerEvents: "none" }]}
+      />
 
-      {error && <CameraError message={error} />}
-
-      <View style={[styles.controls, { paddingBottom: Math.max(24, insets.bottom + 11) }]}>
-        <CameraSideButton caption="Gallery" icon={ImageIcon} onPress={pickFromGallery} disabled={busy} />
-        <View style={{ alignItems: "center", gap: 8 }}>
-          <Shutter
-            accessibilityLabel={seen ? `Look up barcode ${seen}` : "Take photo"}
-            accessibilityHint={seen ? "Opens the product to pick how much you had" : undefined}
-            onPress={shoot}
-            disabled={busy || !granted || (!ready && !seen)}
-            dimmed={busy || !granted}
-            barcode={Boolean(seen)}
+      <View style={[styles.layout, { paddingTop: insets.top + 8, pointerEvents: "box-none" }]}>
+        <View style={styles.header}>
+          {/* iPhone has no back button, so it keeps the close button left of the title, as before.
+              Android and the web use the system back (user decision 2026-11-27). */}
+          {Platform.OS === "ios" && <CameraTopButton icon={X} label="Close" onPress={() => router.back()} />}
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text variant="heading2" color={cam.white} numberOfLines={1}>
+              Snap your meal
+            </Text>
+            {premium.isPremium && scans.data && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Crown size={12} color={cam.highlight} strokeWidth={2.4} absoluteStrokeWidth />
+                <Text variant="labelMedium" color={CAM_SUBTLE} tabular>
+                  {scans.data.left} of {scans.data.limit} photo scans left today
+                </Text>
+              </View>
+            )}
+          </View>
+          <CameraTopButton
+            icon={Zap}
+            iconSize={18}
+            label="Flash"
+            on={torch}
+            disabled={!granted || !ready}
+            onPress={() => setTorch((t) => !t)}
           />
-          <Text variant="labelStrong" color={seen ? cam.highlight : cam.white}>
-            {seen ? "Look up product" : "Snap"}
-          </Text>
         </View>
-        <CameraSideButton
-          caption="Type"
-          icon={Keyboard}
-          onPress={() => router.replace({ pathname: "/log/type", params })}
-        />
+
+        <MealWhen tone="dark" mealType={mealType} onMealType={setMealType} date={date} />
+
+        {/* The framing area between the chips and the buttons: guides, scan line and hint. */}
+        <View style={[styles.frame, { pointerEvents: "box-none" }]}>
+          {granted ? (
+            <ScanGuide />
+          ) : (
+            <CameraPermission
+              title={permission?.canAskAgain === false ? "Camera access is off" : "Allow the camera to snap your plate"}
+              message={
+                permission?.canAskAgain === false
+                  ? "Turn it on in Settings, or pick a photo from your gallery."
+                  : "Photos are only used to read your meal."
+              }
+              canAsk={permission?.canAskAgain !== false}
+              onAllow={requestPermission}
+            />
+          )}
+          <Corners color={seen ? cam.highlight : undefined} />
+          <ScanHint
+            locked={photoLocked && barcodeLocked}
+            seen={seen}
+            onUnlock={() => openPremium("photo_scan", logContext)}
+          />
+        </View>
+
+        {error && <CameraError message={error} />}
+
+        <View style={[styles.controls, { paddingBottom: Math.max(24, insets.bottom + 11) }]}>
+          <CameraSideButton caption="Gallery" icon={ImageIcon} onPress={pickFromGallery} disabled={busy} />
+          <View style={{ alignItems: "center", gap: 8 }}>
+            <Shutter
+              accessibilityLabel={seen ? `Look up barcode ${seen}` : "Take photo"}
+              accessibilityHint={seen ? "Opens the product to pick how much you had" : undefined}
+              onPress={shoot}
+              disabled={busy || !granted || (!ready && !seen)}
+              dimmed={busy || !granted}
+              barcode={Boolean(seen)}
+            />
+            <Text variant="labelStrong" color={seen ? cam.highlight : cam.white}>
+              {seen ? "Look up product" : "Snap"}
+            </Text>
+          </View>
+          <CameraSideButton
+            caption="Type"
+            icon={Keyboard}
+            // Pushed on top of the camera, so Type's close button comes back here.
+            onPress={() => router.push({ pathname: "/log/type", params })}
+          />
+        </View>
       </View>
+
+      {phase !== "idle" && <CameraBusy label={BUSY_LABEL[phase]} />}
 
       <AiLimitSheet {...limit.sheet} params={params} />
     </View>
   );
 }
 
-/** Figma "Viewfinder": the frame's own fill, seen until the camera feed draws over it. */
+/** Figma "Viewfinder": the screen's fill, seen until the camera feed draws over it. */
 const VIEWFINDER = ["#2a2e33", "#121416"] as const;
+const SHADE_TOP = ["rgba(0,0,0,0.75)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0)"] as const;
+const SHADE_BOTTOM = ["rgba(0,0,0,0)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.75)"] as const;
+/** Height of the top block under the status bar (8 + header 44 + 16 + meal chips 44) and of the controls. */
+const TOP_CONTENT = 112;
+const BOTTOM_CONTENT = 150;
+/** How far each shade fades out past its content. */
+const FADE = 70;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: cam.panel, paddingHorizontal: 20, gap: 16 },
+  root: { flex: 1, backgroundColor: cam.panel },
+  shade: { position: "absolute", left: 0, right: 0 },
+  layout: { flex: 1, paddingHorizontal: 20, gap: 16 },
   header: { flexDirection: "row", alignItems: "center", gap: 12 },
-  viewfinder: { flex: 1, borderRadius: 28, overflow: "hidden" },
+  frame: { flex: 1 },
   controls: {
     flexDirection: "row",
     alignItems: "center",

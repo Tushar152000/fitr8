@@ -25,7 +25,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "blockedPermissions": ["android.permission.RECORD_AUDIO", "com.google.android.gms.permission.AD_ID"],
+      "blockedPermissions": ["com.google.android.gms.permission.AD_ID"],
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.health.READ_STEPS",
@@ -63,9 +63,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#000000",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 240
+          "backgroundColor": "#ffffff",
+          "image": "./assets/images/splash-wordmark-black.png",
+          "imageWidth": 150,
+          "dark": {
+            "backgroundColor": "#0c0c0c",
+            "image": "./assets/images/splash-wordmark-white.png"
+          }
         }
       ],
       "expo-secure-store",
@@ -100,6 +104,14 @@
           "NSHealthShareUsageDescription": "FITR8 reads your steps, heart rate, sleep, blood oxygen, body measurements and workouts from Apple Health to show them in the app, estimate your recovery and tailor your training. FITR8 never writes to Apple Health and never uses this data for advertising.",
           "NSHealthUpdateUsageDescription": false,
           "background": false
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "FITR8 uses the microphone only when you tap the mic to talk to your coach, to turn what you say into text.",
+          "speechRecognitionPermission": "FITR8 turns what you say to your coach into text so you don't have to type.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox", "com.google.android.as"]
         }
       ]
     ],

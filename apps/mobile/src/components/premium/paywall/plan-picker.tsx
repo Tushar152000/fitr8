@@ -1,8 +1,9 @@
 import { Check } from "lucide-react-native";
 import { View } from "react-native";
-import { PressableScale, Section, Skeleton, Text } from "@/components/ui";
+import { PressableScale, Skeleton, StatusPill, Text } from "@/components/ui";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import type { Period } from "@/lib/use-paywall";
+import { PaywallGroup } from "./group";
 
 /**
  * Design 14c "Choose your plan": Yearly and Monthly as a radio group, skeletons while store prices
@@ -30,7 +31,7 @@ export function PlanPicker({
   monthPrice: string;
 }) {
   return (
-    <Section title="Choose your plan">
+    <PaywallGroup label="Choose your plan">
       {loading ? (
         <>
           <Skeleton height={84} radius={radius.card} />
@@ -59,7 +60,7 @@ export function PlanPicker({
           />
         </View>
       )}
-    </Section>
+    </PaywallGroup>
   );
 }
 
@@ -94,31 +95,23 @@ function PlanCard({
       disabled={disabled}
       style={[styles.plan, selected && styles.planSelected, disabled && { opacity: 0.6 }]}
     >
-      <View style={[styles.radio, selected && { borderColor: c.brand, backgroundColor: c.brand }]}>
-        {selected && <Check size={14} color={c.white} strokeWidth={3} />}
+      <View style={[styles.radio, selected && { borderColor: c.brandText, backgroundColor: c.brandText }]}>
+        {selected && <Check size={14} color={c.surface} strokeWidth={3} />}
       </View>
       <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Text weight={700} size={16}>
-            {title}
-          </Text>
-          {badge && (
-            <View style={styles.save}>
-              <Text size={12} weight={700} color={c.protein} tabular>
-                {badge}
-              </Text>
-            </View>
-          )}
+          <Text variant="heading3">{title}</Text>
+          {badge && <StatusPill label={badge} icon={null} />}
         </View>
-        <Text size={13} color={c.ink3}>
+        <Text variant="labelRegular" color={c.ink2}>
           {detail}
         </Text>
       </View>
-      <View style={{ alignItems: "flex-end" }}>
-        <Text weight={700} size={18} tabular>
+      <View style={{ alignItems: "flex-end", gap: 2 }}>
+        <Text variant="heading2" tabular>
           {price}
         </Text>
-        <Text size={12} color={c.ink3} tabular>
+        <Text variant="labelRegular" color={c.ink2} tabular>
           {priceDetail}
         </Text>
       </View>
@@ -126,21 +119,23 @@ function PlanCard({
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
+  // v2 card; the picked plan gets the 2 px accent border (ChoiceCard's selected state), padding
+  // trimmed by 1 px so nothing moves.
   plan: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     minHeight: 72,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: c.lineStrong,
+    borderColor: "transparent",
     backgroundColor: c.surface,
+    ...shadows.card,
   },
-  planSelected: { borderWidth: 2, borderColor: c.brandGlow, backgroundColor: c.brandSoft },
-  save: { backgroundColor: c.proteinSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  planSelected: { borderWidth: 2, borderColor: c.brandText, paddingHorizontal: 15, paddingVertical: 15 },
   radio: {
     width: 24,
     height: 24,

@@ -29,3 +29,4 @@ export { IconButton, PageHeader, goBack } from "./page-header";
 export { IconTile, MenuGroup, MenuRow, SectionLabel, StatusPill } from "./menu";
 export { PillButton } from "./pill-button";
 export { Avatar } from "./avatar";
+export { OnSurface, useOnSurface } from "./surface";

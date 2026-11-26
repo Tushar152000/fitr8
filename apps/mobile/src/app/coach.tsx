@@ -1,6 +1,6 @@
 import { RotateCw } from "lucide-react-native";
-import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { KeyboardAvoidingView, ScrollView } from "react-native";
 import Animated from "react-native-reanimated";
 import { Bubble, ThreadSkeleton } from "@/components/coach/bubble";
 import { CoachHeader } from "@/components/coach/coach-header";
@@ -13,6 +13,7 @@ import { bubbleIn } from "@/lib/motion";
 import { usePremium } from "@/lib/premium";
 import { gutter, makeStyles, useColors } from "@/lib/theme";
 import { useCoachChat } from "@/lib/use-coach-chat";
+import { useKeyboardVisible } from "@/lib/use-keyboard";
 
 /** Chat with the FITR8 coach. Replies stream in; the thread is kept so reopening continues it. */
 export default function CoachScreen() {
@@ -24,13 +25,18 @@ export default function CoachScreen() {
   const [menu, setMenu] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Opening the keyboard keeps the latest message in view, just above the composer.
+  const toEnd = useCallback(() => {
+    if (chat.messages.length > 0) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+  }, [chat.messages.length]);
+  useKeyboardVisible(toEnd);
+
   const canSend = chat.draft.trim().length > 0 && !chat.sending && chat.status === "ready";
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    // The whole screen rides up with the keyboard, the composer on top of it (as in WhatsApp).
+    // Padding on Android too: the app is edge-to-edge, so the window no longer resizes for it.
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.ground }} behavior="padding">
       <CoachHeader isPremium={isPremium} onMenu={() => setMenu(true)} />
 
       <CoachMenu

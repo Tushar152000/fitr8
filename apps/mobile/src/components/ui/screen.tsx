@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { makeStyles, useColors, gutter as defaultGutter } from "@/lib/theme";
+import { makeStyles, radius, useColors, gutter as defaultGutter } from "@/lib/theme";
+import { OnSurface } from "./surface";
+import { useKeyboardVisible } from "@/lib/use-keyboard";
 
 /**
  * Scrolling screen on the ground colour with the app gutter. `footer` is pinned to the bottom
@@ -43,6 +45,8 @@ export function Screen({
   const c = useColors();
   const styles = useStyles();
   const bottom = tabBar ? 0 : insets.bottom;
+  // With the keyboard up the footer sits right on it (no home-indicator gap).
+  const keyboard = useKeyboardVisible();
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.root, dark && { backgroundColor: c.panel }]}>
       <ScrollView
@@ -64,7 +68,7 @@ export function Screen({
         <View
           style={[
             styles.footer,
-            { paddingHorizontal: gutter, paddingBottom: Math.max(16, bottom) },
+            { paddingHorizontal: gutter, paddingBottom: keyboard ? 12 : Math.max(16, bottom) },
             dark && { backgroundColor: c.panel, borderTopColor: "rgba(255,255,255,0.1)" },
           ]}
         >
@@ -128,12 +132,13 @@ export function Card({
   const cardStyles = useCardStyles();
   return (
     <View {...props} style={[cardStyles.card, dark && cardStyles.dark, style]}>
-      {children}
+      {dark ? children : <OnSurface>{children}</OnSurface>}
     </View>
   );
 }
 
-const useCardStyles = makeStyles((c) => ({
-  card: { backgroundColor: c.surface, borderRadius: 18, padding: 14, gap: 10 },
+// v2 card (Figma "Card", 2026-11-27): white, radius 20, padding 16, Elevation/Card shadow.
+const useCardStyles = makeStyles((c, shadows) => ({
+  card: { backgroundColor: c.surface, borderRadius: radius.card, padding: 16, gap: 12, ...shadows.card },
   dark: { backgroundColor: c.panel, borderWidth: StyleSheet.hairlineWidth, borderColor: c.panelLine },
 }));

@@ -1,8 +1,8 @@
-import { Stack } from "expo-router";
+import { AppStack } from "@/components/app-stack";
 import { useColors } from "@/lib/theme";
-import { stackMotion } from "@/lib/motion";
+import { stackBackground, stackMotion } from "@/lib/motion";
 
 export default function OnboardingLayout() {
   const c = useColors();
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }} />;
+  return <AppStack screenOptions={{ headerShown: false, ...stackBackground(c.ground), ...stackMotion }} />;
 }

@@ -1,9 +1,8 @@
 import type { TrainingStateDto, TrainingType, TrainingWeekDto } from "@fitr8/contracts";
 import { Check } from "lucide-react-native";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
-import { Button, Card, FieldError, PressableScale, Screen, Section, Segmented, Text } from "@/components/ui";
+import { Button, FieldError, PageHeader, PressableScale, Screen, Segmented, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, errorMessage } from "@/lib/api";
 import { handlePremiumError } from "@/lib/premium";
@@ -68,7 +67,7 @@ export function TrainingSetup({
       tabBar={!onBack}
       footer={
         <View style={{ gap: 10 }}>
-          <Text size={13} color={c.ink2} center>
+          <Text variant="labelMedium" color={c.ink2} center>
             {types.length
               ? setupSummary(
                   TRAINING_CHOICES.map((o) => o.value).filter((t) => types.includes(t)),
@@ -83,32 +82,43 @@ export function TrainingSetup({
         </View>
       }
     >
-      {onBack && <BackHeader onBack={onBack} />}
-      <View style={{ gap: 6 }}>
-        <Text variant="meta">Premium · Workouts</Text>
-        <Text variant="h1">Set up your training</Text>
-        <Text color={c.ink2}>We already know your goal. Just tell us how you like to move.</Text>
+      <View style={{ gap: 12 }}>
+        {onBack ? (
+          <PageHeader onBack={onBack} eyebrow="Premium · Workouts" title="Set up your training" />
+        ) : (
+          // First setup, on the Workout tab itself: the tab's own header (no back).
+          <View style={{ gap: 2 }}>
+            <Text variant="labelStrong" color={c.ink2}>
+              Premium · Workouts
+            </Text>
+            <Text variant="title" accessibilityRole="header">
+              Set up your training
+            </Text>
+          </View>
+        )}
+        <Text variant="bodySm" color={c.ink2}>
+          We already know your goal. Just tell us how you like to move.
+        </Text>
       </View>
 
-      <Card style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <View style={styles.summary}>
         {[
           ["Goal", GOAL_LABEL[s.goal]],
           ["Weight", s.weightKg != null ? `${s.weightKg} kg` : "–"],
           ["Activity", ACTIVITY_LABEL[s.activityLevel] ?? s.activityLevel],
         ].map(([label, value]) => (
           <View key={label} style={{ flex: 1, gap: 2 }}>
-            <Text variant="meta">{label}</Text>
-            <Text weight={700} tabular>
+            <Text variant="labelMedium" color={c.ink2}>
+              {label}
+            </Text>
+            <Text variant="bodyStrong" numberOfLines={1} tabular>
               {value}
             </Text>
           </View>
         ))}
-      </Card>
+      </View>
 
-      <Section title="How do you like to train?">
-        <Text size={13} color={c.ink3}>
-          Pick one or more.
-        </Text>
+      <Group title="How do you like to train?" hint="Pick one or more.">
         <View style={styles.grid} accessibilityRole="list">
           {TRAINING_CHOICES.map((o) => {
             const on = types.includes(o.value);
@@ -122,54 +132,83 @@ export function TrainingSetup({
                 style={[styles.choice, on && styles.choiceOn]}
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text weight={700}>{o.label}</Text>
+                  <Text variant="bodyStrong">{o.label}</Text>
                   <View style={[styles.tick, on && { backgroundColor: c.brand, borderColor: c.brand }]}>
                     {on && <Check size={14} color={c.white} strokeWidth={3} />}
                   </View>
                 </View>
-                <Text size={12} color={c.ink3}>
+                <Text variant="labelRegular" color={c.ink2}>
                   {o.line}
                 </Text>
               </PressableScale>
             );
           })}
         </View>
-      </Section>
+      </Group>
 
-      <Section title="Days a week">
+      <Group title="Days a week">
         <Segmented
           label="Days a week"
           options={DAYS.map((d) => ({ value: d, label: String(d) }))}
           value={days as (typeof DAYS)[number]}
           onChange={setDays}
         />
-      </Section>
+      </Group>
 
-      <Section title="Time per session">
+      <Group title="Time per session">
         <Segmented
           label="Time per session"
           options={MINUTES.map((m) => ({ value: m, label: `${m} min` }))}
           value={minutes as (typeof MINUTES)[number]}
           onChange={setMinutes}
         />
-      </Section>
+      </Group>
       {error && <FieldError>{error}</FieldError>}
     </Screen>
   );
 }
 
-const useStyles = makeStyles((c) => ({
+/** A titled question (Heading/H3) with an optional hint, 10 px over its control. */
+function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  const c = useColors();
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={{ gap: 2 }}>
+        <Text variant="heading3" accessibilityRole="header">
+          {title}
+        </Text>
+        {hint ? (
+          <Text variant="labelRegular" color={c.ink2}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+const useStyles = makeStyles((c, shadows) => ({
+  summary: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 16,
+    borderRadius: radius.card,
+    backgroundColor: c.surface,
+    ...shadows.card,
+  },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   choice: {
     flexBasis: "47%",
     flexGrow: 1,
     minHeight: 72,
     gap: 4,
-    padding: 14,
+    padding: 16,
     borderRadius: radius.card,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "transparent",
     backgroundColor: c.surface,
+    ...shadows.card,
   },
   choiceOn: { borderColor: c.brand, backgroundColor: c.brandSoft },
   tick: {

@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { TriangleAlert } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
-import { Button, ChoiceCardGroup, FieldError, PressableScale, Screen, Text } from "@/components/ui";
+import { Button, ChoiceCardGroup, FieldError, PressableScale, Screen, SectionLabel, Text } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { longDate } from "@/lib/dates";
 import { useColors } from "@/lib/theme";
@@ -39,7 +39,6 @@ export function TooFast({ data, onStart, starting }: { data: PlanResponse; onSta
 
   return (
     <Screen
-      gutter={24}
       footer={
         <>
           {error && <FieldError>{error}</FieldError>}
@@ -53,7 +52,7 @@ export function TooFast({ data, onStart, starting }: { data: PlanResponse; onSta
             onPress={() => router.replace("/onboarding")}
             style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
           >
-            <Text weight={600} color={c.ink2}>
+            <Text variant="bodyStrong" color={c.ink2}>
               Change my goal
             </Text>
           </PressableScale>
@@ -68,10 +67,10 @@ export function TooFast({ data, onStart, starting }: { data: PlanResponse; onSta
           color={c.cautionText}
           background={c.cautionSoft}
         />
-        <Text variant="h1">
+        <Text variant="title" accessibilityRole="header">
           {verb} {Math.abs(p.neededWeeklyChangeKg).toFixed(1)} kg a week isn&apos;t safe
         </Text>
-        <Text color={c.ink2}>
+        <Text variant="bodySm" color={c.ink2}>
           A safe pace for you is about {Math.abs(p.weeklyChangeKg).toFixed(1)} kg a week. Pick what matters more:
         </Text>
       </View>
@@ -102,8 +101,8 @@ export function TooFast({ data, onStart, starting }: { data: PlanResponse; onSta
         ]}
       />
 
-      <View style={{ gap: 8 }}>
-        <Text variant="meta">Your daily target either way</Text>
+      <View style={{ gap: 10 }}>
+        <SectionLabel>Your daily target either way</SectionLabel>
         <TargetCard summary={summary} />
       </View>
     </Screen>

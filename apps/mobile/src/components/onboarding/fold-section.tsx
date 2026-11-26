@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { View } from "react-native";
 import { PressableScale, Text } from "@/components/ui";
 import { makeStyles, radius, useColors } from "@/lib/theme";
+import { OnSurface } from "@/components/ui/surface";
 
 /** One part of the merged "About you" step: tap the header to fold it open and shut. */
 export function FoldSection({
@@ -28,7 +29,7 @@ export function FoldSection({
   const c = useColors();
   const styles = useStyles();
   return (
-    <View style={[styles.fold, open && styles.foldOpen]}>
+    <View style={styles.fold}>
       <PressableScale
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -43,7 +44,7 @@ export function FoldSection({
               ? { backgroundColor: c.cautionSoft }
               : done
                 ? { backgroundColor: c.brand }
-                : { backgroundColor: c.sunken },
+                : { backgroundColor: c.ground },
           ]}
         >
           {attention ? (
@@ -55,23 +56,36 @@ export function FoldSection({
           )}
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text variant="h2">{title}</Text>
+          <Text variant="heading3">{title}</Text>
           {!open && (
-            <Text size={13} numberOfLines={1} weight={attention ? 600 : 400} color={attention ? c.cautionText : c.ink3}>
+            <Text
+              variant={attention ? "labelStrong" : "labelRegular"}
+              numberOfLines={1}
+              color={attention ? c.cautionText : c.ink2}
+            >
               {attention ? "Something here needs a look" : summary || "Not answered yet"}
             </Text>
           )}
         </View>
-        <ChevronDown size={20} color={c.ink3} style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }} />
+        <ChevronDown
+          size={20}
+          color={c.ink2}
+          strokeWidth={2}
+          style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}
+        />
       </PressableScale>
-      {open && <View style={styles.foldBody}>{children}</View>}
+      {open && (
+        <View style={styles.foldBody}>
+          <OnSurface>{children}</OnSurface>
+        </View>
+      )}
     </View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  fold: { borderRadius: radius.card, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line },
-  foldOpen: { borderColor: c.brand, borderWidth: 1.5 },
+/** A v2 white card (radius 20, card lift, no outline); 16 px padding like the list cards. */
+const useStyles = makeStyles((c, shadows) => ({
+  fold: { borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
   foldHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -80,13 +94,14 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  foldBadge: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  /** Figma "Icon Tile": 36 px, radius 12. */
+  foldBadge: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   foldBody: {
     gap: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: c.line,
+    borderTopColor: c.lineStrong,
   },
 }));

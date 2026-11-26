@@ -33,11 +33,14 @@ const STATUS_TEXT: Partial<Record<Meal["status"], string>> = {
 /**
  * One meal slot on the Meals tab (Figma "Breakfast" … "Dinner" cards): icon tile, name, time of the
  * first meal and its kcal, "+" to log more, then a row per food (tap → that meal's review). An empty
- * slot shows "Not logged yet · ~N kcal suggested", the coach's suggestion and Snap / Add food.
+ * slot shows "Not logged yet · ~N kcal suggested"; only the `current` slot (the meal for the time
+ * of day, today) adds the coach's suggestion and Snap / Add food, the others keep the same compact
+ * header with "+" as a logged slot (user decision 2026-11-27).
  * `pastDay` = a past day in the logging window; `canLog` false = an older, read-only day.
  */
 export function MealSlotCard({
   type,
+  current,
   meals,
   timezone,
   pastDay,
@@ -45,6 +48,7 @@ export function MealSlotCard({
   suggestedKcal,
 }: {
   type: MealType;
+  current: boolean;
   meals: Meal[];
   timezone: string;
   pastDay: string | null;
@@ -78,7 +82,7 @@ export function MealSlotCard({
             {subtitle}
           </Text>
         </View>
-        {!empty && canLog && (
+        {(!empty || !current) && canLog && (
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={`Add to ${slot.title.toLowerCase()}`}
@@ -100,7 +104,7 @@ export function MealSlotCard({
         </>
       )}
 
-      {empty && canLog && (
+      {empty && current && canLog && (
         <View style={styles.empty}>
           <Suggestion type={type} date={pastDay} />
           <View style={{ flexDirection: "row", gap: 8 }}>

@@ -51,7 +51,7 @@ export function TrainingStep({ draft, set, errors }: StepProps) {
           {errors.medicalNote ? (
             <FieldError>{errors.medicalNote}</FieldError>
           ) : (
-            <Text size={13} color={c.ink3}>
+            <Text variant="labelRegular" color={c.ink3}>
               Private to your account. {draft.medicalNote.length}/{MEDICAL_NOTE_MAX}
             </Text>
           )}

@@ -1,8 +1,8 @@
 import { Coffee } from "lucide-react-native";
 import { View } from "react-native";
-import { Button, Card, FieldError, Text } from "@/components/ui";
+import { FieldError, IconTile, PillButton, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 import type { TodayWorkout } from "@/lib/types";
 
 export type SnackState = "idle" | "saving" | "done";
@@ -22,36 +22,31 @@ export function SnackCard({
   const c = useColors();
   const styles = useStyles();
   return (
-    <Card accessibilityLabel="Pre-workout snack">
+    <View accessibilityLabel="Pre-workout snack" style={styles.card}>
       <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-        <View style={styles.icon}>
-          <Coffee size={20} color={c.ink2} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text weight={600} size={12} color={c.ink3}>
+        <IconTile icon={Coffee} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="labelMedium" color={c.ink2}>
             Before you train{snack.usual ? " · one of your usuals" : ""}
           </Text>
-          <Text weight={600}>{snack.name}</Text>
-          <Text size={13} color={c.ink3} tabular>
+          <Text variant="bodyStrong">{snack.name}</Text>
+          <Text variant="labelRegular" color={c.ink2} tabular>
             {snack.proteinG} g protein · {snack.carbsG} g carbs · {formatInt(snack.kcal)} kcal
           </Text>
         </View>
       </View>
-      <Button variant="secondary" onPress={onLog} loading={state === "saving"} disabled={state === "done"}>
-        {state === "done" ? "Logged as a snack" : "Log it"}
-      </Button>
+      <PillButton
+        variant="soft"
+        label={state === "done" ? "Logged as a snack" : "Log it"}
+        onPress={onLog}
+        loading={state === "saving"}
+        disabled={state === "done"}
+      />
       {error && <FieldError>{error}</FieldError>}
-    </Card>
+    </View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: c.sunken,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 16, padding: 16, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
 }));

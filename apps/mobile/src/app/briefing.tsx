@@ -2,10 +2,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { QueryError } from "@/components/query-error";
 import { BriefingSkeleton } from "@/components/skeletons";
-import { Button, Card, Screen, Text } from "@/components/ui";
+import { Button, PageHeader, Screen, Text } from "@/components/ui";
 import { CoachRules } from "@/components/workout/briefing/coach-rules";
 import { EnergyCheck } from "@/components/workout/briefing/energy-check";
 import { FuelCard } from "@/components/workout/briefing/fuel-card";
@@ -17,7 +16,7 @@ import { weekdayName } from "@/lib/dates";
 import { setEnergy, useEnergy } from "@/lib/energy";
 import { workoutQuery } from "@/lib/queries";
 import { refreshDay } from "@/lib/query";
-import { useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 import type { Energy, TodayWorkout } from "@/lib/types";
 import { haptic } from "@/lib/haptics";
 
@@ -29,7 +28,7 @@ export default function BriefingScreen() {
   if (workout.isPending) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader eyebrow="Coach briefing" title="Today" />
         <BriefingSkeleton />
       </Screen>
     );
@@ -37,7 +36,7 @@ export default function BriefingScreen() {
   if (workout.isError) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader eyebrow="Coach briefing" title="Today" />
         <QueryError error={workout.error} onRetry={() => workout.refetch()} />
       </Screen>
     );
@@ -47,6 +46,7 @@ export default function BriefingScreen() {
 
 function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Energy; switching: boolean }) {
   const c = useColors();
+  const styles = useStyles();
   const [snackState, setSnackState] = useState<SnackState>("idle");
   const [error, setError] = useState<string | null>(null);
   const session = data.session;
@@ -74,17 +74,15 @@ function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Ene
   if (!session) {
     return (
       <Screen>
-        <BackHeader />
-        <View>
-          <Text variant="meta">Coach briefing</Text>
-          <Text variant="h1">Rest day</Text>
+        <PageHeader eyebrow="Coach briefing" title="Rest day" />
+        <View style={styles.card}>
+          <Text variant="bodySm" color={c.ink2}>
+            {data.cardio}
+          </Text>
         </View>
-        <Card>
-          <Text color={c.ink2}>{data.cardio}</Text>
-        </Card>
         {data.nextDay && (
-          <Text color={c.ink2}>
-            Next: <Text weight={600}>{data.nextDay.name}</Text> on {weekdayName(data.nextDay.date)}.
+          <Text variant="bodySm" color={c.ink2}>
+            Next: <Text variant="bodyStrong">{data.nextDay.name}</Text> on {weekdayName(data.nextDay.date)}.
           </Text>
         )}
         <Button variant="secondary" onPress={() => router.navigate("/workout")}>
@@ -102,14 +100,11 @@ function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Ene
         </Button>
       }
     >
-      <BackHeader />
+      <PageHeader
+        eyebrow={`Coach briefing${data.deload ? " · deload week" : ""}`}
+        title={`${session.name} · ${data.sessionMinutes} min`}
+      />
       <View style={{ gap: 16, opacity: switching ? 0.6 : 1 }}>
-        <View>
-          <Text variant="meta">Coach briefing{data.deload ? " · deload week" : ""}</Text>
-          <Text variant="h1">
-            {session.name} · {data.sessionMinutes} min
-          </Text>
-        </View>
         <FuelCard fuel={data.fuel} />
         {data.fuel.low && data.snack && (
           <SnackCard snack={data.snack} state={snackState} error={error} onLog={logSnack} />
@@ -121,3 +116,7 @@ function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Ene
     </Screen>
   );
 }
+
+const useStyles = makeStyles((c, shadows) => ({
+  card: { padding: 16, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
+}));

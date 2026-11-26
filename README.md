@@ -121,9 +121,10 @@ Request schemas: `packages/contracts`. Errors: `{ "error": "message", "details"?
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`, every PR and push to main): prettier → Prisma validate → migrations-vs-schema drift check → `turbo run lint typecheck test build` with Postgres → actionlint + shellcheck → Docker builds for api and web.
-- **Deploy** (`deploy.yml`, after CI passes on main): images → `prisma migrate deploy` → API on Cloud Run (smoke-tested) → web on Vercel → EAS OTA update for `preview` and `production` when app code changed.
-- **Mobile release** (`mobile-release.yml`, manual): EAS store builds, optional auto-submit.
+- **CI/CD** (`.github/workflows/ci-cd.yml`, the only workflow):
+  - every PR and push: prettier → Prisma validate → migrations-vs-schema drift check → `turbo run lint typecheck test build` with Postgres → actionlint + shellcheck; PRs also build the api and web Docker images;
+  - push to main (after the checks): images → `prisma migrate deploy` → API on Cloud Run (smoke-tested) → web on Vercel → EAS OTA update for `preview` and `production` when app code changed (only changed services; manual run "Deploy everything" ships all);
+  - manual run "Store build": EAS store builds (all / ios / android), optional auto-submit.
 - First-time setup, tokens and the pre-release check: **[docs/RELEASE.md](docs/RELEASE.md)**. Dependabot keeps npm and Actions dependencies current.
 
 > Food values in `packages/db/prisma/seed.ts` are approximate placeholders. Replace them with IFCT 2017 / INDB data before launch. FITR8 is not medical advice.

@@ -62,10 +62,8 @@ export function DetailsStep({
             style={styles.countryButton}
           >
             <Text size={22}>{flagEmoji(picked.iso)}</Text>
-            <Text weight={600} size={16}>
-              +{picked.dial}
-            </Text>
-            <ChevronDown size={16} color={c.ink3} />
+            <Text variant="bodyStrong">+{picked.dial}</Text>
+            <ChevronDown size={16} color={c.ink2} strokeWidth={2} />
           </PressableScale>
           <TextField
             accessibilityLabel="Phone number, optional"
@@ -82,7 +80,7 @@ export function DetailsStep({
           />
         </View>
         {!errors.phone && (
-          <Text size={13} color={c.ink3}>
+          <Text variant="labelRegular" color={c.ink3}>
             We only use it for your account, never for marketing.
           </Text>
         )}
@@ -126,16 +124,16 @@ function CountrySheet({
               accessibilityState={{ selected }}
               accessibilityLabel={`${country.name}, +${country.dial}`}
               onPress={() => onPick(country.iso)}
-              style={[styles.countryRow, selected && { backgroundColor: c.sunken }]}
+              style={[styles.countryRow, selected && { backgroundColor: c.ground }]}
             >
               <Text size={22}>{flagEmoji(country.iso)}</Text>
-              <Text weight={selected ? 600 : 400} size={16} style={{ flex: 1 }}>
+              <Text variant={selected ? "bodyStrong" : "bodySm"} style={{ flex: 1 }}>
                 {country.name}
               </Text>
-              <Text size={15} color={c.ink3}>
+              <Text variant="bodySm" color={c.ink2}>
                 +{country.dial}
               </Text>
-              {selected && <Check size={18} color={c.brand} />}
+              {selected && <Check size={18} color={c.brandText} strokeWidth={2} />}
             </PressableScale>
           );
         })}

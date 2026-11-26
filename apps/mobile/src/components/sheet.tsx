@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { PressableScale, Text } from "@/components/ui";
 import { SHEET_CLOSE, SHEET_OPEN, useReduceMotion } from "@/lib/motion";
+import { useKeyboardHeight } from "@/lib/use-keyboard";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /**
@@ -82,8 +83,11 @@ export function Sheet({
   const panel = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - shown.get()) * panelH.get() }] }));
   // Off-screen distance includes the close button floating 52 px above the panel.
   const measure = (h: number) => panelH.set(h + 72);
-  // Room above the tallest sheet for the close button, below the status bar.
-  const maxHeight = screenH - insets.top - 72;
+  // Room above the tallest sheet for the close button, below the status bar, and above the
+  // keyboard while it's open (the panel rides up on it and scrolls inside rather than running
+  // under the status bar).
+  const keyboard = useKeyboardHeight();
+  const maxHeight = screenH - insets.top - 72 - keyboard;
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -93,7 +97,11 @@ export function Sheet({
         </Animated.View>
         <Animated.View
           onLayout={(e) => measure(e.nativeEvent.layout.height)}
-          style={[styles.sheet, { maxHeight, gap: gap ?? 16, paddingBottom: Math.max(24, insets.bottom + 8) }, panel]}
+          style={[
+            styles.sheet,
+            { maxHeight, gap: gap ?? 16, paddingBottom: keyboard > 0 ? 16 : Math.max(24, insets.bottom + 8) },
+            panel,
+          ]}
         >
           <CloseButton onPress={onClose} />
           <View style={styles.grabber} />

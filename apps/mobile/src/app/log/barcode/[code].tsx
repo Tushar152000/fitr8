@@ -2,7 +2,7 @@ import type { BarcodeNotFoundDetails, BarcodeProductDto } from "@fitr8/contracts
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
-import { BackHeader } from "@/components/back-header";
+import { BackRow } from "@/components/log/barcode/back-row";
 import { NotFound, type NotFoundReason } from "@/components/log/barcode/not-found";
 import { ProductScreen } from "@/components/log/barcode/product-screen";
 import { ProductSkeleton } from "@/components/skeletons";
@@ -31,7 +31,7 @@ export default function ProductRoute() {
   if (product.isPending || premiumFeature) {
     return (
       <Screen>
-        <BackHeader />
+        <BackRow />
         <ProductSkeleton />
       </Screen>
     );

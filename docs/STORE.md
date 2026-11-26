@@ -5,13 +5,13 @@ once published). Production talks to `https://www.fitr8.com` (`eas.json`).
 
 ## 0. Ready in the code
 
-| Store requirement                               | Where                                                                                                    |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Sign in with Apple next to Google (Apple 4.8)   | iOS login screen; `POST /api/auth/apple` (identity token + nonce, `apps/api/.../apple/`)                 |
-| In-app account deletion (Apple 5.1.1(v))        | Profile → Delete account; deletes account records, attempts photo cleanup and revokes Sign in with Apple |
-| Privacy policy and terms, in the app and public | `https://www.fitr8.com/privacy`, `/terms`; linked from login, Profile, website footer                    |
-| Purpose strings                                 | Camera and photo library only; microphone permission removed (`app.json`)                                |
-| Encryption export question                      | `usesNonExemptEncryption: false` (standard HTTPS only)                                                   |
+| Store requirement                               | Where                                                                                                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sign in with Apple next to Google (Apple 4.8)   | iOS login screen; `POST /api/auth/apple` (identity token + nonce, `apps/api/.../apple/`)                                                         |
+| In-app account deletion (Apple 5.1.1(v))        | Profile → Delete account; deletes account records, attempts photo cleanup and revokes Sign in with Apple                                         |
+| Privacy policy and terms, in the app and public | `https://www.fitr8.com/privacy`, `/terms`; linked from login, Profile, website footer                                                            |
+| Purpose strings                                 | Camera, photo library, and microphone + speech recognition for talking to the coach (`expo-speech-recognition` plugin in `app.json`, 2026-11-27) |
+| Encryption export question                      | `usesNonExemptEncryption: false` (standard HTTPS only)                                                                                           |
 
 ## 1. Accounts (once)
 
@@ -48,8 +48,8 @@ npx eas-cli@latest submit --platform android  # → Play Console (needs a servic
 ```
 
 EAS manages signing (iOS certificates/profiles, Android keystore). JS-only changes later ship with
-`eas update` (the last job of `deploy.yml`, after the API is live); native changes need a new build
-(Actions → "Mobile release") + review.
+`eas update` (the `app-update` job of `ci-cd.yml`, after the API is live); native changes need a new build
+(Actions → CI/CD → Run workflow → "Store build") + review.
 With `runtimeVersion: appVersion`, a native change (new native module, plugin or permission) must
 also bump `version` in `apps/mobile/app.json`; otherwise the next update reaches older builds
 that lack the native code and can crash them. 0.2.0 added `react-native-purchases` (Pro).
@@ -102,17 +102,18 @@ that lack the native code and can crash them. 0.2.0 added `react-native-purchase
 
 Keep this table aligned with `/privacy`. Nothing is used for tracking or advertising; nothing is sold. AI requests may be processed by the configured OpenAI or Anthropic provider. When subscriptions are enabled, RevenueCat and the relevant app store process purchase-related identifiers and subscription status. The in-product CSV export currently covers confirmed meal items and weigh-ins only; it is not a complete account export.
 
-| Data                                                                                     | Collected | Linked to user | Purpose                               |
-| ---------------------------------------------------------------------------------------- | --------- | -------------- | ------------------------------------- |
-| Name, email, user id (Google/Apple)                                                      | Yes       | Yes            | App functionality, account management |
-| Phone number (optional, onboarding step 1)                                               | Yes       | Yes            | App functionality, account management |
-| Health & fitness (body stats, goal, food, water, workouts, medical flag + optional note) | Yes       | Yes            | App functionality                     |
-| Apple Health / Health Connect records the user allows (docs/HEALTH.md list)              | Yes       | Yes            | App functionality                     |
-| Photos (meals, labels; only ones the user takes or picks)                                | Yes       | Yes            | App functionality                     |
-| Other user content (typed meals, coach messages)                                         | Yes       | Yes            | App functionality                     |
-| Location, contacts, microphone, ads id                                                   | No        | –              | –                                     |
-| Product interaction (screens viewed, coarse events), device/app info                     | Yes*      | Yes (FITR8 id) | Analytics                             |
-| Crash SDKs                                                                               | None      | –              | –                                     |
+| Data                                                                                     | Collected                                                                                                                                                                | Linked to user | Purpose                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ------------------------------------- |
+| Name, email, user id (Google/Apple)                                                      | Yes                                                                                                                                                                      | Yes            | App functionality, account management |
+| Phone number (optional, onboarding step 1)                                               | Yes                                                                                                                                                                      | Yes            | App functionality, account management |
+| Health & fitness (body stats, goal, food, water, workouts, medical flag + optional note) | Yes                                                                                                                                                                      | Yes            | App functionality                     |
+| Apple Health / Health Connect records the user allows (docs/HEALTH.md list)              | Yes                                                                                                                                                                      | Yes            | App functionality                     |
+| Photos (meals, labels; only ones the user takes or picks)                                | Yes                                                                                                                                                                      | Yes            | App functionality                     |
+| Other user content (typed meals, coach messages)                                         | Yes                                                                                                                                                                      | Yes            | App functionality                     |
+| Location, contacts, ads id                                                               | No                                                                                                                                                                       | –              | –                                     |
+| Microphone / audio (coach voice input)                                                   | No (audio is turned into text by the phone's own speech service, Apple or Google, and never reaches FITR8's servers; only the resulting text is sent as a coach message) | –              | –                                     |
+| Product interaction (screens viewed, coarse events), device/app info                     | Yes*                                                                                                                                                                     | Yes (FITR8 id) | Analytics                             |
+| Crash SDKs                                                                               | None                                                                                                                                                                     | –              | –                                     |
 
 \* Only in builds with Firebase configured (`docs/ANALYTICS.md`): Firebase Analytics (Google), no
 advertising ID (iOS `withoutAdIdSupport`, Android `AD_ID` permission blocked), no health values in

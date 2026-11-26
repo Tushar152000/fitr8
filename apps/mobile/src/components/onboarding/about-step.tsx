@@ -91,14 +91,12 @@ export function AboutStep({ draft, set, errors }: StepProps) {
             )}
           </FieldGrid>
           <View style={styles.tip}>
-            <Info size={20} color={c.ink2} style={{ marginTop: 2 }} />
-            <Text size={13} color={c.ink2} style={{ flex: 1 }}>
-              <Text size={13} weight={600}>
-                Measuring tip:
-              </Text>{" "}
-              use a soft tape, standing relaxed. Waist at the navel after breathing out; neck just below the Adam&apos;s
-              apple{draft.sex === "FEMALE" ? "; hips at the widest point" : ""}. We use these to estimate your body fat
-              for your goal.
+            <Info size={18} color={c.ink2} strokeWidth={2} style={{ marginTop: 1 }} />
+            <Text variant="labelRegular" color={c.ink2} style={{ flex: 1, lineHeight: 18 }}>
+              <Text variant="labelStrong">Measuring tip:</Text> use a soft tape, standing relaxed. Waist at the navel
+              after breathing out; neck just below the Adam&apos;s apple
+              {draft.sex === "FEMALE" ? "; hips at the widest point" : ""}. We use these to estimate your body fat for
+              your goal.
             </Text>
           </View>
         </FormField>
@@ -114,5 +112,6 @@ export function AboutStep({ draft, set, errors }: StepProps) {
 }
 
 const useStyles = makeStyles((c) => ({
-  tip: { flexDirection: "row", gap: 12, borderRadius: radius.card, backgroundColor: c.sunken, padding: 16 },
+  /** Grey inset on the white fold card. */
+  tip: { flexDirection: "row", gap: 10, borderRadius: radius.input, backgroundColor: c.ground, padding: 14 },
 }));

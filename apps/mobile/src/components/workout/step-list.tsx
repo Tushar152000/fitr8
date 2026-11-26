@@ -4,8 +4,8 @@ import { Text } from "@/components/ui";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /**
- * A day's steps (name and detail) with dividers. On its own it is a surface card (16d); `inset`
- * is the smaller sunken version inside the week's day card (16c).
+ * A day's steps (name and detail) with dividers. On its own it is a v2 white card (16d); `inset`
+ * is the grey version inside another white card.
  */
 export function StepList({ steps, inset }: { steps: TrainingStep[]; inset?: boolean }) {
   const c = useColors();
@@ -13,14 +13,11 @@ export function StepList({ steps, inset }: { steps: TrainingStep[]; inset?: bool
   return (
     <View style={inset ? styles.insetList : styles.list}>
       {steps.map((s, i) => (
-        <View
-          key={`${s.name}-${i}`}
-          style={[styles.step, inset && styles.insetStep, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}
-        >
-          <Text weight={600} size={inset ? 14 : undefined} style={{ flex: 1 }}>
+        <View key={`${s.name}-${i}`} style={[styles.step, i > 0 && styles.divider]}>
+          <Text variant="bodyStrong" style={{ flex: 1 }}>
             {s.name}
           </Text>
-          <Text size={13} color={c.ink3} tabular style={{ flexShrink: 1, textAlign: "right" }}>
+          <Text variant="labelMedium" color={c.ink2} tabular style={{ flexShrink: 1, textAlign: "right" }}>
             {s.detail}
           </Text>
         </View>
@@ -29,9 +26,15 @@ export function StepList({ steps, inset }: { steps: TrainingStep[]; inset?: bool
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  list: { borderRadius: radius.card, backgroundColor: c.surface },
-  insetList: { borderRadius: radius.input, backgroundColor: c.sunken },
-  step: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
-  insetStep: { paddingHorizontal: 14, paddingVertical: 12 },
+const useStyles = makeStyles((c, shadows) => ({
+  list: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    borderRadius: radius.card,
+    backgroundColor: c.surface,
+    ...shadows.card,
+  },
+  insetList: { paddingHorizontal: 14, borderRadius: radius.input, backgroundColor: c.ground },
+  step: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, minHeight: 48 },
+  divider: { borderTopWidth: 1, borderTopColor: c.line },
 }));

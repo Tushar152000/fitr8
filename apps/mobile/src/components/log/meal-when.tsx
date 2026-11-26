@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { Chip, Segmented, Text } from "@/components/ui";
+import { ChipGroup, Segmented, Text } from "@/components/ui";
 import { MEAL_LABEL, MEAL_TYPES, type MealType } from "@/lib/format";
 import { dayLabel } from "@/lib/meal-param";
 import { useColors } from "@/lib/theme";
@@ -39,17 +39,13 @@ export function MealWhen({
           options={MEAL_TYPES.map((t) => ({ value: t, label: MEAL_LABEL[t] }))}
         />
       ) : (
-        <View
-          style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Which meal"
-        >
-          {MEAL_TYPES.map((t) => (
-            <Chip key={t} tone={tone} selected={t === mealType} onPress={() => onMealType(t)}>
-              {MEAL_LABEL[t]}
-            </Chip>
-          ))}
-        </View>
+        // The selected chip's fill slides to the meal picked, like the camera's slider.
+        <ChipGroup
+          label="Which meal"
+          value={mealType}
+          onChange={onMealType}
+          options={MEAL_TYPES.map((t) => ({ value: t, label: MEAL_LABEL[t] }))}
+        />
       )}
       {past && (
         <Text weight={600} size={13} color={tone === "dark" ? c.white : c.brandText}>

@@ -122,8 +122,8 @@ function ByWhen({ draft, set, error }: { draft: OnboardingDraft; set: StepProps[
           onPress={() => setExact(true)}
           style={{ flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, alignSelf: "flex-start" }}
         >
-          <CalendarDays size={20} color={c.brandText} />
-          <Text weight={600} color={c.brandText}>
+          <CalendarDays size={18} color={c.brandText} strokeWidth={2} />
+          <Text variant="bodyStrong" color={c.brandText}>
             Choose an exact date
           </Text>
         </PressableScale>

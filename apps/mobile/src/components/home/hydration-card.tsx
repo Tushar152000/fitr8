@@ -1,9 +1,9 @@
-import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
+import { HydrationGlow } from "./hydration-glow";
 import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, glassRow, setGlassMl, useGlassMl, type GlassRow } from "@/lib/glass-size";
 import { makeStyles, radius, useColors } from "@/lib/theme";
@@ -11,10 +11,9 @@ import { useWater } from "@/lib/use-water";
 
 const L = (ml: number) => (Math.round(ml / 100) / 10).toFixed(1);
 
-// The card is always dark (both themes): bg/inverse with the Figma hydration glow (blurred aqua
-// strokes along the bottom edge), exported from the design as a 350 × 137 image and stretched to fit.
+// The card is always dark (both themes): bg/inverse with the Figma hydration glow along the bottom
+// edge, drawn with gradients (./hydration-glow.tsx), and Figma's soft blue drop shadow.
 const INVERSE = "#0c0c0c";
-const GLOW = require("../../../assets/home/hydration-glow.png");
 
 /**
  * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
@@ -33,7 +32,7 @@ export function HydrationCard() {
 
   return (
     <View style={styles.card}>
-      <Image source={GLOW} style={StyleSheet.absoluteFill} contentFit="fill" accessibilityIgnoresInvertColors />
+      <HydrationGlow />
       <View style={styles.head}>
         <View style={{ flex: 1, gap: 0 }}>
           <Text variant="labelMedium" color="#ffffff" style={{ letterSpacing: -0.24 }}>

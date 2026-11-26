@@ -1,8 +1,6 @@
 import type { FoodDto } from "@fitr8/contracts";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Linking, Pressable, View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { Button, FieldError, Screen, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, errorMessage } from "@/lib/api";
@@ -12,15 +10,19 @@ import { refreshDay } from "@/lib/query";
 import { useColors } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
 import { MealWhen } from "../meal-when";
+import { BackRow } from "./back-row";
 import { TotalCard } from "../total-card";
 import { NutritionTable } from "./nutrition-table";
 import { ProductAmount, type AmountMode } from "./product-amount";
 import { ProductSummary } from "./product-summary";
 import { haptic } from "@/lib/haptics";
+import { useLeaveLog } from "@/lib/use-leave-log";
 
 /** Design 7d: a known product. Amount in servings (0.5 steps) or grams (5 g steps). */
 export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
   const c = useColors();
+  // After saving or deleting: back where logging started (Home, Meals …), not always Home.
+  const leaveLog = useLeaveLog();
   const { mealType, setMealType, date, dateBody } = useMealChoice();
   const hasServing = Boolean(food.servingSizeG);
   const [mode, setMode] = useState<AmountMode>(hasServing ? "SERVINGS" : "GRAMS");
@@ -46,7 +48,7 @@ export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
       haptic.success();
       refreshDay();
       showDay(date);
-      router.dismissTo("/today");
+      leaveLog();
     } catch (e) {
       setError(errorMessage(e, "Couldn't add it. Try again."));
       setBusy(false);
@@ -58,7 +60,7 @@ export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
       footer={
         <>
           <TotalCard kcal={food.kcalPer100g * (amountG / 100)}>
-            <Text weight={600} size={13} color={c.protein}>
+            <Text variant="labelStrong" color={c.protein}>
               No AI scan used
             </Text>
           </TotalCard>
@@ -69,10 +71,10 @@ export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
         </>
       }
     >
-      <BackHeader />
+      <BackRow />
       <ProductSummary food={food} />
 
-      <View style={{ gap: 12 }}>
+      <View style={{ gap: 16 }}>
         <ProductAmount
           food={food}
           mode={mode}
@@ -90,14 +92,14 @@ export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
 
         {fromOff && (
           <View style={{ flexDirection: "row", justifyContent: "center", flexWrap: "wrap" }}>
-            <Text size={12} color={c.ink3}>
+            <Text variant="labelRegular" color={c.ink2}>
               Data: Open Food Facts (ODbL).{" "}
             </Text>
             <Pressable
               accessibilityRole="link"
               onPress={() => Linking.openURL(`https://world.openfoodfacts.org/product/${code}`)}
             >
-              <Text size={12} weight={600} color={c.brandText}>
+              <Text variant="labelStrong" color={c.brandText}>
                 Report it
               </Text>
             </Pressable>

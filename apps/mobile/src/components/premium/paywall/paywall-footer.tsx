@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { Button, FieldError, PressableScale, Text } from "@/components/ui";
+import { Button, FieldError, PillButton, Text } from "@/components/ui";
 import { openLegal } from "@/lib/legal";
 import { purchasesAvailable } from "@/lib/purchases";
 import { makeStyles, useColors } from "@/lib/theme";
@@ -32,7 +32,7 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.priceLine}>
-        <Text size={13} weight={600} color={c.ink2} tabular>
+        <Text variant="labelMedium" color={c.ink2} tabular>
           {trialDays
             ? `Free for ${trialDays} days, then ${chosenPrice}`
             : picked === "year"
@@ -40,7 +40,7 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
               : "Billed monthly"}
         </Text>
         {picked === "year" && saving && (
-          <Text size={13} weight={700} color={c.protein} tabular>
+          <Text variant="labelStrong" color={c.brandText} tabular>
             You save {saving}
           </Text>
         )}
@@ -56,35 +56,39 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
       </Button>
       {error && <FieldError>{error}</FieldError>}
       {testMode && (
-        <Text size={12} weight={600} color={c.ink2} center>
+        <Text variant="labelMedium" color={c.ink2} center>
           Test purchase: no money is charged while FITR8 is in testing.
         </Text>
       )}
       {hasStorePlan && (
-        <Text size={11} color={c.ink3} center>
+        <Text variant="caption" color={c.ink3} center>
           Renews automatically until you cancel, at least 24 hours before the period ends, in {storeSettings}.{" "}
-          <Text size={11} color={c.brandText} weight={600} onPress={() => openLegal("terms")}>
+          <Text variant="captionStrong" color={c.brandText} onPress={() => openLegal("terms")}>
             Terms
           </Text>
           {" · "}
-          <Text size={11} color={c.brandText} weight={600} onPress={() => openLegal("privacy")}>
+          <Text variant="captionStrong" color={c.brandText} onPress={() => openLegal("privacy")}>
             Privacy
           </Text>
         </Text>
       )}
       <View style={styles.links}>
         {purchasesAvailable && (
-          <PressableScale accessibilityRole="button" onPress={restore} disabled={busy !== null} style={styles.link}>
-            <Text size={14} weight={600} color={c.ink2}>
-              {busy === "restore" ? "Restoring…" : "Restore purchases"}
-            </Text>
-          </PressableScale>
+          <PillButton
+            variant="link"
+            label={busy === "restore" ? "Restoring…" : "Restore purchases"}
+            onPress={restore}
+            disabled={busy !== null}
+            style={styles.link}
+          />
         )}
-        <PressableScale accessibilityRole="button" onPress={close} disabled={busy === "buy"} style={styles.link}>
-          <Text size={14} weight={600} color={c.ink2}>
-            Continue with Free
-          </Text>
-        </PressableScale>
+        <PillButton
+          variant="link"
+          label="Continue with Free"
+          onPress={close}
+          disabled={busy === "buy"}
+          style={styles.link}
+        />
       </View>
     </View>
   );
@@ -93,5 +97,6 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
 const useStyles = makeStyles(() => ({
   priceLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
   links: { flexDirection: "row", justifyContent: "center", gap: 16 },
-  link: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  // Link pills have no padding of their own: keep the 44 px hit area.
+  link: { minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
 }));

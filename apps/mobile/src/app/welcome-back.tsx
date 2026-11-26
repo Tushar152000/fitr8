@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { WelcomeBackDto } from "@fitr8/contracts";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyNowCard } from "@/components/onboarding/body-now-card";
 import { FormFooter } from "@/components/onboarding/form-footer";
@@ -22,7 +22,7 @@ import { api, ApiError, errorMessage } from "@/lib/api";
 import { useAuth, useMe } from "@/lib/auth";
 import { planQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
-import { useColors } from "@/lib/theme";
+import { gutter, useColors } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
 import type { PlanResponse } from "@/lib/types-plan";
 import {
@@ -45,7 +45,7 @@ export default function WelcomeBackScreen() {
 
   if (plan.isPending || !me.profile) {
     return (
-      <View style={{ flex: 1, padding: 24, paddingTop: 72, gap: 20, backgroundColor: c.ground }}>
+      <View style={{ flex: 1, padding: gutter, paddingTop: 72, gap: 20, backgroundColor: c.ground }}>
         <FormSkeleton />
       </View>
     );
@@ -134,15 +134,24 @@ function WelcomeBackForm({
 
   const first = name?.split(" ")[0];
   return (
-    <View style={{ flex: 1, backgroundColor: c.ground }}>
+    // The form and its footer ride up with the keyboard on both platforms (edge-to-edge Android
+    // doesn't resize for it), so the field being typed in and Continue stay visible.
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.ground }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 24, paddingBottom: 24, gap: 24 }}
+        contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: gutter, paddingBottom: 24, gap: 24 }}
       >
-        <View style={{ gap: 8 }}>
-          <Text variant="meta">It&apos;s been a while</Text>
-          <Text variant="h1">Welcome back{first ? `, ${first}` : ""}</Text>
-          <Text color={c.ink2}>
+        {/* No back button: this is a gate. The eyebrow + title follow PageHeader's type. */}
+        <View style={{ gap: 8, paddingTop: 8 }}>
+          <View style={{ gap: 2 }}>
+            <Text variant="labelStrong" color={c.ink2}>
+              It&apos;s been a while
+            </Text>
+            <Text variant="title" accessibilityRole="header">
+              Welcome back{first ? `, ${first}` : ""}
+            </Text>
+          </View>
+          <Text variant="bodySm" color={c.ink2}>
             A few months can change a lot. Check these so your calories and workouts fit you today. Your goal and
             everything else stay as they were.
           </Text>
@@ -167,7 +176,7 @@ function WelcomeBackForm({
       <FormFooter>
         {serverError && <FieldError>{serverError}</FieldError>}
         {Object.values(errors).some(Boolean) && (
-          <Text size={13} color={c.ink2} center>
+          <Text variant="labelMedium" color={c.ink2} center>
             Check the highlighted fields above.
           </Text>
         )}
@@ -178,6 +187,6 @@ function WelcomeBackForm({
           Not now
         </Button>
       </FormFooter>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

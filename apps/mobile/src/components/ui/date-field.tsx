@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { TextInput, View } from "react-native";
-import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 import { FieldError } from "./field-error";
 import { Text } from "./text";
+import { useOnSurface } from "./surface";
 
 const pad = (s: string, n: number) => s.padStart(n, "0");
 
@@ -39,6 +40,8 @@ export function DateField({
   const c = useColors();
   const styles = useStyles();
   const [parts, setParts] = useState(() => split(value));
+  // Inside a white card: grey fill, no outline (v2; ./surface).
+  const onWhite = useOnSurface();
   const month = useRef<TextInput>(null);
   const year = useRef<TextInput>(null);
 
@@ -59,8 +62,15 @@ export function DateField({
   };
 
   const box = (key: "d" | "m" | "y", placeholder: string, flex: number, ref?: React.Ref<TextInput>) => (
-    <View style={[styles.box, { flex, borderColor: error ? c.caution : c.lineStrong }]}>
+    <View
+      style={[
+        styles.box,
+        onWhite && { backgroundColor: c.ground },
+        { flex, borderColor: error ? c.caution : onWhite ? "transparent" : c.lineStrong },
+      ]}
+    >
       <TextInput
+        {...INPUT_CARET}
         ref={ref}
         accessibilityLabel={`${label}: ${key === "d" ? "day" : key === "m" ? "month" : "year"}`}
         value={parts[key]}
@@ -76,7 +86,9 @@ export function DateField({
 
   return (
     <View style={{ gap: 6 }}>
-      <Text variant="label">{label}</Text>
+      <Text variant="labelStrong" color={c.ink2}>
+        {label}
+      </Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
         {box("d", "DD", 1)}
         {box("m", "MM", 1, month)}

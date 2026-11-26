@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Smartphone } from "lucide-react-native";
 import { useState } from "react";
-import { Linking, View } from "react-native";
+import { Linking, Platform, View } from "react-native";
 import { ConnectIntro } from "@/components/health/connect-intro";
 import { ConnectionActions } from "@/components/health/connection-actions";
 import { HealthDetails } from "@/components/health/details";
-import { HEALTH_PLATFORM_NAME, healthAppLabel, healthConnection } from "@/components/health/status";
+import { HEALTH_PLATFORM_NAME, healthAppLabel, healthConnection, PLATFORM_STORE } from "@/components/health/status";
 import { ProfilePage } from "@/components/profile/profile-page";
 import { QueryError } from "@/components/query-error";
 import { Card, FieldError, IconTile, PillButton, Skeleton, StatusPill, Text } from "@/components/ui";
@@ -36,8 +36,10 @@ export default function HealthConnectScreen() {
   const adapter = healthAdapter();
   const status = useQuery(healthStatusQuery);
   const connection = healthConnection(status.data);
-  // The web preview has no health app: name the connected one, else a generic title.
-  const label = adapter ? healthAppLabel() : connection ? HEALTH_PLATFORM_NAME[connection.platform] : "Health apps";
+  // A phone names only its own health app (even an older build without the native module); the web
+  // preview has none: it names the connected one, else a generic title.
+  const web = Platform.OS === "web";
+  const label = !web ? healthAppLabel() : connection ? HEALTH_PLATFORM_NAME[connection.platform] : "Health apps";
   const summary = useQuery({ ...healthSummaryQuery, enabled: Boolean(connection) });
   const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,14 +135,20 @@ export default function HealthConnectScreen() {
         <QueryError error={status.error} onRetry={() => status.refetch()} />
       ) : !adapter ? (
         <>
-          <Card style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <Card
+            style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16, borderRadius: radius.card }}
+          >
             <IconTile icon={Smartphone} />
             <View style={{ flex: 1, gap: 4 }}>
-              <Text variant="bodyStrong">{connection ? "Manage it on your phone" : "Connect on your phone"}</Text>
+              <Text variant="bodyStrong">
+                {!web ? "Update FITR8" : connection ? "Manage it on your phone" : "Connect on your phone"}
+              </Text>
               <Text variant="bodySm" color={c.ink2}>
-                {connection
-                  ? `Syncing, what ${label} shares and disconnecting are in the FITR8 app on your phone.`
-                  : "Health apps connect from the FITR8 app on your phone: Apple Health on iPhone, Health Connect on Android."}
+                {!web
+                  ? `This version of FITR8 can't reach ${label}. Update the app from ${PLATFORM_STORE}, then come back.`
+                  : connection
+                    ? `Syncing, what ${label} shares and disconnecting are in the FITR8 app on your phone.`
+                    : "Health apps connect from the FITR8 app on your phone: Apple Health on iPhone, Health Connect on Android."}
               </Text>
             </View>
           </Card>

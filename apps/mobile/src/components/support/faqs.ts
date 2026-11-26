@@ -1,8 +1,10 @@
+import { PLATFORM_HEALTH_APP, PLATFORM_STORE } from "@/components/health/status";
 /**
  * Help & support → FAQs. DRAFT (2026-11-26), written from how the app works today (docs/PREMIUM.md,
  * docs/HEALTH.md, packages/domain nutrition/progress rules): awaiting product review. Keep answers
  * true to the code; update them when limits, prices or flows change.
  */
+// A phone only names its own platform's health app and store (user decision 2026-11-27).
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "How does FITR8 set my calorie and protein targets?",
@@ -18,11 +20,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What's free, and what does Premium add?",
-    a: "Free: typing meals, calorie and protein targets, water and weight tracking, 3 custom reminders and Apple Health / Health Connect. Premium adds photo scanning (10 a day), barcode and label scanning, the AI coach (40 messages a day), your weekly workout plan and unlimited reminders.",
+    a: `Free: typing meals, calorie and protein targets, water and weight tracking, 3 custom reminders and ${PLATFORM_HEALTH_APP}. Premium adds photo scanning (10 a day), barcode and label scanning, the AI coach (40 messages a day), your weekly workout plan and unlimited reminders.`,
   },
   {
     q: "How do I cancel Premium?",
-    a: "Premium is billed by the App Store or Google Play, so you cancel it there (Profile → Manage subscription opens the right page). Deleting your FITR8 account does not stop the store billing you.",
+    a: `Premium is billed by ${PLATFORM_STORE}, so you cancel it there (Profile → Manage subscription opens the right page). Deleting your FITR8 account does not stop the store billing you.`,
   },
   {
     q: "How does my streak work?",
@@ -33,7 +35,7 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Check Settings → Notifications says On; if not, allow notifications for FITR8 in your phone's settings. Reminders are scheduled on this phone, so after reinstalling or changing phones, open FITR8 once to set them up again.",
   },
   {
-    q: "What does FITR8 read from Apple Health or Health Connect?",
+    q: `What does FITR8 read from ${PLATFORM_HEALTH_APP.replace(" / ", " or ")}?`,
     a: "Only what you allow, and read only: FITR8 never changes your health data. It shows your steps, heart rate, BMI, blood oxygen, sleep and recovery, and your coach can use them. Disconnect, or delete everything FITR8 synced, any time from Profile → Apps & devices.",
   },
   {

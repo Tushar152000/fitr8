@@ -2,7 +2,7 @@ import { Crown, Sparkles } from "lucide-react-native";
 import { TextInput, View } from "react-native";
 import { Chip, FieldError, PillButton, Text } from "@/components/ui";
 import { openPremium } from "@/lib/premium";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 
 const EXAMPLES = [
   "Take creatine every day at 9 am",
@@ -41,6 +41,7 @@ export function NewReminderCard({
   return (
     <View style={styles.card}>
       <TextInput
+        {...INPUT_CARET}
         accessibilityLabel="Describe your reminder"
         value={text}
         onChangeText={onChangeText}
