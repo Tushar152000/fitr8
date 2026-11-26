@@ -62,35 +62,54 @@ export function setGlassMl(ml: number) {
 /** Glasses in one row of the Home hydration card. */
 export const ROW_SLOTS = 8;
 
+export type GlassSlot = {
+  /** How much of this glass is drunk, 0–1 of its own capacity. */
+  level: number;
+  /** Capacity as a share of a whole glass: 1, or less for the last glass of an uneven target. */
+  capacity: number;
+};
+
 export type GlassRow = {
-  /** Glasses shown in this round (8, or fewer in the last round: only what's still needed). */
-  slots: number;
-  /** How many of them are drunk. */
-  filled: number;
-  /** 0-based round; a target needing more than 8 glasses takes several rounds of the row. */
+  /** The glasses of this round (8, fewer in the last round). */
+  glasses: GlassSlot[];
+  /** Index (in `glasses`) of the glass the next tap fills, or -1 when the round/target is done. */
+  next: number;
+  /** Index of the last glass with water in it (undo target), or -1. */
+  last: number;
+  /** 0-based round; a target of more than 8 glasses takes several rounds. */
   round: number;
   rounds: number;
 };
 
-/** Slots in round `round` when the target needs `needed` glasses. */
-export const roundSlots = (round: number, needed: number) => Math.min(ROW_SLOTS, needed - round * ROW_SLOTS);
+const EPS = 1e-6;
 
 /**
- * The glass row on the card (user decision 2026-11-26): every tap fills the next glass, all 8 fill;
- * after the 8th the row starts the next round (the last round shows only the glasses still needed),
- * so the final glass of the final round lands exactly on the target. At or past the target the
- * last round stays full.
+ * The glass row on the card (user decisions 2026-11-26). The target is `targetMl / glass` glasses,
+ * e.g. 3.4 L / 250 ml = 13.6: 13 whole glasses and a last, smaller glass worth 0.6. Glasses run in
+ * rounds of 8: every tap fills the next glass, after the 8th the next round starts. Water that isn't
+ * a whole number of glasses (the glass size changed during the day) fills a glass part way.
  */
 export function glassRow(consumedMl: number, targetMl: number, glass: number): GlassRow {
-  const drunk = Math.floor(consumedMl / glass);
-  const needed = Math.max(1, Math.ceil(targetMl / glass));
-  const rounds = Math.ceil(needed / ROW_SLOTS);
-  if (consumedMl >= targetMl) {
-    const round = rounds - 1;
-    const slots = roundSlots(round, needed);
-    return { slots, filled: slots, round, rounds };
+  const total = Math.max(targetMl / glass, EPS); // glasses in the target, may be fractional
+  const count = Math.max(1, Math.ceil(total - EPS));
+  const rounds = Math.ceil(count / ROW_SLOTS);
+  const drunk = consumedMl / glass; // glasses drunk, may be fractional
+  const capacity = (i: number) => (i === count - 1 ? Math.min(1, total - (count - 1)) : 1);
+  // First glass that isn't full yet; = count when the target is reached.
+  let first = 0;
+  while (first < count && drunk - first + EPS >= capacity(first)) first++;
+  const round = Math.min(Math.floor(first / ROW_SLOTS), rounds - 1);
+  const start = round * ROW_SLOTS;
+  const end = Math.min(count, start + ROW_SLOTS);
+  const glasses: GlassSlot[] = [];
+  for (let i = start; i < end; i++) {
+    const cap = capacity(i);
+    glasses.push({ capacity: cap, level: Math.max(0, Math.min(1, (drunk - i) / cap)) });
   }
-  const round = Math.min(Math.floor(drunk / ROW_SLOTS), rounds - 1);
-  const slots = roundSlots(round, needed);
-  return { slots, filled: Math.max(0, Math.min(slots, drunk - round * ROW_SLOTS)), round, rounds };
+  const next = first < end ? first - start : -1;
+  let last = -1;
+  glasses.forEach((g, i) => {
+    if (g.level > EPS) last = i;
+  });
+  return { glasses, next, last, round, rounds };
 }

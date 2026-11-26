@@ -6,7 +6,7 @@ import type { Day } from "@/lib/types";
 
 /**
  * Figma "Daily summary" (Meals): eaten kcal of the target, "kcal left" tag, a black progress bar
- * and Protein / Carbs / Fats bars (black on the Meals tab; colours are Home's).
+ * and Protein / Carbs / Fats bars in the same macro colours as Home's calorie card (user, 2026-11-26).
  */
 export function DailySummary({ day, eatenLabel }: { day: Day; eatenLabel: string }) {
   const c = useColors();
@@ -47,9 +47,9 @@ export function DailySummary({ day, eatenLabel }: { day: Day; eatenLabel: string
             fillStyle={styles.fill}
           />
           <View style={{ gap: 14 }}>
-            <Macro label="Protein" eaten={e.proteinG} target={t.proteinG} />
-            <Macro label="Carbs" eaten={e.carbsG} target={t.carbsG} />
-            <Macro label="Fats" eaten={e.fatG} target={t.fatG} />
+            <Macro label="Protein" eaten={e.proteinG} target={t.proteinG} color={c.macroProtein} />
+            <Macro label="Carbs" eaten={e.carbsG} target={t.carbsG} color={c.macroCarbs} />
+            <Macro label="Fats" eaten={e.fatG} target={t.fatG} color={c.macroFat} />
           </View>
         </>
       )}
@@ -57,8 +57,7 @@ export function DailySummary({ day, eatenLabel }: { day: Day; eatenLabel: string
   );
 }
 
-function Macro({ label, eaten, target }: { label: string; eaten: number; target: number }) {
-  const c = useColors();
+function Macro({ label, eaten, target, color }: { label: string; eaten: number; target: number; color: string }) {
   const styles = useStyles();
   return (
     <View
@@ -74,7 +73,7 @@ function Macro({ label, eaten, target }: { label: string; eaten: number; target:
       </View>
       <ProgressFill
         fraction={target > 0 ? eaten / target : 0}
-        color={c.ink}
+        color={color}
         trackStyle={styles.track}
         fillStyle={styles.fill}
       />
