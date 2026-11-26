@@ -449,8 +449,8 @@
   }
  },
  "mobile": {
-  "syncedAt": "2026-11-26T06:28:03.788Z",
-  "head": "4e74f30",
+  "syncedAt": "2026-11-26T06:34:22.860Z",
+  "head": "cd1fc45",
   "files": {
    "apps/mobile/.claude/settings.json": "14b797af98bf",
    "apps/mobile/.gitignore": "1b3d2a4eff0b",
@@ -533,7 +533,7 @@
    "apps/mobile/src/components/home/day-switcher.tsx": "0f6b5fa03313",
    "apps/mobile/src/components/home/glass.tsx": "49035e455c5c",
    "apps/mobile/src/components/home/home-header.tsx": "b19eacb665c7",
-   "apps/mobile/src/components/home/hydration-card.tsx": "32721f197437",
+   "apps/mobile/src/components/home/hydration-card.tsx": "72e66856ca87",
    "apps/mobile/src/components/home/streak-flame.tsx": "d7c7c021735f",
    "apps/mobile/src/components/home/streak-sheet.tsx": "c2c26fbe7385",
    "apps/mobile/src/components/home/weight-card.tsx": "cd17a63e29c3",
@@ -714,7 +714,7 @@
    "apps/mobile/src/lib/energy.ts": "c686ebe7e7b0",
    "apps/mobile/src/lib/food-icon.ts": "8bd71fc9b4b2",
    "apps/mobile/src/lib/format.ts": "fc638328fafe",
-   "apps/mobile/src/lib/glass-size.ts": "fb9d41eec14b",
+   "apps/mobile/src/lib/glass-size.ts": "98d5b2a289a0",
    "apps/mobile/src/lib/goal-details.ts": "4564a63f4e1d",
    "apps/mobile/src/lib/gradients.ts": "00fdc5895e44",
    "apps/mobile/src/lib/health/health-connect.ts": "7df45fdaeda9",
