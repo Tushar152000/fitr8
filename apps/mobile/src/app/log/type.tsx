@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Info, X } from "lucide-react-native";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MealWhen } from "@/components/log/meal-when";
 import { ModeTabs } from "@/components/log/mode-tabs";
@@ -87,7 +87,9 @@ export default function TypeMealScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Padding on Android too: the app is edge-to-edge, so the window no longer resizes for the
+      // keyboard and the field or Save button would sit behind it.
+      behavior="padding"
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"

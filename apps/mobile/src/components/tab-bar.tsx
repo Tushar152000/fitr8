@@ -5,7 +5,6 @@ import {
   Dumbbell,
   LayoutDashboard,
   MessageCircle,
-  Utensils,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react-native";
@@ -26,11 +25,12 @@ import { showDay, useViewDay } from "@/lib/view-day";
 
 /**
  * Tabs shown in the bar, in order (Figma "Tab Bar" Nav Items). The active item is ink with its
- * glyph filled (Home, Workout) or swapped (Meals: fork and knife); idle items are text/secondary.
+ * glyph filled (Home, Workout) or, for Meals, the same glyph drawn bolder (it has no fill; user
+ * decision 2026-11-27: the glyph never changes shape); idle items are text/secondary.
  */
-const TABS: Record<string, { label: string; icon: LucideIcon; active?: LucideIcon; fill?: boolean }> = {
+const TABS: Record<string, { label: string; icon: LucideIcon; fill?: boolean }> = {
   today: { label: "Home", icon: LayoutDashboard, fill: true },
-  meals: { label: "Meals", icon: UtensilsCrossed, active: Utensils },
+  meals: { label: "Meals", icon: UtensilsCrossed },
   workout: { label: "Workout", icon: Dumbbell, fill: true },
 };
 
@@ -105,8 +105,8 @@ export function TabBar({ state, navigation }: SwipeTabBarProps) {
 }
 
 /**
- * One tab's glyph and label. The idle (outline, text/secondary) and active (ink, filled or swapped
- * glyph) looks are stacked and cross-fade, so switching tabs (and Meals' glyph swap) never snaps.
+ * One tab's glyph and label. The idle (outline, text/secondary) and active (ink, filled or bolder)
+ * looks are stacked and cross-fade, so switching tabs never snaps.
  */
 function TabItem({ tab, focused }: { tab: (typeof TABS)[string]; focused: boolean }) {
   const c = useColors();
@@ -118,7 +118,6 @@ function TabItem({ tab, focused }: { tab: (typeof TABS)[string]; focused: boolea
   }, [focused, reduce, on]);
   const activeStyle = useAnimatedStyle(() => ({ opacity: on.get() }));
   const idleStyle = useAnimatedStyle(() => ({ opacity: 1 - on.get() }));
-  const Active = tab.active ?? tab.icon;
   return (
     <View style={styles.item}>
       <Animated.View style={[styles.layer, idleStyle]}>
@@ -128,7 +127,13 @@ function TabItem({ tab, focused }: { tab: (typeof TABS)[string]; focused: boolea
         </Text>
       </Animated.View>
       <Animated.View style={[styles.layer, styles.over, activeStyle]}>
-        <Active size={24} color={c.ink} strokeWidth={2} absoluteStrokeWidth fill={tab.fill ? c.ink : "none"} />
+        <tab.icon
+          size={24}
+          color={c.ink}
+          strokeWidth={tab.fill ? 2 : 2.6}
+          absoluteStrokeWidth
+          fill={tab.fill ? c.ink : "none"}
+        />
         <Text variant="nav" color={c.ink} numberOfLines={1}>
           {tab.label}
         </Text>

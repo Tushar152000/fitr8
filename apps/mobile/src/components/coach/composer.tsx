@@ -2,6 +2,7 @@ import { ArrowUp, Square } from "lucide-react-native";
 import { TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COACH_MAX_LENGTH } from "@/lib/use-coach-chat";
+import { useKeyboardVisible } from "@/lib/use-keyboard";
 import { fonts, gutter, makeStyles, useColors } from "@/lib/theme";
 import { GradientFab } from "@/components/ui";
 
@@ -29,8 +30,11 @@ export function Composer({
   const c = useColors();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
+  // With the keyboard up the composer sits right on it (as in WhatsApp); otherwise it keeps clear
+  // of the home indicator.
+  const keyboard = useKeyboardVisible();
   return (
-    <View style={[styles.composer, { paddingBottom: Math.max(24, insets.bottom - 10) }]}>
+    <View style={[styles.composer, { paddingBottom: keyboard ? 10 : Math.max(24, insets.bottom - 10) }]}>
       <TextInput
         accessibilityLabel="Message your coach"
         value={draft}

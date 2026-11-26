@@ -63,7 +63,13 @@ export function Intro({ onPick, locked }: { onPick: (text: string) => void; lock
         <View style={styles.chips}>
           {["Remembers you", "Science-based", "Logs for you"].map((t) => (
             <View key={t} style={styles.chip}>
-              <Text variant="captionStrong" color={c.white}>
+              <Text
+                variant="captionStrong"
+                color={c.white}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
                 {t}
               </Text>
             </View>
@@ -106,8 +112,16 @@ const useStyles = makeStyles((c, shadows) => ({
     ...shadows.card,
   },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100, backgroundColor: c.glassStrong },
+  // Always one row (user decision 2026-11-27); a chip shrinks before anything wraps.
+  chips: { flexDirection: "row", gap: 4 },
+  chip: {
+    flexShrink: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: c.glassStrong,
+    alignItems: "center",
+  },
   suggestion: {
     alignSelf: "flex-start",
     flexDirection: "row",
