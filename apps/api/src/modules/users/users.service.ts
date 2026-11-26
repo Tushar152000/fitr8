@@ -42,6 +42,16 @@ const ME_PROFILE_SELECT = {
   onboardedAt: true,
 } as const;
 
+/**
+ * The first day the user has in the app (YYYY-MM-DD): the local day they signed up, or an earlier
+ * day a meal was back-filled to. The app's day switcher and calendar don't go further back.
+ */
+function startedOn(createdAt: Date, timezone: string, firstMealDate?: Date): string {
+  const signup = localDate(timezone, createdAt);
+  const first = firstMealDate && firstMealDate < signup ? firstMealDate : signup;
+  return first.toISOString().slice(0, 10);
+}
+
 export interface NewUser {
   email: string;
   name: string | null;
@@ -172,14 +182,20 @@ export class UsersService {
         image: true,
         imageKey: true,
         lastActiveAt: true,
+        createdAt: true,
         profile: { select: ME_PROFILE_SELECT },
       },
     });
-    const { profile, lastActiveAt, imageKey, image, ...rest } = user;
+    const { profile, lastActiveAt, imageKey, image, createdAt, ...rest } = user;
     const activity = { onboardedAt: profile?.onboardedAt ?? null, lastActiveAt };
-    const [plan, photo] = await Promise.all([
+    const [plan, photo, firstMeal] = await Promise.all([
       this.billing.plan(userId),
       this.storage.presignReadOrNull(imageKey, PHOTO_URL_SECONDS),
+      this.prisma.mealLog.findFirst({
+        where: { userId },
+        orderBy: { date: "asc" },
+        select: { date: true },
+      }),
       shouldTouchActivity(activity, now) ? this.markActive(userId, now) : null,
     ]);
     return {
@@ -190,6 +206,7 @@ export class UsersService {
       welcomeBack: isWelcomeBack(activity, now),
       profile,
       plan,
+      startedOn: startedOn(createdAt, profile?.timezone ?? DEFAULT_TIMEZONE, firstMeal?.date),
     };
   }
 

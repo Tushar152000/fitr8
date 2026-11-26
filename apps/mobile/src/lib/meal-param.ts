@@ -33,20 +33,24 @@ export function daysAgo(ymd: string, now = new Date()): number {
 }
 
 /**
- * A past day Home / Meals can show (any day before today, e.g. picked in the calendar), or null =
- * today. Unlike `dayFromParam` this isn't limited to the logging window: older days are read-only.
+ * A past day Home / Meals can show (any day before today, e.g. picked in the calendar, but not
+ * before `startedOn`, the user's first day: `/me` `startedOn`), or null = today. Unlike
+ * `dayFromParam` this isn't limited to the logging window: older days are read-only.
  */
-export function viewableDay(value: string | null | undefined, now = new Date()): string | null {
+export function viewableDay(value: string | null | undefined, now = new Date(), startedOn?: string): string | null {
   if (!value || !ymdRe.test(value)) return null;
+  if (startedOn && value < startedOn) return null;
   return daysAgo(value, now) > 0 ? value : null;
 }
 
 /**
  * The days the Home / Meals pager steps through, today first: the logging window (a week back),
- * stretched back to `viewDay` when the calendar jumped further.
+ * stretched back to `viewDay` when the calendar jumped further, and never before `startedOn` (the
+ * user's first day in the app, user decision 2026-11-26).
  */
-export function pagerDays(viewDay: string | null, now = new Date()): string[] {
-  const back = Math.max(MEAL_BACKFILL_DAYS, viewDay ? daysAgo(viewDay, now) : 0);
+export function pagerDays(viewDay: string | null, now = new Date(), startedOn?: string): string[] {
+  let back = Math.max(MEAL_BACKFILL_DAYS, viewDay ? daysAgo(viewDay, now) : 0);
+  if (startedOn && ymdRe.test(startedOn)) back = Math.min(back, Math.max(0, daysAgo(startedOn, now)));
   return Array.from({ length: back + 1 }, (_, i) =>
     localYmd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)),
   );

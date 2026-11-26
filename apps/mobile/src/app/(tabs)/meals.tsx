@@ -7,6 +7,7 @@ import { DayMeals } from "@/components/meals/day-meals";
 import { QueryError } from "@/components/query-error";
 import { TodaySkeleton } from "@/components/skeletons";
 import { FadeIn, Screen, Text } from "@/components/ui";
+import { useMe } from "@/lib/auth";
 import { canLogOn, pagerDays, viewableDay } from "@/lib/meal-param";
 import { dayQueryFor } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
@@ -28,8 +29,10 @@ const eyebrow = (ymd: string) => {
 export default function MealsScreen() {
   const c = useColors();
   const [calendar, setCalendar] = useState(false);
-  const viewDay = viewableDay(useViewDay());
-  const days = pagerDays(viewDay);
+  // Never before the user's first day in the app (`/me` startedOn).
+  const startedOn = useMe().startedOn;
+  const viewDay = viewableDay(useViewDay(), undefined, startedOn);
+  const days = pagerDays(viewDay, undefined, startedOn);
   const index = viewDay ? Math.max(0, days.indexOf(viewDay)) : 0;
   const go = (i: number) => showDay(i <= 0 ? null : days[Math.min(i, days.length - 1)]);
   const isToday = index === 0;
