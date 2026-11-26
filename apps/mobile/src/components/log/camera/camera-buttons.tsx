@@ -1,26 +1,46 @@
-import { Barcode, type LucideIcon } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Camera, ScanBarcode, type LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { PressableScale, Text } from "@/components/ui";
-import { cam } from "./cam";
+import { PRIMARY_PILL } from "@/lib/gradients";
+import { cam, CAM_GLASS, CAM_MUTED } from "./cam";
 
-/** 44 px icon button in the camera's top bar (close, back). */
+/**
+ * 44 px glass circle in the camera's header (close, back, torch). `on`: a toggle that is on (the
+ * torch) turns white with a dark glyph, like the selected meal pill.
+ */
 export function CameraTopButton({
   icon: Icon,
   label,
   onPress,
+  iconSize = 20,
+  on,
+  disabled,
 }: {
   icon: LucideIcon;
   label: string;
   onPress: () => void;
+  iconSize?: number;
+  /** Set for a toggle (adds the switch role). */
+  on?: boolean;
+  disabled?: boolean;
 }) {
+  const toggle = on !== undefined;
   return (
-    <PressableScale accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.top}>
-      <Icon size={26} color={cam.white} />
+    <PressableScale
+      accessibilityRole={toggle ? "switch" : "button"}
+      accessibilityLabel={label}
+      accessibilityState={toggle ? { checked: on, disabled } : { disabled }}
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.top, on && { backgroundColor: cam.white }, disabled && { opacity: 0.4 }]}
+    >
+      <Icon size={iconSize} color={on ? cam.ink : cam.white} strokeWidth={2} absoluteStrokeWidth />
     </PressableScale>
   );
 }
 
-/** A square glass button beside the shutter (gallery, type), with an optional caption under it. */
+/** A 56 px glass circle beside the shutter (gallery, type), with an optional caption under it. */
 export function CameraSideButton({
   icon: Icon,
   caption,
@@ -34,7 +54,7 @@ export function CameraSideButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
-  const icon = <Icon size={24} color={cam.white} />;
+  const icon = <Icon size={22} color={cam.white} strokeWidth={2} absoluteStrokeWidth />;
   if (!caption) {
     return (
       <PressableScale
@@ -51,13 +71,13 @@ export function CameraSideButton({
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? caption}
       onPress={onPress}
       disabled={disabled}
       style={styles.side}
     >
       <View style={styles.sideIcon}>{icon}</View>
-      <Text weight={600} size={12} color="rgba(255,255,255,0.85)">
+      <Text variant="labelStrong" color={CAM_MUTED}>
         {caption}
       </Text>
     </PressableScale>
@@ -65,7 +85,8 @@ export function CameraSideButton({
 }
 
 /**
- * The round shutter; its disc sinks while held. `barcode`: a code is in view, so it turns green and
+ * The shutter: an 84 px white ring round the gradient/primary disc with the camera glyph; the disc
+ * sinks while held. `barcode`: a code is in view, so the disc turns lime with a barcode glyph and
  * looks the product up instead of taking a photo.
  */
 export function Shutter({
@@ -90,17 +111,19 @@ export function Shutter({
       accessibilityHint={accessibilityHint}
       onPress={onPress}
       disabled={disabled}
-      style={[styles.shutter, barcode && { borderColor: "rgba(221,235,227,0.6)" }, dimmed && { opacity: 0.5 }]}
+      style={[styles.ring, barcode && { borderColor: cam.highlight }, dimmed && { opacity: 0.5 }]}
     >
       {({ pressed }) => (
-        <View
-          style={[
-            styles.shutterInner,
-            barcode && { backgroundColor: cam.protein },
-            pressed && { transform: [{ scale: 0.95 }] },
-          ]}
-        >
-          {barcode && <Barcode size={28} color={cam.white} />}
+        <View style={[styles.disc, pressed && { transform: [{ scale: 0.95 }] }]}>
+          {barcode ? (
+            <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: cam.highlight }]}>
+              <ScanBarcode size={28} color={cam.ink} strokeWidth={2.3} absoluteStrokeWidth />
+            </View>
+          ) : (
+            <LinearGradient {...PRIMARY_PILL} style={[StyleSheet.absoluteFill, styles.center]}>
+              <Camera size={27.5} color={cam.white} strokeWidth={2} />
+            </LinearGradient>
+          )}
         </View>
       )}
     </Pressable>
@@ -108,31 +131,32 @@ export function Shutter({
 }
 
 const styles = StyleSheet.create({
-  top: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  side: { alignItems: "center", gap: 4, width: 64 },
+  top: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: CAM_GLASS,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  side: { alignItems: "center", gap: 8 },
   sideIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: CAM_GLASS,
     alignItems: "center",
     justifyContent: "center",
   },
-  shutter: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.35)",
+  ring: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3,
+    borderColor: cam.white,
     alignItems: "center",
     justifyContent: "center",
   },
-  shutterInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: cam.brandGlow,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  disc: { width: 68, height: 68, borderRadius: 34, overflow: "hidden" },
+  center: { alignItems: "center", justifyContent: "center" },
 });

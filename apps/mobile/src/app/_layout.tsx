@@ -1,15 +1,12 @@
+import "@/lib/web-pointer-fix";
+import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque";
 import {
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from "@expo-google-fonts/bricolage-grotesque";
-import {
-  Figtree_400Regular,
-  Figtree_500Medium,
-  Figtree_600SemiBold,
-  Figtree_700Bold,
-} from "@expo-google-fonts/figtree";
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from "@expo-google-fonts/inter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useSegments } from "expo-router";
@@ -29,6 +26,7 @@ import { configureNotifications } from "@/lib/reminders";
 import { AppearanceProvider, palettes, useColors, useScheme } from "@/lib/theme";
 import { PremiumLockedSheet } from "@/components/premium/locked-sheet";
 import { Toast } from "@/components/toast";
+import { ScreenTransition } from "@/components/screen-transition";
 import { modalMotion, stackMotion } from "@/lib/motion";
 
 SplashScreen.preventAutoHideAsync();
@@ -37,14 +35,12 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    BricolageGrotesque_500Medium,
-    BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-    Figtree_400Regular,
-    Figtree_500Medium,
-    Figtree_600SemiBold,
-    Figtree_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
   useEffect(() => wireQueryLifecycle(), []);
   useEffect(() => {
@@ -121,7 +117,15 @@ function Routes() {
   // Back after 90+ days: only the welcome-back check-in until it's answered or dismissed.
   const welcomeBack = onboarded && Boolean(me?.welcomeBack);
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }}>
+    <Stack
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }}
+      // Web preview only: animates screen changes the browser's native stack would hard-cut.
+      screenLayout={({ navigation, options, children }) => (
+        <ScreenTransition navigation={navigation} modal={options.presentation === "modal"}>
+          {children}
+        </ScreenTransition>
+      )}
+    >
       {/*
         Order matters: when a guard flips (sign-in, sign-out), the stack falls back to the FIRST screen
         still allowed. The app must come before onboarding, or a returning user who signs in again
@@ -137,15 +141,25 @@ function Routes() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="log" />
         <Stack.Screen name="briefing" />
-        <Stack.Screen name="history" />
         <Stack.Screen name="progress" />
+        <Stack.Screen name="goal" />
         <Stack.Screen name="coach" />
         <Stack.Screen name="coach-memory" />
         <Stack.Screen name="reminders" />
+        <Stack.Screen name="measurements" />
         <Stack.Screen name="workout-session" />
         <Stack.Screen name="training/[date]" />
         <Stack.Screen name="training/setup" />
-        <Stack.Screen name="health" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="health/index" />
+        <Stack.Screen name="health/connect" />
+        <Stack.Screen name="settings/index" />
+        <Stack.Screen name="settings/account" />
+        <Stack.Screen name="settings/notifications" />
+        <Stack.Screen name="settings/privacy" />
+        <Stack.Screen name="support/index" />
+        <Stack.Screen name="support/faq" />
+        <Stack.Screen name="support/feedback" />
         <Stack.Screen name="pro" options={modalMotion} />
       </Stack.Protected>
       {/* First-time setup, and where an onboarded user edits their goal (pushed from Profile). */}

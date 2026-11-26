@@ -216,32 +216,6 @@ export function ProgressSkeleton() {
   );
 }
 
-const BAR_HEIGHTS = [60, 95, 40, 120, 80, 105, 70];
-
-/** Screen 12: summary tiles, the bar chart, the day's meals. */
-export function HistorySkeleton() {
-  return (
-    <>
-      <TilesSkeleton count={2} />
-      <Box style={{ gap: 12 }}>
-        <View style={{ height: 150, flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
-          {BAR_HEIGHTS.map((h, i) => (
-            <View key={i} style={{ flex: 1 }}>
-              <Skeleton height={h} radius={6} tone="card" />
-            </View>
-          ))}
-        </View>
-        <Line width="70%" height={11} tone="card" />
-      </Box>
-      <View style={{ gap: 10 }}>
-        <Line width={120} height={20} />
-        <MealRowSkeleton />
-        <MealRowSkeleton />
-      </View>
-    </>
-  );
-}
-
 /** Screen 13's dark goal card. */
 export function GoalCardSkeleton() {
   const styles = useStyles();

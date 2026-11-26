@@ -4,6 +4,7 @@ import type { StorageService } from "../../infra/storage/storage.service.js";
 import type { TargetsService } from "../plan/targets.service.js";
 import type { UsersService } from "../users/users.service.js";
 import { DashboardService } from "./dashboard.service.js";
+import type { HistoryService } from "./history.service.js";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 
@@ -16,6 +17,7 @@ function withLoggedDays(days: string[]) {
     {} as TargetsService,
     {} as StorageService,
     {} as UsersService,
+    {} as HistoryService,
   );
 }
 

@@ -4,7 +4,7 @@ import { useColors } from "@/lib/theme";
 import { Text } from "./text";
 import { PressableScale } from "./pressable-scale";
 
-/** 36 px pill with a 44 px hit area. Dark tone for the camera screen. */
+/** 36 px pill (grows and wraps for a long label, never wider than its row) with a 44 px hit area. Dark tone for the camera screen. */
 export function Chip({
   selected,
   tone = "light",
@@ -31,7 +31,7 @@ export function Chip({
       style={[styles.chip, { backgroundColor: bg, paddingHorizontal: tone === "dark" ? 14 : 16 }]}
     >
       {icon}
-      <Text weight={600} size={14} color={fg}>
+      <Text weight={600} size={14} color={fg} style={styles.label}>
         {children}
       </Text>
     </PressableScale>
@@ -62,6 +62,15 @@ export function ChipGroup<T extends string | number>({
 }
 
 const styles = StyleSheet.create({
-  chip: { height: 36, borderRadius: 18, flexDirection: "row", alignItems: "center", gap: 6 },
+  chip: {
+    minHeight: 36,
+    maxWidth: "100%",
+    paddingVertical: 8,
+    borderRadius: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  label: { flexShrink: 1 },
   group: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

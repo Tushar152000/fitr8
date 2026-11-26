@@ -2,14 +2,13 @@ import { useEffect, useId } from "react";
 import Animated, {
   Easing,
   useAnimatedProps,
-  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { View } from "react-native";
 import Svg, { Circle, ClipPath, Defs, G, LinearGradient, Path, Stop } from "react-native-svg";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -23,25 +22,35 @@ const BOTTOM = 28.5;
 
 /**
  * A glass of water. `full` animates the water in (rises from the bottom with a slosh that settles,
- * a droplet, a small bounce) or out (drains). `still` draws it without motion (the small legend icon).
+ * a droplet; no pop/scale, user decision 2026-11-26) or out (drains). `level` (0–1) fills it part
+ * way instead (water that isn't a whole glass). `still` draws it without motion (the small legend icon).
  * Water uses data/hydration-3 → data/hydration-2; the empty glass is frosted with a + to add one.
  */
-export function Glass({ full, size, still }: { full: boolean; size: number; still?: boolean }) {
+export function Glass({
+  full,
+  level: target = full ? 1 : 0,
+  size,
+  still,
+}: {
+  full?: boolean;
+  level?: number;
+  size: number;
+  still?: boolean;
+}) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   const reduce = useReducedMotion() || still;
-  const level = useSharedValue(full ? 1 : 0); // 0 empty … 1 full
+  const level = useSharedValue(target); // 0 empty … 1 full
   const slosh = useSharedValue(0); // wave height, decays to 0
   const phase = useSharedValue(0); // wave travel
   const drop = useSharedValue(0); // droplet: 0 hidden … 1 done
-  const scale = useSharedValue(1);
 
   useEffect(() => {
-    const target = full ? 1 : 0;
+    const rising = target > level.get();
     if (reduce) {
       level.set(target);
       return;
     }
-    level.set(withTiming(target, { duration: full ? 720 : 520, easing: Easing.out(Easing.cubic) }));
+    level.set(withTiming(target, { duration: rising ? 720 : 520, easing: Easing.out(Easing.cubic) }));
     slosh.set(
       withSequence(
         withTiming(1, { duration: 120 }),
@@ -50,14 +59,13 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
     );
     phase.set(0);
     phase.set(withTiming(Math.PI * 4, { duration: 1200, easing: Easing.out(Easing.quad) }));
-    scale.set(withSequence(withTiming(0.88, { duration: 90 }), withSpring(1, { damping: 9, stiffness: 260 })));
-    if (full) {
+    if (rising && target >= 1) {
       drop.set(0);
       drop.set(withDelay(260, withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) })));
     }
-    // Shared values are stable; only `full` should re-run the animation.
+    // Shared values are stable; only the target level should re-run the animation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [full]);
+  }, [target]);
 
   const water = useAnimatedProps(() => {
     const y = BOTTOM - (BOTTOM - TOP) * level.get();
@@ -73,11 +81,10 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
     const t = drop.get();
     return { cy: 6 - t * 9, opacity: t > 0 && t < 1 ? 1 - t : 0, r: 1.6 };
   });
-  const bounce = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   const w = size * 0.8;
   return (
-    <Animated.View style={bounce}>
+    <View>
       <Svg width={w} height={size} viewBox="0 -4 24 34">
         <Defs>
           <ClipPath id={`cup${id}`}>
@@ -106,6 +113,6 @@ export function Glass({ full, size, still }: { full: boolean; size: number; stil
         </AnimatedG>
         <AnimatedCircle animatedProps={droplet} cx={15} fill="#a6dded" />
       </Svg>
-    </Animated.View>
+    </View>
   );
 }

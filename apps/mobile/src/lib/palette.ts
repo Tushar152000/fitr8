@@ -85,6 +85,11 @@ const light = {
   glassStrong: "rgba(255,255,255,0.12)",
   /** text/on-inverse-secondary. */
   onInverse2: "rgba(255,255,255,0.6)",
+  /** Home calorie card (Figma "Home"): macro bars and the ring's track. Data colours, text-unsafe. */
+  macroProtein: "#faad3b",
+  macroCarbs: "#00dbc6",
+  macroFat: "#cb2fff",
+  ringTrack: "#f0f0f0",
   /** Always white: text/icons on brand, panel, photos and the camera. */
   white: "#ffffff",
 } as const;
@@ -150,6 +155,10 @@ const dark: Colors = {
   glass: "rgba(255,255,255,0.08)",
   glassStrong: "rgba(255,255,255,0.12)",
   onInverse2: "rgba(255,255,255,0.6)",
+  macroProtein: "#ffb950",
+  macroCarbs: "#2ee6d3",
+  macroFat: "#d867ff",
+  ringTrack: "#262626",
   white: "#ffffff",
 };
 
@@ -176,29 +185,44 @@ export const radius = { input: 14, button: 16, card: 20, sheet: 28 } as const;
 /** Screen gutter: 20 on app screens, 24 on onboarding. */
 export const gutter = 20;
 
-/** Custom fonts need one family per weight on native. */
+/**
+ * Custom fonts need one family per weight on native. The app is set in Inter (Figma "Fitr8" type
+ * styles, 2026-11-26); `display*` and `sans*` both map to it so older call sites keep working.
+ * Bricolage Grotesque remains only for the FITR8 wordmark (`brand700`, components/ui/logo.tsx).
+ */
 export const fonts = {
-  display500: "BricolageGrotesque_500Medium",
-  display600: "BricolageGrotesque_600SemiBold",
-  display700: "BricolageGrotesque_700Bold",
-  display800: "BricolageGrotesque_800ExtraBold",
-  sans400: "Figtree_400Regular",
-  sans500: "Figtree_500Medium",
-  sans600: "Figtree_600SemiBold",
-  sans700: "Figtree_700Bold",
+  display500: "Inter_500Medium",
+  display600: "Inter_600SemiBold",
+  display700: "Inter_700Bold",
+  display800: "Inter_800ExtraBold",
+  sans400: "Inter_400Regular",
+  sans500: "Inter_500Medium",
+  sans600: "Inter_600SemiBold",
+  sans700: "Inter_700Bold",
+  brand700: "BricolageGrotesque_700Bold",
 } as const;
 
-/** Flat design: the camera button is the only real shadow; `seg` lifts the selected segment. */
-export type Shadows = { readonly fab: { boxShadow: string }; readonly seg: { boxShadow: string } };
+/**
+ * Flat design: the camera button is the only strong shadow; `seg` lifts the selected segment and
+ * `card` is Figma "Elevation/Card" (0 20 20 #37440005), the faint lift under white cards and round
+ * header buttons.
+ */
+export type Shadows = {
+  readonly fab: { boxShadow: string };
+  readonly seg: { boxShadow: string };
+  readonly card: { boxShadow: string };
+};
 const shadowSets: Record<ColorScheme, Shadows> = {
   light: {
     fab: { boxShadow: "0 8px 18px rgba(20, 24, 0, 0.32)" },
     seg: { boxShadow: "0 1px 2px rgba(14, 14, 14, 0.12)" },
+    card: { boxShadow: "0 20px 20px rgba(55, 68, 0, 0.02)" },
   },
   dark: {
     // Shadows barely read on dark; a soft lime glow keeps the FAB lifted.
     fab: { boxShadow: "0 6px 18px rgba(194, 224, 74, 0.18)" },
     seg: { boxShadow: "0 1px 2px rgba(0, 0, 0, 0.5)" },
+    card: { boxShadow: "0 0 0 rgba(0, 0, 0, 0)" },
   },
 };
 export const shadowsFor = (scheme: ColorScheme): Shadows => shadowSets[scheme];

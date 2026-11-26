@@ -6,7 +6,7 @@ import { useColors } from "@/lib/theme";
 export function Faq({ storeSettings }: { storeSettings: string }) {
   const c = useColors();
   return (
-    <Section title="Questions" gap={12}>
+    <Section title="Questions">
       {(
         [
           [

@@ -11,5 +11,7 @@ export * from "./admin.js";
 export * from "./blog.js";
 export * from "./training.js";
 export * from "./health.js";
+export * from "./insights.js";
+export * from "./profile-extras.js";
 export * from "./responses.js";
 export type * from "./analytics.js";

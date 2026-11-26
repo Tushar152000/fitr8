@@ -21,9 +21,9 @@ const useStyles = makeStyles((c) => ({
     height: 36,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     borderRadius: 18,
     backgroundColor: c.chip,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
 }));

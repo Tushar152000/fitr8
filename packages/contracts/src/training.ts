@@ -8,6 +8,7 @@ import {
   type TrainingGoal,
   type TrainingStep,
   type TrainingType,
+  type RestDayCardio,
   type WeekStyle,
 } from "@fitr8/domain/training";
 import type { RecoveryLevel } from "@fitr8/domain/health";
@@ -66,7 +67,16 @@ export const TrainingLogSchema = z.object({
 });
 export type TrainingLogInput = z.infer<typeof TrainingLogSchema>;
 
-export type { DayType, Effort, SessionBlock, TrainingGoal, TrainingStep, TrainingType, WeekStyle };
+export type {
+  DayType,
+  Effort,
+  RestDayCardio,
+  SessionBlock,
+  TrainingGoal,
+  TrainingStep,
+  TrainingType,
+  WeekStyle,
+};
 
 export interface TrainingProfileDto {
   types: TrainingType[];
@@ -126,6 +136,23 @@ export interface TrainingDayDto {
   logs: TrainingLogDto[];
   /** Gym days: today's strength session lives at GET /api/workouts/today (focus mode). */
   gym: { exercises: number; logged: number } | null;
+  /**
+   * Gym days: the strength engine's full exercise list (sets, rep range, target kg; null kg =
+   * bodyweight), in order. `steps` keeps the first four as text for older app builds. Null on other
+   * days, and on a past gym day without a plan.
+   */
+  exercises: TrainingExerciseDto[] | null;
+}
+
+/** One exercise of a gym day (Workout tab "Up next" list). */
+export interface TrainingExerciseDto {
+  name: string;
+  sets: number;
+  repMin: number;
+  repMax: number;
+  /** Reps are seconds (planks, carries). */
+  timed: boolean;
+  targetKg: number | null;
 }
 
 /** GET /api/training/week */
@@ -146,4 +173,11 @@ export interface TrainingWeekDto {
   profile: TrainingProfileDto;
   /** Today's recovery from Apple Health / Health Connect, when connected and known. */
   recovery: { score: number; level: RecoveryLevel; advice: string | null } | null;
+  /** The plan in a few words for the tab's eyebrow: "Full body A/B", "Upper / lower + running". */
+  plan: string;
+  /**
+   * Cardio for rest days as fields ("Today's recovery": activity, minutes, steps, no extra HIIT).
+   * `GET /workouts/today` keeps the same advice as one sentence (`cardio`).
+   */
+  restDay: RestDayCardio;
 }

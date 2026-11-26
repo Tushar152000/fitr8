@@ -18,10 +18,13 @@ export async function compressPhoto(
   return saved.uri;
 }
 
-/** Signed upload of a meal/label photo straight to storage. Returns the storage key. */
-export async function uploadPhoto(uri: string): Promise<string> {
+/**
+ * Signed upload of a photo straight to storage: meal/label photos by default, or another signing
+ * endpoint (the profile photo's `/api/profile/photo/upload-url`). Returns the storage key.
+ */
+export async function uploadPhoto(uri: string, signUrl = "/api/meals/upload-url"): Promise<string> {
   const blob = await (await fetch(uri)).blob();
-  const { key, uploadUrl } = await api<{ key: string; uploadUrl: string }>("/api/meals/upload-url", {
+  const { key, uploadUrl } = await api<{ key: string; uploadUrl: string }>(signUrl, {
     json: { contentType: "image/jpeg", sizeBytes: blob.size },
   });
   const put = await fetch(uploadUrl, {

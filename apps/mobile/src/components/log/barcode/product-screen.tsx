@@ -16,6 +16,7 @@ import { TotalCard } from "../total-card";
 import { NutritionTable } from "./nutrition-table";
 import { ProductAmount, type AmountMode } from "./product-amount";
 import { ProductSummary } from "./product-summary";
+import { haptic } from "@/lib/haptics";
 
 /** Design 7d: a known product. Amount in servings (0.5 steps) or grams (5 g steps). */
 export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
@@ -42,6 +43,7 @@ export function ProductScreen({ food, code }: { food: FoodDto; code: string }) {
             : { foodId: food.id, mealType, quantity: grams, unit: "g", grams, ...dateBody },
       });
       track("meal_logged", { method: "barcode" });
+      haptic.success();
       refreshDay();
       showDay(date);
       router.dismissTo("/today");

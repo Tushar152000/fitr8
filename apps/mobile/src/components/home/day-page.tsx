@@ -8,7 +8,7 @@ import { QueryError } from "@/components/query-error";
 import { TodaySkeleton } from "@/components/skeletons";
 import { Card, FadeIn, InsightCard, Skeleton, Text } from "@/components/ui";
 import { WorkoutUnlockBanner } from "@/components/workout/unlock-banner";
-import { dayLabel } from "@/lib/meal-param";
+import { canLogOn, dayLabel, recentDays } from "@/lib/meal-param";
 import { dayQueryFor, progressQuery } from "@/lib/queries";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import type { Day } from "@/lib/types";
@@ -98,7 +98,8 @@ function PastDayMeals({ day, date }: { day: Day; date: string }) {
       <View style={{ flex: 1 }}>
         <Text weight={600}>{count ? `${count} meal${count === 1 ? "" : "s"} logged` : "Nothing logged"}</Text>
         <Text size={13} color={c.ink3}>
-          See or add meals for {dayLabel(date).toLowerCase()}
+          {canLogOn(date) ? "See or add meals for " : "View meals for "}
+          {date === recentDays()[1] ? "yesterday" : dayLabel(date)}
         </Text>
       </View>
       <ChevronRight size={20} color={c.ink3} />

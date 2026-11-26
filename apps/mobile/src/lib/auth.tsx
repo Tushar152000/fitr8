@@ -10,7 +10,7 @@ import { API_URL } from "./config";
 import { queryClient } from "./query";
 import { writeConversationId } from "./coach-store";
 import { forgetPurchaser, identifyPurchaser } from "./purchases";
-import { cancelCustomReminders, cancelWaterReminders } from "./reminders";
+import { cancelCustomReminders, cancelRoutineReminders, cancelWaterReminders } from "./reminders";
 import { readToken, writeToken } from "./token-store";
 import type { Me } from "./types";
 
@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       forgetPurchaser(),
       cancelWaterReminders().catch(() => undefined),
       cancelCustomReminders().catch(() => undefined),
+      cancelRoutineReminders().catch(() => undefined),
     ]);
     setApiToken(null);
     queryClient.clear(); // never show the last user's data to the next one

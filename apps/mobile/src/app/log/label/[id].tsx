@@ -19,6 +19,7 @@ import { useMealChoice } from "@/lib/meal-param";
 import { refreshDay } from "@/lib/query";
 import { useColors } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
+import { haptic } from "@/lib/haptics";
 
 type ScanDto = LabelScanDto;
 
@@ -96,6 +97,7 @@ function CheckLabel({ scan }: { scan: ScanDto }) {
         },
       });
       track("meal_logged", { method: "label" });
+      haptic.success();
       refreshDay();
       showDay(date);
       router.dismissTo("/today");

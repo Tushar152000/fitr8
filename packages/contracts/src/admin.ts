@@ -32,5 +32,7 @@ export interface AdminMeDto {
   can: { manageTeam: boolean };
   sections: {
     blog: { publish: boolean; manageContent: boolean; assignAuthor: boolean };
+    /** In-app feedback (/admin/feedback): `read` = may open the section. */
+    feedback: { read: boolean };
   };
 }

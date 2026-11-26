@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as SecureStore from "expo-secure-store";
 import { Camera, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { Platform, Pressable, View } from "react-native";
 import { Text } from "@/components/ui";
 import { SmallCta } from "./small-cta";
@@ -17,6 +18,7 @@ import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
 import { LIST_PRICE, openPaywall } from "@/lib/premium";
 import { usageQuery } from "@/lib/queries";
+import { PRIMARY_PILL } from "@/lib/gradients";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import Animated from "react-native-reanimated";
 import { appear, disappear } from "@/lib/motion";
@@ -88,14 +90,14 @@ export function PremiumBanner() {
   return (
     <Animated.View entering={appear} exiting={disappear} style={styles.banner}>
       <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-        <View style={styles.icon}>
-          <Camera size={20} color={c.white} />
-        </View>
+        <LinearGradient {...PRIMARY_PILL} style={styles.icon}>
+          <Camera size={18} color={c.white} strokeWidth={2} />
+        </LinearGradient>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text weight={700} size={16}>
+          <Text variant="heading3">
             {typed > 0 ? `You typed ${typed} ${typed === 1 ? "meal" : "meals"} today` : "Log meals faster with a photo"}
           </Text>
-          <Text size={14} color={c.ink2}>
+          <Text variant="bodySm" color={c.ink2}>
             Next time, snap a photo. Premium finds every dish on your plate and fills in calories and macros.
           </Text>
         </View>
@@ -112,14 +114,14 @@ export function PremiumBanner() {
       <View style={styles.chips}>
         {["Photo scans", "Barcode", "AI Coach"].map((label) => (
           <View key={label} style={styles.chip}>
-            <Text size={12} weight={600} color={c.brandText}>
+            <Text variant="captionStrong" color={c.brandText}>
               {label}
             </Text>
           </View>
         ))}
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Text size={13} color={c.ink3} tabular style={{ flex: 1 }}>
+        <Text variant="labelMedium" color={c.ink2} tabular style={{ flex: 1 }}>
           From {LIST_PRICE.perMonth} a month
         </Text>
         <SmallCta
@@ -134,24 +136,23 @@ export function PremiumBanner() {
   );
 }
 
-const useStyles = makeStyles((c) => ({
+// Restyled to the Figma "New" cards (2026-11-26): white card with Elevation/Card, gradient icon tile.
+const useStyles = makeStyles((c, shadows) => ({
   banner: {
-    gap: 12,
-    padding: 16,
+    gap: 14,
+    padding: 20,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: c.premiumLine,
     backgroundColor: c.surface,
+    ...shadows.card,
   },
   icon: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: c.brand,
     alignItems: "center",
     justifyContent: "center",
   },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center", margin: -10 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { backgroundColor: c.brandSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  chip: { backgroundColor: c.brandSoft, borderRadius: 100, paddingHorizontal: 8, paddingVertical: 4 },
 }));

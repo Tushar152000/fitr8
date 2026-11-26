@@ -15,6 +15,7 @@ import type {
 } from "@fitr8/domain/training";
 import type { LabelRead } from "./ai.js";
 import type { MealTypeValue, OnboardingInput } from "./requests.js";
+import type { ProgressStatsDto } from "./insights.js";
 
 export type { AdjustedExercise, AdjustedSession, CoachRule, NextTarget, PlanDay, Prescription };
 
@@ -82,9 +83,15 @@ export interface ProfileDto {
   medicalFlag: boolean;
   medicalNote: string | null;
   timezone: string;
+  /** @deprecated Older app builds only; use `remindMeals`. */
   remindLunch: boolean;
+  /** @deprecated Older app builds only; use `remindMeals`. */
   remindDinner: boolean;
   remindWater: boolean;
+  /** Meal reminders at REMINDER_SCHEDULE.meals (contracts profile-extras). */
+  remindMeals: boolean;
+  /** Weekly weigh-in reminder at REMINDER_SCHEDULE.weighIn. */
+  remindWeighIn: boolean;
   onboardedAt: string | null;
 }
 
@@ -97,7 +104,13 @@ export interface MeDto {
   /** E.164, e.g. "+919876543210". */
   phone: string | null;
   email: string | null;
+  /**
+   * The photo to show: the uploaded profile photo (a signed URL, valid 24 h) or else the sign-in
+   * provider's picture (Google). Null when there's neither.
+   */
   image: string | null;
+  /** True when `image` is a photo the user uploaded (Profile offers "Remove photo"). */
+  hasPhoto: boolean;
   onboarded: boolean;
   /**
    * Onboarded but away for 90+ days (@fitr8/domain/activity): the app asks only the numbers that
@@ -120,9 +133,13 @@ export interface PhoneCheckDto {
 
 /** PATCH /api/profile/reminders */
 export interface RemindersDto {
-  remindLunch: boolean;
-  remindDinner: boolean;
+  remindMeals: boolean;
   remindWater: boolean;
+  remindWeighIn: boolean;
+  /** @deprecated Older app builds only; use `remindMeals`. */
+  remindLunch: boolean;
+  /** @deprecated Older app builds only; use `remindMeals`. */
+  remindDinner: boolean;
 }
 
 // ── Plan ──────────────────────────────────────────────────────────────────
@@ -495,8 +512,15 @@ export interface DashboardMealDto {
   status: MealStatus;
   totalKcal: number;
   createdAt: string;
-  /** Item names, for the meal's title. */
-  items: { name: string }[];
+  /** Each item as the Meals tab lists it: name (also the meal's title), amount and kcal. */
+  items: {
+    name: string;
+    quantity: number;
+    unit: string;
+    grams: number;
+    kcal: number;
+    isLiquid: boolean;
+  }[];
   photoUrl: string | null;
 }
 
@@ -540,6 +564,9 @@ export interface BodyMetricDto {
   waistCm: number | null;
   neckCm: number | null;
   hipCm: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  /** Calculated (US Navy) from the day's waist, neck and hips; never entered. */
   bodyFatPct: number | null;
   createdAt: string;
 }
@@ -554,8 +581,8 @@ export interface CheckinsDto {
   metrics: BodyMetricDto[];
 }
 
-/** GET /api/progress */
-export interface ProgressDto {
+/** GET /api/progress (stat tiles, trend and check-ins fields: `ProgressStatsDto` in insights.ts) */
+export interface ProgressDto extends ProgressStatsDto {
   points: { date: string; weightKg: number; avg7: number }[];
   /** The newest weigh-in (prefills the check-in form). */
   latest: { weightKg: number; waistCm: number | null } | null;

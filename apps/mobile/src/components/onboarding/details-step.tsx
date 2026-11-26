@@ -78,7 +78,7 @@ export function DetailsStep({
             textContentType="telephoneNumber"
             maxLength={20}
             invalid={Boolean(errors.phone)}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
           />
         </View>
         {!errors.phone && (

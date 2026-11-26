@@ -22,11 +22,14 @@ export function wireQueryLifecycle() {
   return () => sub.remove();
 }
 
-/** After logging or editing food: Today, the workout fuel card and usuals all change. */
+/** After logging or editing food: Home, Meals (suggestions), streak, calendar, the workout fuel card and usuals all change. */
 export function refreshDay() {
   queryClient.invalidateQueries({ queryKey: ["day"] });
   queryClient.invalidateQueries({ queryKey: ["workout"] });
   queryClient.invalidateQueries({ queryKey: ["usuals"] });
-  queryClient.invalidateQueries({ queryKey: ["history"] });
+  queryClient.invalidateQueries({ queryKey: ["streak"] });
+  queryClient.invalidateQueries({ queryKey: ["calendar"] });
+  queryClient.invalidateQueries({ queryKey: ["meal-suggestion"] });
+  queryClient.invalidateQueries({ queryKey: ["progress"] }); // on-target share and streak on Progress
   queryClient.invalidateQueries({ queryKey: ["usage"] }); // photo / label scans count against today's limit
 }

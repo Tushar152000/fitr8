@@ -77,6 +77,63 @@ describe("progress", () => {
     expect((await stranger.agent.get("/api/checkins").expect(200)).body.metrics).toEqual([]);
   });
 
+  it("edits and deletes a day's weigh-in, keeping that day's other measurements", async () => {
+    await t.http().patch("/api/checkins/2026-01-05").send({ weightKg: 80 }).expect(401);
+    await t.http().delete("/api/checkins/2026-01-05").expect(401);
+
+    const { userId, agent } = await t.signIn();
+    await onboard(agent);
+    const stranger = await t.signIn();
+    await agent.post("/api/checkins").send({ date: "2026-01-05", weightKg: 81 }).expect(201);
+    await agent
+      .post("/api/checkins")
+      .send({ date: "2026-01-12", weightKg: 80.6, waistCm: 90, neckCm: 38 })
+      .expect(201);
+
+    // Bad input: not a date, impossible date, weight out of range.
+    await agent.patch("/api/checkins/yesterday").send({ weightKg: 80 }).expect(400);
+    await agent.patch("/api/checkins/2026-02-31").send({ weightKg: 80 }).expect(400);
+    await agent.patch("/api/checkins/2026-01-05").send({ weightKg: 10 }).expect(400);
+    await agent.delete("/api/checkins/2026-13-01").expect(400);
+    // No weigh-in that day, or someone else's day.
+    await agent.patch("/api/checkins/2026-01-06").send({ weightKg: 80 }).expect(404);
+    await agent.delete("/api/checkins/2026-01-06").expect(404);
+    await stranger.agent.patch("/api/checkins/2026-01-05").send({ weightKg: 70 }).expect(404);
+    await stranger.agent.delete("/api/checkins/2026-01-05").expect(404);
+
+    const edited = await agent
+      .patch("/api/checkins/2026-01-12")
+      .send({ weightKg: 80.2 })
+      .expect(200);
+    expect(edited.body.metric).toMatchObject({
+      userId,
+      date: "2026-01-12T00:00:00.000Z",
+      weightKg: 80.2,
+      waistCm: 90,
+      bodyFatPct: expect.any(Number),
+    });
+
+    // A weight-only day goes; a day with a tape measure keeps its row without the weight.
+    await agent.delete("/api/checkins/2026-01-05").expect(204);
+    await agent.delete("/api/checkins/2026-01-12").expect(204);
+    const rows = await t.prisma.bodyMetric.findMany({
+      where: { userId, date: { in: [new Date("2026-01-05"), new Date("2026-01-12")] } },
+    });
+    expect(rows).toEqual([
+      expect.objectContaining({
+        weightKg: null,
+        waistCm: 90,
+        neckCm: 38,
+        bodyFatPct: expect.any(Number),
+      }),
+    ]);
+    const list = await agent.get("/api/checkins").expect(200);
+    expect(list.body.metrics.map((m: { date: string }) => m.date.slice(0, 10))).not.toContain(
+      "2026-01-12",
+    );
+    await agent.delete("/api/checkins/2026-01-12").expect(404);
+  });
+
   it("builds the Today dashboard with a streak, photo links and no raw AI output", async () => {
     const { userId, agent } = await t.signIn();
     const plan = await onboard(agent);
@@ -106,7 +163,9 @@ describe("progress", () => {
       status: "CONFIRMED",
       totalKcal: 500,
       createdAt: expect.any(String),
-      items: [{ name: "dal tadka" }],
+      items: [
+        { name: "dal tadka", quantity: 1, unit: "katori", grams: 150, kcal: 500, isLiquid: false },
+      ],
       photoUrl: expect.stringContaining(`meals/${userId}/p.jpg`),
     });
 

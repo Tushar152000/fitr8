@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { haptic } from "@/lib/haptics";
 
 /** One short message at a time ("Welcome to Premium"), shown by <Toast /> in the root layout. */
 type ToastState = { id: number; message: string } | null;
@@ -12,7 +13,9 @@ function set(next: ToastState) {
   for (const l of listeners) l();
 }
 
-export function showToast(message: string, ms = 3000) {
+/** A toast confirms something done, so it taps "success"; pass `quiet` for neutral or failure notes. */
+export function showToast(message: string, ms = 3000, quiet = false) {
+  if (!quiet) haptic.success();
   if (timer) clearTimeout(timer);
   set({ id: Date.now(), message });
   timer = setTimeout(() => set(null), ms);

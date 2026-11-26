@@ -8,7 +8,7 @@ export function CoachTips({ tips }: { tips: string[] }) {
   const c = useColors();
   const styles = useStyles();
   return (
-    <Section title="Coach tips" gap={8}>
+    <Section title="Coach tips">
       {tips.map((t) => (
         <View key={t} style={styles.tip}>
           <Lightbulb size={16} color={c.carbsText} style={{ marginTop: 2 }} />

@@ -22,6 +22,42 @@ export function recentDays(now = new Date()): string[] {
   );
 }
 
+const ymdRe = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Whole days from `ymd` back to today (0 = today, negative = future). Local calendar days. */
+export function daysAgo(ymd: string, now = new Date()): number {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const then = new Date(y, m - 1, d);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((today.getTime() - then.getTime()) / 86_400_000);
+}
+
+/**
+ * A past day Home / Meals can show (any day before today, e.g. picked in the calendar), or null =
+ * today. Unlike `dayFromParam` this isn't limited to the logging window: older days are read-only.
+ */
+export function viewableDay(value: string | null | undefined, now = new Date()): string | null {
+  if (!value || !ymdRe.test(value)) return null;
+  return daysAgo(value, now) > 0 ? value : null;
+}
+
+/**
+ * The days the Home / Meals pager steps through, today first: the logging window (a week back),
+ * stretched back to `viewDay` when the calendar jumped further.
+ */
+export function pagerDays(viewDay: string | null, now = new Date()): string[] {
+  const back = Math.max(MEAL_BACKFILL_DAYS, viewDay ? daysAgo(viewDay, now) : 0);
+  return Array.from({ length: back + 1 }, (_, i) =>
+    localYmd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)),
+  );
+}
+
+/** Meals can still be added to this day (today or up to MEAL_BACKFILL_DAYS back; the API's rule). */
+export function canLogOn(ymd: string, now = new Date()): boolean {
+  const back = daysAgo(ymd, now);
+  return back >= 0 && back <= MEAL_BACKFILL_DAYS;
+}
+
 /** "Today", "Yesterday", else "Sat 15 Nov". Long form adds the weekday in full. */
 export function dayLabel(ymd: string, now = new Date()): string {
   const [today, yesterday] = recentDays(now);

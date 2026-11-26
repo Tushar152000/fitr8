@@ -9,6 +9,7 @@ import {
   type GoalPlan,
 } from "@fitr8/domain/nutrition";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
+import { HAS_WEIGHT, weighedOne } from "../progress/weigh-ins.js";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -22,7 +23,10 @@ export class TargetsService {
   async computePlan(userId: string, effectiveFrom?: Date) {
     const [profile, metric, goal] = await Promise.all([
       this.prisma.profile.findUnique({ where: { userId } }),
-      this.prisma.bodyMetric.findFirst({ where: { userId }, orderBy: { date: "desc" } }),
+      // The newest weigh-in; measurement-only rows (no weight) don't count.
+      this.prisma.bodyMetric
+        .findFirst({ where: { userId, ...HAS_WEIGHT }, orderBy: { date: "desc" } })
+        .then(weighedOne),
       this.prisma.goal.findFirst({
         where: { userId, status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
@@ -90,7 +94,7 @@ export class TargetsService {
     const [profile, metric] = await Promise.all([
       this.prisma.profile.findUnique({ where: { userId }, select: { heightCm: true } }),
       this.prisma.bodyMetric.findFirst({
-        where: { userId, ...(onOrBefore && { date: { lte: onOrBefore } }) },
+        where: { userId, ...HAS_WEIGHT, ...(onOrBefore && { date: { lte: onOrBefore } }) },
         orderBy: { date: "desc" },
         select: { weightKg: true, date: true },
       }),
@@ -108,6 +112,27 @@ export class TargetsService {
       where: { userId, effectiveFrom: { lte: onDate } },
       orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }],
     });
+  }
+
+  /**
+   * For measuring many days at once: `kcalOn(date)` gives the same target kcal as `targetForDay`
+   * (in effect that day, else the first plan; null with no plan), and `firstPlanAt` when the first
+   * plan started (an instant), or null.
+   */
+  async kcalForDays(userId: string) {
+    const rows = await this.prisma.dailyTarget.findMany({
+      where: { userId },
+      orderBy: [{ effectiveFrom: "asc" }, { createdAt: "asc" }],
+      select: { effectiveFrom: true, kcal: true },
+    });
+    return {
+      firstPlanAt: rows[0]?.effectiveFrom ?? null,
+      kcalOn: (date: Date): number | null => {
+        let kcal = rows[0]?.kcal ?? null;
+        for (const t of rows) if (t.effectiveFrom.getTime() <= date.getTime()) kcal = t.kcal;
+        return kcal;
+      },
+    };
   }
 
   /**

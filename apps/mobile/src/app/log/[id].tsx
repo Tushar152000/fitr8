@@ -32,6 +32,7 @@ import { useColors } from "@/lib/theme";
 import { useHistory } from "@/lib/use-history";
 import { useScanLimit } from "@/lib/use-scan-limit";
 import { showDay } from "@/lib/view-day";
+import { haptic } from "@/lib/haptics";
 
 /** GET /api/meals/:id, with the one hint the screen reads from the model's raw output. */
 type MealDto = Omit<MealDetailDto, "aiRaw"> & { aiRaw: { hiddenFatLikely?: boolean } | null };
@@ -158,6 +159,7 @@ function Editor({
       });
       // Editing an already-saved meal is not a new log.
       if (meal.status !== "CONFIRMED") track("meal_logged", { method: meal.source === "PHOTO" ? "photo" : "type" });
+      haptic.success();
       refreshDay();
       backToDay();
     } catch (e) {

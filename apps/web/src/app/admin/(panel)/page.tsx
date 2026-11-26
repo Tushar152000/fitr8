@@ -1,6 +1,6 @@
-import { ArrowRight, Newspaper, Users } from "lucide-react";
+import { ArrowRight, MessageSquareText, Newspaper, Users } from "lucide-react";
 import Link from "next/link";
-import type { BlogStatsDto, StaffMemberDto } from "@fitr8/contracts";
+import type { AdminFeedbackPageDto, BlogStatsDto, StaffMemberDto } from "@fitr8/contracts";
 import { STAFF_ROLE_LABELS } from "@fitr8/domain/staff";
 import { PageHead } from "@/components/admin/ui";
 import { adminServerApi, blogServerApi, requireStaff } from "@/lib/admin/server";
@@ -10,9 +10,12 @@ export const metadata = { title: "Home" };
 /** The admin's home: one card per section (the blog first) and the team. */
 export default async function AdminHome() {
   const me = await requireStaff();
-  const [blog, staff] = await Promise.all([
+  const [blog, staff, feedback] = await Promise.all([
     blogServerApi<BlogStatsDto>("/stats"),
     adminServerApi<StaffMemberDto[]>("/staff"),
+    me.sections.feedback.read
+      ? adminServerApi<AdminFeedbackPageDto>("/feedback?page=1")
+      : Promise.resolve(null),
   ]);
   const invited = staff.filter((s) => !s.joined).length;
 
@@ -34,6 +37,15 @@ export default async function AdminHome() {
             { label: "Drafts", value: blog.counts.DRAFT },
           ]}
         />
+        {feedback && (
+          <SectionCard
+            href="/admin/feedback"
+            icon={<MessageSquareText className="size-6" aria-hidden />}
+            title="Feedback"
+            body="What people send from the app's Help & support screen."
+            stats={[{ label: "Messages", value: feedback.total }]}
+          />
+        )}
         <SectionCard
           href="/admin/team"
           icon={<Users className="size-6" aria-hidden />}

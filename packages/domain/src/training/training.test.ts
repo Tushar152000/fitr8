@@ -4,6 +4,8 @@ import {
   buildWeek,
   caloriePhase,
   doseFor,
+  phaseCardio,
+  restDayCardio,
   EXERCISE_BY_SLUG,
   exercisesFor,
   fuelStatus,
@@ -355,5 +357,32 @@ describe("fuel follows training (§8) and check-in hooks (§9)", () => {
     });
     expect(actions.map((a) => a.type)).toEqual(["fewer_days", "food_or_steps", "deload_next_week"]);
     expect(actions[1].message).toMatch(/not add training volume/);
+  });
+});
+
+describe("rest-day cardio (§2)", () => {
+  it("gives the deficit prescription as fields and keeps the sentence", () => {
+    expect(restDayCardio("deficit")).toEqual({
+      activity: "Zone 2 walk or cycle",
+      minutes: { min: 20, max: 25 },
+      daysPerWeek: { min: 2, max: 3 },
+      steps: { min: 8000, max: 10000 },
+      noHiit: true,
+    });
+    expect(phaseCardio("deficit")).toBe(
+      "Zone 2 walk or cycle 20–25 min on 2–3 rest days, plus 8–10k steps. No extra HIIT.",
+    );
+    expect(doseFor("deficit", 0.19, "INTERMEDIATE").cardio).toBe(phaseCardio("deficit"));
+  });
+
+  it("is 20 min twice a week outside a deficit", () => {
+    for (const phase of ["maintenance", "surplus"] as const) {
+      expect(restDayCardio(phase)).toMatchObject({
+        minutes: { min: 20, max: 20 },
+        steps: null,
+        noHiit: false,
+      });
+      expect(phaseCardio(phase)).toBe("Zone 2 walk or cycle 20 min, twice a week.");
+    }
   });
 });

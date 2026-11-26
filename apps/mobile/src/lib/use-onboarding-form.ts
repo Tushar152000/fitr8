@@ -19,6 +19,19 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export type OpenParts = { body: boolean; food: boolean };
 
 /**
+ * Where an edit opens (`/onboarding?step=goal` or `?step=about&part=body|food`, from the Goal
+ * page's rows). Only for returning users; back from that step leaves the flow.
+ */
+export type EditEntry = { step: "goal" } | { step: "about"; part: keyof OpenParts };
+
+/** Reads the `step` / `part` route params; anything else is the default (goal step). */
+export function editEntry(step: unknown, part: unknown): EditEntry | undefined {
+  if (step === "goal") return { step: "goal" };
+  if (step === "about") return { step: "about", part: part === "food" ? "food" : "body" };
+  return undefined;
+}
+
+/**
  * State and actions of the onboarding form: the step, the draft and your details, errors, the
  * folding parts of "About you", and Continue (validate, phone check, then save on the last step).
  */
@@ -27,15 +40,21 @@ export function useOnboardingForm({
   initialPerson,
   returning,
   scroll,
+  entry,
 }: {
   initial: Partial<OnboardingDraft>;
   initialPerson: PersonDetails;
   returning: boolean;
+  /** Returning users only: open at this step (and part of "About you"). */
+  entry?: EditEntry;
   /** The form's scroll view, sent back to the top on a new step. */
   scroll: RefObject<ScrollView | null>;
 }) {
   const firstStep = returning ? 1 : 0;
-  const [step, setStep] = useState(firstStep);
+  const start = returning && entry ? entry : undefined;
+  /** The step the flow was opened at: back from it leaves. */
+  const entryStep = start?.step === "about" ? LAST_STEP : firstStep;
+  const [step, setStep] = useState(entryStep);
   const [draft, setDraft] = useState<OnboardingDraft>(() => ({ ...emptyDraft(), ...initial }));
   const [person, setPersonState] = useState<PersonDetails>(initialPerson);
   const [errors, setErrors] = useState<DraftErrors & PersonProblems>({});
@@ -55,14 +74,16 @@ export function useOnboardingForm({
 
   const back = () => {
     setErrors({});
-    if (step > firstStep) setStep(step - 1);
+    if (step > entryStep) setStep(step - 1);
     // Opened by replace (welcome back → "Set a new goal") there's nothing behind it.
     else if (router.canGoBack()) router.back();
     else router.replace("/today");
   };
 
-  // "About you" folds into two parts; "Your body" starts open.
-  const [openPart, setOpenPartNow] = useState<OpenParts>({ body: true, food: false });
+  // "About you" folds into two parts; "Your body" starts open (or the part an edit asked for).
+  const [openPart, setOpenPartNow] = useState<OpenParts>(
+    start?.step === "about" && start.part === "food" ? { body: false, food: true } : { body: true, food: false },
+  );
   /** Folding animates: the next layout change eases instead of jumping. */
   const setOpenPart: typeof setOpenPartNow = (next) => {
     LayoutAnimation.configureNext(LayoutAnimation.create(260, "easeInEaseOut", "opacity"));
@@ -162,6 +183,7 @@ export function useOnboardingForm({
 
   return {
     firstStep,
+    entryStep,
     step,
     draft,
     set,

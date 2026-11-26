@@ -101,49 +101,53 @@ enum AiCallType {
 // ---------- Identity & auth (users module owns `users`; auth module owns the rest) ----------
 
 model User {
-  id            String    @id @default(cuid())
+  id                 String    @id @default(cuid())
   /// First (preferred) name; Google/Apple fill it with the full name until onboarding step 1.
-  name          String?
-  lastName      String?
+  name               String?
+  lastName           String?
   /// E.164 ("+919876543210"), optional, from onboarding step 1. One account per number.
-  phone         String?   @unique
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
+  phone              String?   @unique
+  email              String?   @unique
+  emailVerified      DateTime?
+  /// Sign-in provider's picture URL (Google), public.
+  image              String?
+  /// Profile photo the user uploaded (private storage key avatars/<userId>/…); shown instead of `image`.
+  imageKey           String?
   /// Last app use (GET /me, throttled to hourly). 90+ days old → "welcome back" check-in (@fitr8/domain/activity).
-  lastActiveAt  DateTime?
+  lastActiveAt       DateTime?
   /// When the one-time welcome email (sent on account creation) went out. Set before sending, cleared if the send fails.
   welcomeEmailSentAt DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  identities    AuthIdentity[]
-  sessions      Session[]
-  authCodes     AuthCode[]
-  authEvents    AuthEvent[]
-  profile       Profile?
-  goals         Goal[]
-  dailyTargets  DailyTarget[]
-  bodyMetrics   BodyMetric[]
-  mealLogs      MealLog[]
-  workoutPlans  WorkoutPlan[]
-  workoutLogs   WorkoutLog[]
-  checkins      Checkin[]
-  aiCalls       AiCall[]
-  labelScans    LabelScan[]
-  waterLogs     WaterLog[]
-  coachChats    CoachConversation[]
-  coachMemories CoachMemory[]
-  entitlement   Entitlement?
-  savedMeals    SavedMeal[]
-  reminders     Reminder[]
-  staffMember   StaffMember?
+  identities        AuthIdentity[]
+  sessions          Session[]
+  authCodes         AuthCode[]
+  authEvents        AuthEvent[]
+  profile           Profile?
+  goals             Goal[]
+  dailyTargets      DailyTarget[]
+  bodyMetrics       BodyMetric[]
+  mealLogs          MealLog[]
+  workoutPlans      WorkoutPlan[]
+  workoutLogs       WorkoutLog[]
+  checkins          Checkin[]
+  aiCalls           AiCall[]
+  labelScans        LabelScan[]
+  waterLogs         WaterLog[]
+  coachChats        CoachConversation[]
+  coachMemories     CoachMemory[]
+  entitlement       Entitlement?
+  savedMeals        SavedMeal[]
+  reminders         Reminder[]
+  staffMember       StaffMember?
   trainingProfile   TrainingProfile?
   trainingWeeks     TrainingWeek[]
   trainingLogs      TrainingLog[]
   healthConnections HealthConnection[]
   healthSamples     HealthSample[]
   healthDaily       HealthDaily[]
+  feedback          Feedback[]
 
   @@map("users")
 }
@@ -270,11 +274,17 @@ model Profile {
   /// What the condition is, in the user's words (optional; kept only while medicalFlag is on).
   medicalNote         String?
   timezone            String        @default("Asia/Kolkata")
-  /// Design 13 reminder switches (2 pm lunch, 9 pm dinner). Stored now; sending needs web push.
+  /// Legacy design-13 switches (2 pm lunch, 9 pm dinner), never sent. Kept for app builds before
+  /// remindMeals; new clients use remindMeals.
   remindLunch         Boolean       @default(false)
   remindDinner        Boolean       @default(false)
   /// Water reminders every 2 h, 9 am–9 pm; the app schedules them as local notifications.
   remindWater         Boolean       @default(false)
+  /// Profile / Reminders "Meal reminders" (8:00, 13:00, 20:00; times in @fitr8/contracts
+  /// REMINDER_SCHEDULE). Replaces remindLunch/remindDinner, which stay for older app builds.
+  remindMeals         Boolean       @default(false)
+  /// Profile / Reminders "Weekly weigh-in" (Mondays 8:00). The app schedules it locally.
+  remindWeighIn       Boolean       @default(false)
   onboardedAt         DateTime?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -330,11 +340,17 @@ model BodyMetric {
   id         String   @id @default(cuid())
   userId     String
   date       DateTime @db.Date
-  weightKg   Float
+  /// Null on a measurement-only row (Profile / Measurements without a weigh-in). Weight readers
+  /// use the newest row that has one.
+  weightKg   Float?
   waistCm    Float?
   neckCm     Float?
   hipCm      Float?
   bodyFatPct Float?
+  /// Chest circumference (Profile / Measurements).
+  chestCm    Float?
+  /// Upper-arm circumference (Profile / Measurements "Arms").
+  armCm      Float?
   createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -392,6 +408,25 @@ model AccountDeletionFeedback {
 
   @@index([createdAt])
   @@map("account_deletion_feedback")
+}
+
+/// In-app "Send feedback" (Help & support). Read by staff at /admin/feedback (docs/ADMIN.md).
+model Feedback {
+  id         String   @id @default(cuid())
+  userId     String
+  /// Optional short topic the app picked or the user chose.
+  topic      String?  @db.VarChar(40)
+  message    String   @db.VarChar(2000)
+  /// App version and platform ("ios" | "android" | "web") the feedback was sent from.
+  appVersion String?  @db.VarChar(32)
+  platform   String?  @db.VarChar(16)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("feedback")
 }
 
 /// Barcodes Open Food Facts didn't know, cached for 24 h so we stay under its rate limit.

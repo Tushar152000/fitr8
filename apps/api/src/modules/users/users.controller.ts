@@ -1,10 +1,15 @@
-import { Controller, Delete, Get, HttpCode, Patch, Post, Res } from "@nestjs/common";
+import { Controller, Delete, Get, HttpCode, Patch, Post, Put, Res } from "@nestjs/common";
 import type { Response } from "express";
 import {
   DeleteAccountSchema,
   type DeleteAccountInput,
   PhoneCheckQuerySchema,
   PreferredNameSchema,
+  ProfilePhotoSchema,
+  type ProfilePhotoInput,
+  UploadUrlSchema,
+  type UploadUrlDto,
+  type UploadUrlInput,
   type PhoneCheckDto,
   type PhoneCheckQuery,
   RemindersSchema,
@@ -62,6 +67,31 @@ export class UsersController {
     return wire(this.users.setName(userId, input));
   }
 
+  /** Profile photo step 1: a signed URL to PUT the (compressed) image to. */
+  @Post("profile/photo/upload-url")
+  @HttpCode(200)
+  photoUploadUrl(
+    @UserId() userId: string,
+    @ZodBody(UploadUrlSchema) input: UploadUrlInput,
+  ): Promise<UploadUrlDto> {
+    return this.users.photoUploadUrl(userId, input);
+  }
+
+  /** Profile photo step 2: show the uploaded photo (replaces the previous one). */
+  @Put("profile/photo")
+  setPhoto(
+    @UserId() userId: string,
+    @ZodBody(ProfilePhotoSchema) { key }: ProfilePhotoInput,
+  ): Promise<MeDto> {
+    return wire(this.users.setPhoto(userId, key));
+  }
+
+  /** Remove the uploaded photo (back to the sign-in picture or the initial). */
+  @Delete("profile/photo")
+  removePhoto(@UserId() userId: string): Promise<MeDto> {
+    return wire(this.users.setPhoto(userId, null));
+  }
+
   /** Onboarding step 1: warn before Continue when another account has the number. */
   @Get("profile/phone-check")
   async phoneCheck(
@@ -71,7 +101,7 @@ export class UsersController {
     return { phone, available: await this.users.phoneAvailable(userId, phone) };
   }
 
-  /** Save the design-13 reminder switches (lunch, dinner, water). */
+  /** Profile / Reminders switches (meals, water, weekly weigh-in; legacy lunch / dinner). */
   @Patch("profile/reminders")
   reminders(
     @UserId() userId: string,

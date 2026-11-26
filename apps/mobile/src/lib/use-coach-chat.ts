@@ -1,4 +1,5 @@
 import type { CoachChatInput, CoachConversationView, CoachMessageView, CoachStreamEvent } from "@fitr8/contracts";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiStream, errorMessage } from "@/lib/api";
 import { track } from "@/lib/analytics";
@@ -39,6 +40,7 @@ function upsertTool(tools: ToolChip[], e: ToolEvent): ToolChip[] {
 /**
  * The coach conversation: reopens the last thread, streams replies over SSE (text and tool chips),
  * and keeps the draft. When `locked` (free plan), sending keeps the draft and opens Premium.
+ * `/coach?ask=…` opens with that question in the composer (not sent), e.g. the Meals suggestion card.
  * Leaving the screen stops the reply (the server aborts the model stream on disconnect).
  */
 export function useCoachChat({ locked }: { locked: boolean }) {
@@ -47,7 +49,8 @@ export function useCoachChat({ locked }: { locked: boolean }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState("");
   const [reloads, setReloads] = useState(0);
-  const [draft, setDraft] = useState("");
+  const { ask } = useLocalSearchParams<{ ask?: string }>();
+  const [draft, setDraft] = useState(() => (typeof ask === "string" ? ask.slice(0, COACH_MAX_LENGTH) : ""));
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState<CoachProblem | null>(null);
   const streamRef = useRef<AbortController | null>(null);

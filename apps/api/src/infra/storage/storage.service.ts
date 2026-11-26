@@ -58,12 +58,24 @@ export class StorageService implements OnApplicationBootstrap {
     return `meals/${userId}/${randomUUID()}.${ext}`;
   }
 
+  /** Private profile photo key, e.g. avatars/<userId>/<uuid>.jpg (a new key per upload). */
+  avatarKey(userId: string, contentType: string): string {
+    const ext = contentType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
+    return `avatars/${userId}/${randomUUID()}.${ext}`;
+  }
+
   /**
-   * Deletes every photo a user uploaded (meals/<userId>/…), page by page, 1,000 keys per request.
-   * Returns how many objects were removed.
+   * Deletes every photo a user uploaded (meals/<userId>/… and avatars/<userId>/…), page by page,
+   * 1,000 keys per request. Returns how many objects were removed.
    */
   async deleteUserPhotos(userId: string): Promise<number> {
-    const prefix = `meals/${userId}/`;
+    let removed = 0;
+    for (const prefix of [`meals/${userId}/`, `avatars/${userId}/`])
+      removed += await this.deletePrefix(prefix);
+    return removed;
+  }
+
+  private async deletePrefix(prefix: string): Promise<number> {
     let removed = 0;
     let token: string | undefined;
     do {

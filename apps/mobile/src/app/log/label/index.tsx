@@ -1,7 +1,7 @@
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft, Images } from "lucide-react-native";
+import { ChevronLeft, Image as ImageIcon } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,9 +14,9 @@ import { api, errorMessage } from "@/lib/api";
 import { choiceParams, dayFromParam, mealFromParam } from "@/lib/meal-param";
 import { compressPhoto, uploadPhoto } from "@/lib/photo";
 import { handlePremiumError } from "@/lib/premium";
-import { radius } from "@/lib/theme";
 import { useCameraAutoPermission } from "@/lib/use-camera-auto-permission";
 import { useScanLimit } from "@/lib/use-scan-limit";
+import { haptic } from "@/lib/haptics";
 
 /** Labels have small print, so keep more pixels than a plate photo. */
 const LABEL_MAX_SIDE = 1600;
@@ -55,6 +55,7 @@ export default function LabelCamera() {
   async function shoot() {
     if (!camera.current || !ready) return;
     try {
+      haptic.press(); // the shutter
       const photo = await camera.current.takePictureAsync({ quality: 0.95 });
       if (photo) await submit(photo);
     } catch {
@@ -73,7 +74,7 @@ export default function LabelCamera() {
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
       <View style={styles.top}>
         <CameraTopButton icon={ChevronLeft} label="Back" onPress={() => router.back()} />
-        <Text weight={600} color={cam.white}>
+        <Text variant="heading2" color={cam.white}>
           Photograph the label
         </Text>
         {/* Balances the back button so the title stays centred. */}
@@ -93,7 +94,7 @@ export default function LabelCamera() {
         {/* Tall frame for the nutrition table. */}
         <View style={[styles.frame, { pointerEvents: "none" }]} />
         <View style={[styles.hint, { pointerEvents: "none" }]}>
-          <Text weight={600} size={13} color={cam.white}>
+          <Text variant="labelMedium" color={cam.white}>
             Whole table in frame · per 100 g visible
           </Text>
         </View>
@@ -103,14 +104,14 @@ export default function LabelCamera() {
       {error && <CameraError message={error} />}
 
       <View style={[styles.controls, { paddingBottom: Math.max(28, insets.bottom + 8) }]}>
-        <CameraSideButton icon={Images} accessibilityLabel="Pick from gallery" onPress={pick} disabled={busy} />
+        <CameraSideButton icon={ImageIcon} accessibilityLabel="Pick from gallery" onPress={pick} disabled={busy} />
         <Shutter
           accessibilityLabel="Take photo of label"
           onPress={shoot}
           disabled={busy || !granted || !ready}
           dimmed={busy || !granted}
         />
-        <View style={{ width: 48 }} />
+        <View style={{ width: 56 }} />
       </View>
 
       <AiLimitSheet {...limit.sheet} params={choice} />
@@ -120,15 +121,15 @@ export default function LabelCamera() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cam.panel },
-  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12 },
+  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   spacer: { width: 44, height: 44 },
   viewfinder: {
     flex: 1,
     marginHorizontal: 20,
     marginTop: 16,
-    borderRadius: radius.card,
+    borderRadius: 28,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#1c1f22",
   },
   frame: {
     position: "absolute",
@@ -143,12 +144,12 @@ const styles = StyleSheet.create({
   },
   hint: {
     position: "absolute",
-    bottom: 16,
+    bottom: 24,
     alignSelf: "center",
-    borderRadius: 999,
-    backgroundColor: "rgba(23,24,28,0.75)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   controls: {
     flexDirection: "row",

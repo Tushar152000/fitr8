@@ -72,10 +72,51 @@ export function doseFor(phase: Phase, deficit: number, experience: Experience): 
   };
 }
 
-function phaseCardio(phase: Phase): string {
+/**
+ * Spec §2 cardio on rest days, as fields (the Workout tab's "Today's recovery" card shows them as
+ * chips). In a deficit: 20–25 min on 2–3 rest days plus 8–10k steps and no extra HIIT, so hard
+ * cardio doesn't eat into recovery; otherwise 20 min twice a week.
+ */
+export interface RestDayCardio {
+  activity: string;
+  minutes: { min: number; max: number };
+  /** Rest days a week to do it on. */
+  daysPerWeek: { min: number; max: number };
+  /** Daily steps to aim for, or null when the plan doesn't set any. */
+  steps: { min: number; max: number } | null;
+  /** Keep hard intervals out (deficit). */
+  noHiit: boolean;
+}
+
+export function restDayCardio(phase: Phase): RestDayCardio {
   return phase === "deficit"
-    ? "Zone 2 walk or cycle 20–25 min on 2–3 rest days, plus 8–10k steps. No extra HIIT."
-    : "Zone 2 walk or cycle 20 min, twice a week.";
+    ? {
+        activity: "Zone 2 walk or cycle",
+        minutes: { min: 20, max: 25 },
+        daysPerWeek: { min: 2, max: 3 },
+        steps: { min: 8000, max: 10000 },
+        noHiit: true,
+      }
+    : {
+        activity: "Zone 2 walk or cycle",
+        minutes: { min: 20, max: 20 },
+        daysPerWeek: { min: 2, max: 2 },
+        steps: null,
+        noHiit: false,
+      };
+}
+
+const range = (r: { min: number; max: number }, unit = "") =>
+  r.min === r.max ? `${r.min}${unit}` : `${r.min}–${r.max}${unit}`;
+
+/** The same advice as one sentence (`TodayWorkoutDto.cardio`, kept for shipped app builds). */
+export function phaseCardio(phase: Phase): string {
+  const c = restDayCardio(phase);
+  const minutes = `${c.activity} ${range(c.minutes)} min`;
+  if (!c.steps)
+    return `${minutes}, ${c.daysPerWeek.max === 2 ? "twice" : range(c.daysPerWeek)} a week.`;
+  const steps = range({ min: c.steps.min / 1000, max: c.steps.max / 1000 }, "k");
+  return `${minutes} on ${range(c.daysPerWeek)} rest days, plus ${steps} steps.${c.noHiit ? " No extra HIIT." : ""}`;
 }
 
 /** Deload on every Nth week of the plan (week index is 0-based). */

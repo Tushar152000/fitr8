@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { localDate, parseDateOnly } from "@fitr8/domain/dates";
 import { sumMacros } from "@fitr8/domain/nutrition";
+import { currentStreak, streakDetails } from "@fitr8/domain/progress";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { StorageService } from "../../infra/storage/storage.service.js";
 import { TargetsService } from "../plan/targets.service.js";
 import { UsersService } from "../users/users.service.js";
+import { HistoryService } from "./history.service.js";
 
 const DAY_MS = 86_400_000;
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 /** The meal columns a day needs: the list (title, photo, kcal) and the totals. Never the model's raw output. */
 const DAY_MEAL_SELECT = {
@@ -33,6 +36,7 @@ const DAY_MEAL_SELECT = {
       proteinG: true,
       carbsG: true,
       fatG: true,
+      isLiquid: true,
     },
   },
 } as const;
@@ -45,6 +49,7 @@ export class DashboardService {
     private readonly targets: TargetsService,
     private readonly storage: StorageService,
     private readonly users: UsersService,
+    private readonly history: HistoryService,
   ) {}
 
   /**
@@ -63,7 +68,15 @@ export class DashboardService {
         status: m.status,
         totalKcal: m.totalKcal,
         createdAt: m.createdAt,
-        items: m.items.map((i) => ({ name: i.name })),
+        // The Meals tab lists each item: "Masala oats · 1 bowl · 240 g · 320 kcal".
+        items: m.items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+          grams: i.grams,
+          kcal: Math.round(i.kcal),
+          isLiquid: i.isLiquid,
+        })),
         photoUrl: await this.storage.presignReadOrNull(m.photoKey, 3600),
       })),
     );
@@ -136,27 +149,33 @@ export class DashboardService {
 
   /**
    * Consecutive days with at least one confirmed meal, ending today — or yesterday, so the
-   * streak doesn't read 0 before breakfast is logged.
+   * streak doesn't read 0 before breakfast is logged (rule: `@fitr8/domain/progress` currentStreak).
    */
   async loggingStreak(userId: string, today: Date): Promise<number> {
+    const days = await this.loggedDays(userId, new Date(today.getTime() - 365 * DAY_MS), today);
+    return currentStreak(new Set(days), ymd(today));
+  }
+
+  /** GET /streak: current and best streak, whether today is logged, and this Mon–Sun week (days before the user started = "before"). */
+  async streak(userId: string) {
+    const timezone = await this.users.timezone(userId);
+    const today = localDate(timezone);
+    const [days, start] = await Promise.all([
+      this.loggedDays(userId, undefined, today),
+      this.history.startDate(userId, timezone),
+    ]);
+    return streakDetails(days, ymd(today), start);
+  }
+
+  /** Distinct local dates (YYYY-MM-DD) with at least one confirmed meal, within [from, to]. */
+  async loggedDays(userId: string, from: Date | undefined, to: Date): Promise<string[]> {
     const rows = await this.prisma.mealLog.findMany({
-      where: {
-        userId,
-        status: "CONFIRMED",
-        date: { lte: today, gte: new Date(today.getTime() - 365 * DAY_MS) },
-      },
+      where: { userId, status: "CONFIRMED", date: { lte: to, ...(from && { gte: from }) } },
       select: { date: true },
       distinct: ["date"],
       orderBy: { date: "desc" },
     });
-    const days = new Set(rows.map((r) => r.date.getTime()));
-    let cursor = days.has(today.getTime()) ? today.getTime() : today.getTime() - DAY_MS;
-    let streak = 0;
-    while (days.has(cursor)) {
-      streak++;
-      cursor -= DAY_MS;
-    }
-    return streak;
+    return rows.map((r) => ymd(r.date));
   }
 }
 

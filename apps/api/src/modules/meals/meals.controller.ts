@@ -4,6 +4,7 @@ import {
   ConfirmMealSchema,
   CreateMealSchema,
   LogItemsSchema,
+  MealSuggestionQuerySchema,
   ParseItemsSchema,
   QuickAddSchema,
   RecheckSchema,
@@ -17,6 +18,8 @@ import {
   type LogItemsInput,
   type MealDetailDto,
   type MealListDto,
+  type MealSuggestionDto,
+  type MealSuggestionQuery,
   type ParsedItemsDto,
   type ParseItemsInput,
   type QuickAddInput,
@@ -30,7 +33,8 @@ import {
 } from "@fitr8/contracts";
 import { UserId } from "../../common/auth/decorators.js";
 import { wire } from "../../common/http/wire.js";
-import { ZodBody } from "../../common/http/zod.js";
+import { ZodBody, ZodQuery } from "../../common/http/zod.js";
+import { MealSuggestionService } from "./meal-suggestion.service.js";
 import { MealsService } from "./meals.service.js";
 import { ScanQuotaService } from "./scan-quota.service.js";
 import { UsualsService } from "./usuals.service.js";
@@ -42,6 +46,7 @@ export class MealsController {
     private readonly meals: MealsService,
     private readonly usuals: UsualsService,
     private readonly quota: ScanQuotaService,
+    private readonly suggestions: MealSuggestionService,
   ) {}
 
   /** Photo scans used today, the daily limit and when it resets; meals typed today and this month. */
@@ -81,6 +86,18 @@ export class MealsController {
   @Get("meals/usuals")
   async usualMeals(@UserId() userId: string): Promise<UsualsDto> {
     return { usuals: await this.usuals.getUsuals(userId) };
+  }
+
+  /**
+   * Meals "Coach suggests" card: the saved meal or recently logged meal/food that best fits what's
+   * left of the day for `mealType` (rule-based, no AI). `{suggestion: null}` when nothing fits.
+   */
+  @Get("meals/suggestion")
+  suggestion(
+    @UserId() userId: string,
+    @ZodQuery(MealSuggestionQuerySchema) { mealType, date }: MealSuggestionQuery,
+  ): Promise<MealSuggestionDto> {
+    return this.suggestions.suggest(userId, mealType, date);
   }
 
   /** Describe something to add to a meal ("2 sachets sugar") and get priced items back. Nothing is saved. */
