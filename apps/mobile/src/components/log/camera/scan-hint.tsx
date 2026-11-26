@@ -49,7 +49,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 100,
     backgroundColor: "rgba(0,0,0,0.5)",
-    backdropFilter: "blur(6px)",
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
