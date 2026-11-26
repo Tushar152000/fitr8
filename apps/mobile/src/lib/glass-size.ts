@@ -59,7 +59,7 @@ export function setGlassMl(ml: number) {
   }
 }
 
-/** Most glasses the Home hydration card's row can show. */
+/** Most glasses the Home hydration card's row can show, the "+" glass included. */
 export const ROW_SLOTS = 8;
 
 export type GlassSlot = {
@@ -70,63 +70,57 @@ export type GlassSlot = {
 };
 
 export type GlassRow = {
+  /** The row's glasses (up to 7; the "+" glass is separate). */
   glasses: GlassSlot[];
-  /** Index of the glass the next tap fills, or -1 when the target is reached. */
+  /** Index of the glass the next tap fills, or -1 when every glass in the row is full. */
   next: number;
-  /** Index of the glass that takes the last glass back off (undo), or -1. */
-  undoAt: number;
-  /**
-   * Stacked mode only (target > 8 glasses): how many glasses the second-last glass stands for
-   * ("×2", "×3" …); 0 when nothing is stacked or in a plain row.
-   */
-  stack: number;
-  /** True when the last glass is the always-empty "add" glass (target > 8 glasses). */
-  stacked: boolean;
+  /** Index of the last glass with water (a tap on a full glass takes the last glass back), or -1. */
+  last: number;
+  /** True once every glass in the row is full: the "+" glass shows to add more. */
+  plus: boolean;
+  /** Glasses drunk past the row, shown under the "+" glass as "×n" (whole glasses). */
+  extra: number;
+  /** Water the row itself holds, ml: a tap on a row glass never adds past it. */
+  rowMl: number;
 };
 
 const EPS = 1e-6;
+const ROW_GLASSES = ROW_SLOTS - 1; // one slot is kept for the "+" glass
 
 /**
- * The glass row on the card (user decisions 2026-11-26). One tap is always one glass.
- * - Target of up to 8 glasses: exactly that many glasses, e.g. 1.9 L / 250 ml = 7.6 → 7 glasses
- *   and a last, smaller glass worth 0.6.
- * - More than 8: 8 glasses. Glasses 1–7 fill one per tap; the 8th stays empty as the "add" glass.
- *   From the 8th glass on, a tap fills the last glass, which then empties into the 7th: the 7th
- *   shows "×2", "×3" … (the glasses it stands for). Reaching the target leaves the last glass full.
- * Water that isn't a whole glass shows as a part-filled glass.
+ * The glass row on the card (user decisions 2026-11-26):
+ * - The target is `targetMl / glass` glasses, e.g. 1.9 L / 250 ml = 7.6. The row shows them (up to
+ *   7), the last one smaller when the target isn't whole glasses. All start empty and fill in order,
+ *   one per tap, whichever glass is tapped.
+ * - Once every glass in the row is full, an empty "+" glass shows at the end. Each tap on it adds a
+ *   glass and the count under it goes ×1, ×2, ×3 …; the "+" glass itself never fills.
+ * - A tap on any full glass takes the last glass back (the ×n count first).
+ * A target over 7 glasses keeps 7 in the row; the rest are counted on the "+" glass.
  */
 export function glassRow(consumedMl: number, targetMl: number, glass: number): GlassRow {
   const total = Math.max(targetMl / glass, EPS); // glasses in the target, may be fractional
   const count = Math.max(1, Math.ceil(total - EPS));
+  const shown = Math.min(count, ROW_GLASSES);
   const drunk = consumedMl / glass; // glasses drunk, may be fractional
-  const reached = consumedMl + EPS >= targetMl;
-  const lastWater = (gs: GlassSlot[]) => {
-    let i = -1;
-    gs.forEach((g, k) => {
-      if (g.level > EPS) i = k;
-    });
-    return i;
-  };
-
-  if (count <= ROW_SLOTS) {
-    const capacity = (i: number) => (i === count - 1 ? Math.min(1, total - (count - 1)) : 1);
-    const glasses: GlassSlot[] = Array.from({ length: count }, (_, i) => {
-      const cap = capacity(i);
-      return { capacity: cap, level: Math.max(0, Math.min(1, (drunk - i) / cap)) };
-    });
-    const next = reached ? -1 : glasses.findIndex((g) => g.level < 1 - EPS);
-    return { glasses, next, undoAt: lastWater(glasses), stack: 0, stacked: false };
-  }
-
-  const add = ROW_SLOTS - 1; // the always-empty last glass
-  const pile = add - 1; // the second-last glass, which stacks ×n
+  const capacity = (i: number) => (count <= ROW_GLASSES && i === count - 1 ? Math.min(1, total - (count - 1)) : 1);
   const glasses: GlassSlot[] = [];
-  for (let i = 0; i < add; i++) glasses.push({ capacity: 1, level: Math.max(0, Math.min(1, drunk - i)) });
-  // Past the 7th glass, part of a glass shows in the add glass; at the target it stays full.
-  glasses.push({ capacity: 1, level: reached ? 1 : drunk > add ? drunk - Math.floor(drunk + EPS) : 0 });
-  const whole = Math.floor(drunk + EPS);
-  const stack = whole > add ? whole - pile : 0; // 8 glasses → the 7th shows ×2
-  const next = reached ? -1 : whole < add ? whole : add;
-  const undoAt = reached ? add : stack > 0 ? pile : lastWater(glasses.slice(0, add));
-  return { glasses, next, undoAt, stack, stacked: true };
+  let rowGlasses = 0; // the row's capacity, in glasses
+  for (let i = 0; i < shown; i++) {
+    const cap = capacity(i);
+    glasses.push({ capacity: cap, level: Math.max(0, Math.min(1, (drunk - rowGlasses) / cap)) });
+    rowGlasses += cap;
+  }
+  const next = glasses.findIndex((g) => g.level < 1 - EPS);
+  let last = -1;
+  glasses.forEach((g, k) => {
+    if (g.level > EPS) last = k;
+  });
+  return {
+    glasses,
+    next,
+    last,
+    plus: next === -1,
+    extra: Math.max(0, Math.floor(drunk - rowGlasses + EPS)),
+    rowMl: rowGlasses * glass,
+  };
 }

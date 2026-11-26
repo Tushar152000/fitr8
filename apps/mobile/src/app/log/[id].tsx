@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddItemSheet } from "@/components/log/add-item-sheet";
 import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
@@ -212,7 +212,9 @@ function Editor({
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Padding on both platforms: the app is edge-to-edge, so Android no longer resizes the window
+      // for the keyboard and the input would sit behind it.
+      behavior="padding"
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"

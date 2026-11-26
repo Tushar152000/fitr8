@@ -3,10 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Info, X } from "lucide-react-native";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MealWhen } from "@/components/log/meal-when";
-import { ModeTabs } from "@/components/log/mode-tabs";
 import { SavedMealsSection, UsualsSection } from "@/components/log/quick-log-lists";
 import { Button, FieldError, PressableScale, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
@@ -87,7 +86,9 @@ export default function TypeMealScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Padding on both platforms: the app is edge-to-edge, so Android no longer resizes the window
+      // for the keyboard and the input would sit behind it.
+      behavior="padding"
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -149,7 +150,6 @@ export default function TypeMealScreen() {
         <Button onPress={submit} loading={busy === "text"} disabled={busy !== null && busy !== "text"}>
           Get calories
         </Button>
-        <ModeTabs current="type" params={params} tone="light" />
       </View>
     </KeyboardAvoidingView>
   );

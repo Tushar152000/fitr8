@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
@@ -17,10 +17,10 @@ const INVERSE = "#0c0c0c";
 const GLOW = require("../../../assets/home/hydration-glow.png");
 
 /**
- * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
- * full one takes it back off (undo). The pencil changes the glass size (a phone setting). Up to 8
- * glasses show as-is; a bigger target keeps the last glass empty to add more, and each extra glass
- * fills it, then stacks onto the glass before it as "×2", "×3" … (lib/glass-size `glassRow`).
+ * Home v2 hydration card: litres left and a row of glasses (lib/glass-size `glassRow`). Every glass
+ * starts empty and they fill in order, one per tap on any glass that isn't full; a tap on a full
+ * glass takes the last glass back. Once the row is full, a "+" glass adds more, counted under it as
+ * ×1, ×2 … (it never fills). The pencil changes the glass size (a phone setting).
  */
 export function HydrationCard() {
   const styles = useStyles();
@@ -80,7 +80,7 @@ export function HydrationCard() {
           <Glasses
             row={row!}
             glass={glass}
-            leftMl={Math.max(0, d.targetMl - d.consumedMl)}
+            consumedMl={d.consumedMl}
             canUndo={Boolean(water.undoable)}
             onAdd={(ml) => water.add.mutate(ml)}
             onUndo={() => {
@@ -119,74 +119,69 @@ const glassSize = (capacity: number) => Math.round(GLASS * Math.max(0.4, capacit
 function Glasses({
   row,
   glass,
-  leftMl,
+  consumedMl,
   canUndo,
   onAdd,
   onUndo,
 }: {
   row: GlassRow;
   glass: number;
-  /** Water left to the target: a tap never adds more than this (the final, smaller glass). */
-  leftMl: number;
+  consumedMl: number;
   canUndo: boolean;
   onAdd: (ml: number) => void;
   onUndo: () => void;
 }) {
   const styles = useStyles();
-  const { glasses, next, undoAt, stack, stacked } = row;
-  // When a glass stacks, the last glass shows full for a moment, then empties into the ×n glass.
-  const [shownStack, setShownStack] = useState(stack);
-  useEffect(() => {
-    if (stack === shownStack) return;
-    const t = setTimeout(() => setShownStack(stack), stack > shownStack ? 650 : 0);
-    return () => clearTimeout(t);
-  }, [stack, shownStack]);
-  const pouring = stack > shownStack;
-  const lastIndex = glasses.length - 1;
-  // A part-filled glass is both the next to fill and the last with water: undo it with a long press.
-  const undoOnNext = canUndo && undoAt === next;
+  const { glasses, plus, extra, rowMl } = row;
+  // A row glass adds one glass of water, or only what the row still holds (its last, smaller glass);
+  // the "+" glass always adds a whole glass. The API's minimum is 50 ml.
+  const rowAddMl = Math.max(50, Math.round(Math.min(glass, rowMl - consumedMl)));
+  const slots = glasses.length + (plus ? 1 : 0);
 
   return (
-    <View style={[styles.glasses, glasses.length < 6 && styles.glassesShort]}>
+    <View style={[styles.glasses, slots < 6 && styles.glassesShort]}>
       {glasses.map((g, i) => {
-        // Every glass that isn't full shows a "+": tapping any of them adds one glass (it fills in order).
-        const adds = next !== -1 && (g.level < 0.999 || (stacked && i === lastIndex));
-        const undoes = !adds && i === undoAt && canUndo;
-        // A tap adds one glass of water, or only what's left near the target (API minimum 50 ml).
-        const ml = Math.max(50, Math.round(Math.min(glass, leftMl)));
-        const level = pouring && i === lastIndex ? 1 : g.level;
-        const badge = stacked && i === lastIndex - 1 ? (pouring ? shownStack : stack) : 0;
-        const label = adds
-          ? `Add a glass, ${ml} ml${undoOnNext && i === next ? ". Long press to remove the last one" : ""}`
-          : i === undoAt
-            ? "Remove the last glass"
-            : g.level > 0
-              ? `Glass ${i + 1}, drunk${badge > 1 ? `, ${badge} glasses` : ""}`
-              : `Glass ${i + 1}`;
+        const full = g.level >= 0.999;
+        // Any glass that isn't full adds the next glass (they fill in order, whichever is tapped);
+        // any full glass takes the last glass back.
+        const adds = !full;
+        const undoes = full && canUndo;
         return (
           <Pressable
             key={i}
             accessibilityRole="button"
-            accessibilityLabel={label}
+            accessibilityLabel={
+              adds ? `Add a glass, ${rowAddMl} ml` : `Glass ${i + 1}, drunk. Tap to remove the last glass`
+            }
             accessibilityState={{ disabled: !adds && !undoes }}
             disabled={!adds && !undoes}
-            onPress={adds ? () => onAdd(ml) : onUndo}
-            onLongPress={adds && undoOnNext && i === next ? onUndo : undefined}
+            onPress={adds ? () => onAdd(rowAddMl) : onUndo}
             hitSlop={4}
             style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
           >
-            <Glass level={level} size={glassSize(g.capacity)} />
-            {badge > 1 && (
-              // A subscript at the glass's lower-right corner: "×7" in aqua, on a cut-out of the card.
-              <View style={styles.badge}>
-                <Text weight={700} size={11} color="#35cefe" tabular style={{ lineHeight: 13 }}>
-                  ×{badge}
-                </Text>
-              </View>
-            )}
+            <Glass level={g.level} size={glassSize(g.capacity)} />
           </Pressable>
         );
       })}
+      {plus && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Add another glass, ${glass} ml${extra > 0 ? `. ${extra} extra so far` : ""}`}
+          onPress={() => onAdd(glass)}
+          hitSlop={4}
+          style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
+        >
+          {/* Never fills: the glasses past the row are counted under it. */}
+          <Glass level={0} size={GLASS} />
+          {extra > 0 && (
+            <View style={styles.count}>
+              <Text weight={700} size={11} color="#35cefe" tabular style={{ lineHeight: 13 }}>
+                ×{extra}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -222,16 +217,8 @@ const useStyles = makeStyles((c) => ({
   big: { letterSpacing: -0.56 },
   size: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 15 },
   glasses: { flexDirection: "row", justifyContent: "space-between", marginVertical: -5 },
-  badge: {
-    position: "absolute",
-    bottom: 1,
-    right: -9,
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-    borderRadius: 6,
-    backgroundColor: INVERSE, // the card, so the count cuts cleanly over the glass outline
-    pointerEvents: "none",
-  },
+  // "×n" under the "+" glass: the glasses drunk past the row.
+  count: { position: "absolute", bottom: -12, left: 0, right: 0, alignItems: "center", pointerEvents: "none" },
   // A short row (small target or big glass) sits at the left instead of stretching across.
   glassesShort: { justifyContent: "flex-start", gap: 14 },
   glass: { minWidth: 34, minHeight: 44, alignItems: "center", justifyContent: "flex-end", paddingBottom: 5 },

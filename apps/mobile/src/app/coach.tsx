@@ -1,6 +1,6 @@
 import { RotateCw } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { KeyboardAvoidingView, ScrollView } from "react-native";
 import Animated from "react-native-reanimated";
 import { Bubble, ThreadSkeleton } from "@/components/coach/bubble";
 import { CoachHeader } from "@/components/coach/coach-header";
@@ -29,7 +29,9 @@ export default function CoachScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.ground }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Padding on both platforms: the app is edge-to-edge, so Android no longer resizes the window
+      // for the keyboard and the input would sit behind it.
+      behavior="padding"
     >
       <CoachHeader isPremium={isPremium} onMenu={() => setMenu(true)} />
 

@@ -5,7 +5,6 @@ import {
   Dumbbell,
   LayoutDashboard,
   MessageCircle,
-  Utensils,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react-native";
@@ -26,11 +25,12 @@ import { showDay, useViewDay } from "@/lib/view-day";
 
 /**
  * Tabs shown in the bar, in order (Figma "Tab Bar" Nav Items). The active item is ink with its
- * glyph filled (Home, Workout) or swapped (Meals: fork and knife); idle items are text/secondary.
+ * glyph filled (Home, Workout); Meals keeps the same glyph; idle items are text/secondary.
  */
 const TABS: Record<string, { label: string; icon: LucideIcon; active?: LucideIcon; fill?: boolean }> = {
   today: { label: "Home", icon: LayoutDashboard, fill: true },
-  meals: { label: "Meals", icon: UtensilsCrossed, active: Utensils },
+  // One glyph in both states (user decision 2026-11-26: the swap to a different glyph looked like a bug).
+  meals: { label: "Meals", icon: UtensilsCrossed },
   workout: { label: "Workout", icon: Dumbbell, fill: true },
 };
 
