@@ -113,10 +113,10 @@ export function PlanBuilder({ done }: { done: boolean }) {
       </View>
 
       <View style={{ alignItems: "center", gap: 4 }}>
-        <Text variant="h1" center>
+        <Text variant="title" center>
           {done ? "Your plan is ready" : "Building your plan…"}
         </Text>
-        <Text color={c.ink2} center>
+        <Text variant="bodySm" color={c.ink2} center>
           {done ? "Here's what your coach set up." : "Your coach is warming up."}
         </Text>
       </View>
@@ -142,7 +142,7 @@ export function PlanBuilder({ done }: { done: boolean }) {
                 {complete && <Check size={14} color={c.surface} strokeWidth={3} />}
                 {current && <View style={styles.dot} />}
               </View>
-              <Text weight={current ? 600 : 400} color={complete ? c.ink2 : current ? c.ink : c.ink3}>
+              <Text variant={current ? "bodyStrong" : "bodySm"} color={complete ? c.ink2 : current ? c.ink : c.ink3}>
                 {label}
               </Text>
             </View>

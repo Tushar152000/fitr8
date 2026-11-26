@@ -48,12 +48,12 @@ export function ScanGuide() {
       style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
     >
-      <View style={[StyleSheet.absoluteFill, styles.center]}>
+      <View style={[StyleSheet.absoluteFill, styles.center, { pointerEvents: "none" }]}>
         <ScanBarcode size={56} color={cam.white} strokeWidth={1.4} absoluteStrokeWidth style={{ opacity: 0.25 }} />
       </View>
       {height > 0 && (
-        <Animated.View style={[styles.track, line]}>
-          <View style={styles.lineGlow}>
+        <Animated.View style={[styles.track, { pointerEvents: "box-none" }, line]}>
+          <View style={[styles.lineGlow, { pointerEvents: "none" }]}>
             <LinearGradient
               colors={["rgba(194,224,74,0)", cam.highlight, "rgba(194,224,74,0)"]}
               start={{ x: 0, y: 0.5 }}

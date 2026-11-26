@@ -1,7 +1,10 @@
 import { TextInput } from "react-native";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 
-/** A kg or reps box in a set row (15b); a comma becomes a decimal point. */
+/**
+ * A kg or reps box in a set row (15b); a comma becomes a decimal point. Inside the white exercise
+ * card, so the v2 grey fill without an outline (like the add-item sheet's fields).
+ */
 export function SetInput({
   label,
   value,
@@ -17,6 +20,7 @@ export function SetInput({
   const styles = useStyles();
   return (
     <TextInput
+      {...INPUT_CARET}
       accessibilityLabel={label}
       keyboardType="decimal-pad"
       value={value}
@@ -32,11 +36,13 @@ const useStyles = makeStyles((c) => ({
   input: {
     height: 44,
     borderRadius: radius.input,
-    backgroundColor: c.sunken,
-    paddingHorizontal: 12,
+    backgroundColor: c.ground,
+    paddingHorizontal: 14,
     fontFamily: fonts.sans600,
-    fontSize: 15,
+    fontSize: 14,
     color: c.ink,
     fontVariant: ["tabular-nums"],
+    // No focus ring on the web either.
+    outlineWidth: 0,
   },
 }));

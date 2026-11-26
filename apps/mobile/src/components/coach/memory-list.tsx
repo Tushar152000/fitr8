@@ -20,7 +20,9 @@ export function MemoryList({
     <View style={styles.list}>
       {memories.map((m, i) => (
         <AnimatedRow key={m.id} style={[styles.row, i > 0 && styles.divider]}>
-          <Text style={{ flex: 1 }}>{m.text}</Text>
+          <Text variant="bodyMedium" style={{ flex: 1 }}>
+            {m.text}
+          </Text>
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={`Forget: ${m.text}`}
@@ -29,7 +31,7 @@ export function MemoryList({
             hitSlop={8}
             style={{ opacity: removing === m.id ? 0.4 : 1 }}
           >
-            <Trash2 size={18} color={c.ink3} />
+            <Trash2 size={18} color={c.ink2} strokeWidth={2} />
           </PressableScale>
         </AnimatedRow>
       ))}
@@ -37,8 +39,15 @@ export function MemoryList({
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  list: { backgroundColor: c.surface, borderRadius: radius.card, borderWidth: 1, borderColor: c.line },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+// Figma "Group": white card, card lift, 16 px sides; rows 12 px tall padding with 1 px dividers.
+const useStyles = makeStyles((c, shadows) => ({
+  list: {
+    backgroundColor: c.surface,
+    borderRadius: radius.card,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    ...shadows.card,
+  },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, minHeight: 48 },
   divider: { borderTopWidth: 1, borderTopColor: c.line },
 }));

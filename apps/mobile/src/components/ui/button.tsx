@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { ActivityIndicator, View, type StyleProp, type ViewStyle } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { PRIMARY_PILL } from "@/lib/gradients";
 import { makeStyles, radius, useColors, type Colors } from "@/lib/theme";
 import { Text } from "./text";
 import { PressableScale } from "./pressable-scale";
@@ -26,7 +28,12 @@ const fg = (c: Colors): Record<ButtonVariant, string> => ({
   danger: c.onDanger,
 });
 
-/** Full-width 48 px button (44 for dashed), radius 16. One primary per screen. */
+/**
+ * Full-width button in the v2 language (Figma "Button", user decision 2026-11-27: one look across
+ * every screen): `primary` is the gradient pill (gradient/primary, white label), `secondary` a white
+ * pill with a hairline, `strong` / `danger` / `ghostDark` solid pills; all 54 px tall. `dashed` (an
+ * "add" row inside a list) stays a 44 px rounded rectangle. One primary per screen.
+ */
 export function Button({
   children,
   onPress,
@@ -62,7 +69,12 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        { height: height ?? (variant === "dashed" ? 44 : 48), backgroundColor: fills[pressed ? 1 : 0] },
+        variant !== "dashed" && styles.pill,
+        {
+          height: height ?? (variant === "dashed" ? 44 : 54),
+          backgroundColor: variant === "primary" ? "transparent" : fills[pressed ? 1 : 0],
+        },
+        variant === "primary" && pressed && { opacity: 0.9 },
         variant === "secondary" && styles.secondary,
         variant === "dashed" && styles.dashed,
         variant === "ghostDark" && styles.ghostDark,
@@ -70,6 +82,7 @@ export function Button({
         style,
       ]}
     >
+      {variant === "primary" && <LinearGradient {...PRIMARY_PILL} style={StyleSheet.absoluteFill} />}
       {loading ? (
         <ActivityIndicator color={color} />
       ) : (
@@ -101,7 +114,9 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
+  pill: { borderRadius: 100 },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   secondary: { borderWidth: 1, borderColor: c.lineStrong },
   dashed: { borderWidth: 1.5, borderStyle: "dashed", borderColor: c.dash },

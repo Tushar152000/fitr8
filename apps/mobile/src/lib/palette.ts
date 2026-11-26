@@ -226,3 +226,9 @@ const shadowSets: Record<ColorScheme, Shadows> = {
   },
 };
 export const shadowsFor = (scheme: ColorScheme): Shadows => shadowSets[scheme];
+
+/**
+ * Text cursor and selection in every input: the brand olive (the same in both themes), never the
+ * platform blue (user decision 2026-11-27). Spread onto a TextInput: `<TextInput {...INPUT_CARET} />`.
+ */
+export const INPUT_CARET = { cursorColor: "#718b00", selectionColor: "rgba(113,139,0,0.45)" } as const;

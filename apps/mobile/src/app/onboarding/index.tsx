@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useRef } from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BackHeader } from "@/components/back-header";
 import { AboutYouStep } from "@/components/onboarding/about-you-step";
 import { DetailsStep } from "@/components/onboarding/details-step";
 import { FormFooter } from "@/components/onboarding/form-footer";
@@ -11,12 +10,12 @@ import { GoalStep } from "@/components/onboarding/goal-step";
 import { PlanBuilder } from "@/components/onboarding/plan-builder";
 import { StepsBar } from "@/components/onboarding/steps-bar";
 import { FormSkeleton } from "@/components/skeletons";
-import { Button, FieldError, ProgressSteps, Text } from "@/components/ui";
+import { Button, FieldError, Text } from "@/components/ui";
 import { useMe } from "@/lib/auth";
 import type { OnboardingDraft } from "@/lib/onboarding-draft";
 import { splitName, splitPhone, type PersonDetails } from "@/lib/person";
 import { planQuery } from "@/lib/queries";
-import { useColors } from "@/lib/theme";
+import { gutter, useColors } from "@/lib/theme";
 import { editEntry, LAST_STEP, useOnboardingForm, type EditEntry } from "@/lib/use-onboarding-form";
 
 const STEP_TITLES = ["What can we call you?", "Your goal", "About you"];
@@ -41,7 +40,7 @@ export default function OnboardingScreen() {
   const c = useColors();
   if (returning && plan.isPending) {
     return (
-      <View style={{ flex: 1, padding: 24, paddingTop: 72, gap: 20, backgroundColor: c.ground }}>
+      <View style={{ flex: 1, padding: gutter, paddingTop: 72, gap: 20, backgroundColor: c.ground }}>
         <FormSkeleton />
       </View>
     );
@@ -106,22 +105,20 @@ function OnboardingForm(props: {
   const steps = { current: step + 1 - firstStep, total: LAST_STEP + 2 - firstStep };
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.ground }}>
+    // The form and its footer ride up with the keyboard on both platforms (edge-to-edge Android
+    // doesn't resize for it), so the field being typed in and Continue stay visible.
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.ground }}>
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 24, paddingBottom: 24, gap: 24 }}
+        contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: gutter, paddingBottom: 24, gap: 24 }}
       >
-        {step > firstStep || props.returning ? (
-          <BackHeader onBack={form.back}>
-            <ProgressSteps {...steps} />
-          </BackHeader>
-        ) : (
-          <StepsBar {...steps} />
-        )}
+        <StepsBar {...steps} onBack={step > firstStep || props.returning ? form.back : undefined} />
         <View style={{ gap: 8 }}>
-          <Text variant="h1">{STEP_TITLES[step]}</Text>
-          <Text size={15} color={c.ink2}>
+          <Text variant="title" accessibilityRole="header">
+            {STEP_TITLES[step]}
+          </Text>
+          <Text variant="bodySm" color={c.ink2}>
             {STEP_LEADS[step]}
           </Text>
         </View>
@@ -143,12 +140,12 @@ function OnboardingForm(props: {
       <FormFooter>
         {form.serverError && <FieldError>{form.serverError}</FieldError>}
         {Object.values(errors).some(Boolean) ? (
-          <Text size={13} color={c.ink2} center>
+          <Text variant="labelMedium" color={c.ink2} center>
             Check the highlighted fields above.
           </Text>
         ) : (
           !form.stepValid && (
-            <Text size={13} color={c.ink3} center>
+            <Text variant="labelRegular" color={c.ink3} center>
               {form.continueHint}
             </Text>
           )
@@ -158,6 +155,6 @@ function OnboardingForm(props: {
         </Button>
       </FormFooter>
       {form.submitting && <PlanBuilder done={form.built} />}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

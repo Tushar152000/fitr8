@@ -18,8 +18,8 @@ export function MedicalCheck({ checked, onToggle }: { checked: boolean; onToggle
         {checked && <Check size={16} color={c.white} strokeWidth={3} />}
       </View>
       <View style={{ flex: 1 }}>
-        <Text weight={600}>I have a medical condition, am pregnant, or am under 18</Text>
-        <Text size={13} color={c.ink3}>
+        <Text variant="bodyStrong">I have a medical condition, am pregnant, or am under 18</Text>
+        <Text variant="labelRegular" color={c.ink2} style={{ lineHeight: 18 }}>
           We&apos;ll keep calories at maintenance instead of a deficit. Check with your doctor.
         </Text>
       </View>
@@ -27,7 +27,7 @@ export function MedicalCheck({ checked, onToggle }: { checked: boolean; onToggle
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   check: {
     flexDirection: "row",
     gap: 12,
@@ -35,6 +35,7 @@ const useStyles = makeStyles((c) => ({
     borderRadius: radius.card,
     backgroundColor: c.surface,
     padding: 16,
+    ...shadows.card,
   },
   box: {
     width: 24,

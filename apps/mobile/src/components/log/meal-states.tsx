@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { Camera, Check, CircleAlert, RotateCw, Trash2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Animated, Pressable, View } from "react-native";
-import { Button, Card, FieldError, PressableScale, Text } from "@/components/ui";
+import { Button, FieldError, PressableScale, Text } from "@/components/ui";
 import type { MealType } from "@/lib/format";
 import { NATIVE_DRIVER, useReduceMotion } from "@/lib/motion";
 import { makeStyles, radius, useColors } from "@/lib/theme";
@@ -26,7 +26,7 @@ export function Analysing({ slow, mealType, hasPhoto }: { slow: boolean; mealTyp
 
   return (
     <View style={{ flex: 1, gap: 16 }}>
-      <Text variant="h1" size={26}>
+      <Text variant="heading1" accessibilityRole="header">
         Reading your plate…
       </Text>
       <View style={{ gap: 10 }} accessibilityLiveRegion="polite">
@@ -53,7 +53,7 @@ export function Analysing({ slow, mealType, hasPhoto }: { slow: boolean; mealTyp
                   <Animated.View style={[styles.dot, { opacity: pulse }]} />
                 ) : null}
               </View>
-              <Text weight={current ? 600 : 400} color={done ? c.ink2 : current ? c.ink : c.ink3}>
+              <Text variant={current ? "bodyStrong" : "bodySm"} color={done ? c.ink2 : current ? c.ink : c.ink3}>
                 {label}
               </Text>
             </View>
@@ -73,14 +73,14 @@ export function Analysing({ slow, mealType, hasPhoto }: { slow: boolean; mealTyp
         ))}
       </View>
       <View style={{ marginTop: "auto", flexDirection: "row", justifyContent: "center", flexWrap: "wrap" }}>
-        <Text size={13} color={c.ink3}>
+        <Text variant="labelRegular" color={c.ink2}>
           {slow ? "This is taking longer than usual. " : "Taking too long? "}
         </Text>
         <Pressable
           accessibilityRole="link"
           onPress={() => router.replace({ pathname: "/log/type", params: { meal: mealType } })}
         >
-          <Text size={13} weight={600} color={c.brandText}>
+          <Text variant="labelStrong" color={c.brandText}>
             Type it instead
           </Text>
         </Pressable>
@@ -120,11 +120,13 @@ export function Found({ count, onReview }: { count: number; onReview: () => void
         <View style={[styles.step, { width: 40, height: 40, borderRadius: 20, backgroundColor: c.protein }]}>
           <Check size={20} color={c.white} strokeWidth={3} />
         </View>
-        <Text variant="h1" size={26}>
+        <Text variant="heading1" accessibilityRole="header">
           Found {count} {noun}
         </Text>
       </View>
-      <Text color={c.ink2}>Check the portions before saving — you can change anything.</Text>
+      <Text variant="bodySm" color={c.ink2}>
+        Check the portions before saving — you can change anything.
+      </Text>
       <View style={{ marginTop: "auto", paddingTop: 32 }}>
         <Button onPress={onReview}>{`Review ${count} ${noun}`}</Button>
       </View>
@@ -155,28 +157,34 @@ export function Failed({
   onDelete: () => void;
 }) {
   const c = useColors();
+  const styles = useStyles();
   const notFood = errorText?.includes("doesn't look like food");
   return (
     <View style={{ flex: 1, gap: 12 }}>
       {notFood ? (
         <>
-          <Text variant="h1" size={26}>
+          <Text variant="heading1" accessibilityRole="header">
             We couldn&apos;t spot any food
           </Text>
-          <Text color={c.ink2}>This doesn&apos;t count toward your daily scans.</Text>
+          <Text variant="bodySm" color={c.ink2}>
+            This doesn&apos;t count toward your daily scans.
+          </Text>
           <TipsCard title="For a better read" tips={TIPS} icon={Check} />
         </>
       ) : (
         <>
-          <Text variant="h1" size={26}>
+          <Text variant="heading1" accessibilityRole="header">
             We couldn&apos;t read this one
           </Text>
-          <Card style={{ flexDirection: "row", gap: 12 }}>
-            <CircleAlert size={20} color={c.ink2} style={{ marginTop: 2 }} />
-            <Text color={c.ink2} style={{ flex: 1 }}>
-              <Text weight={600}>Your photo is saved.</Text> Something went wrong on our side — try again, or type it.
+          <View style={[styles.card, { flexDirection: "row", gap: 12 }]}>
+            <CircleAlert size={18} color={c.ink2} strokeWidth={2} style={{ marginTop: 1 }} />
+            <Text variant="bodySm" color={c.ink2} style={{ flex: 1 }}>
+              <Text variant="bodyStrong" color={c.ink}>
+                Your photo is saved.
+              </Text>{" "}
+              Something went wrong on our side — try again, or type it.
             </Text>
-          </Card>
+          </View>
         </>
       )}
       {error && <FieldError>{error}</FieldError>}
@@ -201,8 +209,8 @@ export function Failed({
           onPress={onDelete}
           style={{ minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
-          <Trash2 size={16} color={c.ink3} />
-          <Text weight={600} size={13} color={c.ink3}>
+          <Trash2 size={16} color={c.ink2} strokeWidth={2} />
+          <Text variant="labelStrong" color={c.ink2}>
             Delete this meal
           </Text>
         </PressableScale>
@@ -211,9 +219,10 @@ export function Failed({
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
+  card: { borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
   step: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.brandText },
-  skeleton: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16 },
+  skeleton: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
   bar: { borderRadius: 999, backgroundColor: c.sunken },
 }));

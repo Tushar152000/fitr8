@@ -1,3 +1,4 @@
+import { PLATFORM_HEALTH_APP } from "@/components/health/status";
 import { Bell, Camera, Dumbbell, MessageCircle, ScanBarcode, ScanText, type LucideIcon } from "lucide-react-native";
 
 export type PaywallFeature = {
@@ -77,6 +78,6 @@ export const TIERS: Tier[] = [
   { label: "Nutrition label reading", free: false, premium: true },
   { label: "AI Coach", free: false, premium: true },
   { label: "Weekly workout plan", free: false, premium: true },
-  { label: "Apple Health / Health Connect", free: true, premium: true },
+  { label: PLATFORM_HEALTH_APP, free: true, premium: true },
   { label: "Reminders", free: "3", premium: "Unlimited" },
 ];

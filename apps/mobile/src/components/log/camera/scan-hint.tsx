@@ -4,8 +4,9 @@ import { PressableScale, Text } from "@/components/ui";
 import { cam } from "./cam";
 
 /**
- * The pill at the bottom of the viewfinder: what to point at, "Barcode found" (lime) while a code
- * is in view, or (free plan, both scans locked) a tap through to Premium.
+ * The pill near the bottom of the viewfinder, still (it doesn't move with the scan line), just above
+ * the bottom corner guides (user decision 2026-11-27): what to point at, "Barcode found" (lime)
+ * while a code is in view, or (free plan, both scans locked) a tap through to Premium.
  */
 export function ScanHint({ locked, seen, onUnlock }: { locked: boolean; seen: string | null; onUnlock: () => void }) {
   if (locked) {
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     position: "absolute",
-    bottom: 24,
+    bottom: 64,
     alignSelf: "center",
     borderRadius: 100,
     backgroundColor: "rgba(0,0,0,0.5)",

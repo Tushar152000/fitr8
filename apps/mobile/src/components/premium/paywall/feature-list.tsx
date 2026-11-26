@@ -1,10 +1,11 @@
 import { ChevronDown } from "lucide-react-native";
 import { View } from "react-native";
 import Animated from "react-native-reanimated";
-import { PressableScale, Section, Text } from "@/components/ui";
+import { IconTile, PressableScale, StatusPill, Text } from "@/components/ui";
 import { reveal } from "@/lib/motion";
-import { makeStyles, useColors } from "@/lib/theme";
+import { useColors } from "@/lib/theme";
 import { FEATURES } from "./data";
+import { PaywallGroup } from "./group";
 import { useListStyles } from "./list-styles";
 
 /**
@@ -13,10 +14,9 @@ import { useListStyles } from "./list-styles";
  */
 export function FeatureList({ open, onExpand }: { open: string; onExpand: (key: string) => void }) {
   const c = useColors();
-  const styles = useStyles();
   const list = useListStyles();
   return (
-    <Section title="What you get">
+    <PaywallGroup label="What you get">
       <View style={list.list}>
         {FEATURES.map((f, i) => {
           const expanded = open === f.key;
@@ -32,28 +32,27 @@ export function FeatureList({ open, onExpand }: { open: string; onExpand: (key: 
                 }}
                 style={list.row}
               >
-                <View style={styles.icon}>
-                  <f.icon size={18} color={c.brandText} />
-                </View>
+                <IconTile icon={f.icon} accent />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text weight={700}>{f.title}</Text>
-                  <Text size={13} color={c.ink3}>
+                  <Text variant="bodyStrong">{f.title}</Text>
+                  <Text variant="labelRegular" color={c.ink2}>
                     {f.line}
                   </Text>
                 </View>
-                <View style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
-                  <ChevronDown size={18} color={c.ink3} />
-                </View>
+                <ChevronDown
+                  size={18}
+                  color={c.ink2}
+                  strokeWidth={2}
+                  style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}
+                />
               </PressableScale>
               {expanded && (
-                <Animated.View entering={reveal} style={styles.expanded}>
-                  <Text size={14} color={c.ink2}>
+                <Animated.View entering={reveal} style={{ paddingBottom: 14, paddingLeft: 48, gap: 8 }}>
+                  <Text variant="bodySm" color={c.ink2}>
                     {f.detail}
                   </Text>
-                  <View style={styles.example}>
-                    <Text size={12} weight={700} color={c.brandText} tabular>
-                      {f.example}
-                    </Text>
+                  <View style={{ flexDirection: "row" }}>
+                    <StatusPill label={f.example} icon={null} />
                   </View>
                 </Animated.View>
               )}
@@ -61,25 +60,6 @@ export function FeatureList({ open, onExpand }: { open: string; onExpand: (key: 
           );
         })}
       </View>
-    </Section>
+    </PaywallGroup>
   );
 }
-
-const useStyles = makeStyles((c) => ({
-  icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: c.brandSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  expanded: { paddingRight: 14, paddingBottom: 14, paddingLeft: 62, gap: 8 },
-  example: {
-    alignSelf: "flex-start",
-    backgroundColor: c.brandSoft,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-}));

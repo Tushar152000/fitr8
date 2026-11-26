@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { TextInput, View, type TextInputProps } from "react-native";
-import { fade, fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fade, fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 import { FieldError } from "./field-error";
 import { Text } from "./text";
+import { useOnSurface } from "./surface";
 
 /** Label above, 52 px box, big value with a unit suffix. Keeps the raw string so users can type "7" then "72.5". */
 export function NumberField({
@@ -13,6 +14,7 @@ export function NumberField({
   hint,
   error,
   keyboardType = "decimal-pad",
+  filled,
   ...props
 }: {
   label: string;
@@ -21,15 +23,28 @@ export function NumberField({
   onValueChange: (value: string) => void;
   hint?: string;
   error?: string;
+  /** Inside a white card or sheet: grey fill, no outline until focused (v2). */
+  filled?: boolean;
 } & Omit<TextInputProps, "value" | "onChangeText">) {
   const c = useColors();
   const styles = useStyles();
   const [focused, setFocused] = useState(false);
+  const onWhite = useOnSurface();
+  filled = filled ?? onWhite;
   return (
     <View style={{ gap: 6, flex: 1 }}>
-      <Text variant="label">{label}</Text>
-      <View style={[styles.box, { borderColor: error ? c.caution : focused ? c.ink : c.lineStrong }]}>
+      <Text variant="labelStrong" color={c.ink2}>
+        {label}
+      </Text>
+      <View
+        style={[
+          styles.box,
+          filled && { backgroundColor: c.ground },
+          { borderColor: error ? c.caution : focused ? c.ink : filled ? "transparent" : c.lineStrong },
+        ]}
+      >
         <TextInput
+          {...INPUT_CARET}
           accessibilityLabel={label}
           value={value}
           onChangeText={(v) => onValueChange(v.replace(",", "."))}
@@ -49,7 +64,7 @@ export function NumberField({
       {error ? (
         <FieldError>{error}</FieldError>
       ) : hint ? (
-        <Text size={13} color={c.ink3}>
+        <Text variant="labelRegular" color={c.ink2}>
           {hint}
         </Text>
       ) : null}

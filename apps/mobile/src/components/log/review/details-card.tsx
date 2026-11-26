@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react-native";
-import { TextInput } from "react-native";
-import { Button, Card, Text } from "@/components/ui";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { TextInput, View } from "react-native";
+import { PillButton, Text } from "@/components/ui";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 
 /** The meal's note, saved with it, and "Re-check with details" to let the AI correct the items. */
 export function DetailsCard({
@@ -18,9 +18,11 @@ export function DetailsCard({
   const c = useColors();
   const styles = useStyles();
   return (
-    <Card style={{ gap: 10 }}>
-      <Text weight={600}>Details</Text>
+    <View style={styles.card}>
+      <Text variant="heading3">Details</Text>
+      {/* Inside a white card: the grey filled field, no outline (as the add-item sheet). */}
       <TextInput
+        {...INPUT_CARET}
         accessibilityLabel="Details"
         value={note}
         onChangeText={onNoteChange}
@@ -31,32 +33,32 @@ export function DetailsCard({
         style={styles.note}
         textAlignVertical="top"
       />
-      <Text size={13} color={c.ink3}>
+      <Text variant="labelRegular" color={c.ink2}>
         Saved with the meal. Re-check to let the AI correct the items using your details.
       </Text>
-      <Button
-        variant="secondary"
+      <PillButton
+        variant="soft"
         icon={Sparkles}
+        label="Re-check with details"
         onPress={onRecheck}
         loading={rechecking}
         disabled={note.trim().length < 2}
-      >
-        Re-check with details
-      </Button>
-    </Card>
+      />
+    </View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
   note: {
-    minHeight: 64,
-    borderWidth: 1,
-    borderColor: c.lineStrong,
+    minHeight: 72,
     borderRadius: radius.input,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    backgroundColor: c.ground,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontFamily: fonts.sans400,
-    fontSize: 15,
+    fontSize: 16,
     color: c.ink,
+    outlineWidth: 0,
   },
 }));

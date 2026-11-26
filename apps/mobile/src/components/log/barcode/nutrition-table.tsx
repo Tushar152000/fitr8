@@ -1,5 +1,5 @@
 import type { FoodDto } from "@fitr8/contracts";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { Text } from "@/components/ui";
 import { formatInt, formatQty } from "@/lib/format";
 import { makeStyles, radius, useColors } from "@/lib/theme";
@@ -23,13 +23,13 @@ export function NutritionTable({ food, amountG }: { food: FoodDto; amountG: numb
   return (
     <View style={styles.table} accessibilityLabel={`Nutrition per 100 ${measure} and for your amount`}>
       <View style={styles.tr}>
-        <Text weight={600} size={12} color={c.ink3} style={{ flex: 1.4 }}>
+        <Text variant="labelStrong" color={c.ink2} style={{ flex: 1.4 }}>
           Nutrition
         </Text>
-        <Text weight={600} size={12} color={c.ink3} style={styles.num}>
+        <Text variant="labelStrong" color={c.ink2} style={styles.num}>
           per 100 {measure}
         </Text>
-        <Text weight={600} size={12} color={c.ink3} style={styles.num}>
+        <Text variant="labelStrong" color={c.ink2} style={styles.num}>
           You
         </Text>
       </View>
@@ -40,16 +40,16 @@ export function NutritionTable({ food, amountG }: { food: FoodDto; amountG: numb
           return (
             <View key={label} style={[styles.tr, styles.rowLine]}>
               <Text
-                weight={sub ? 400 : 600}
+                variant={sub ? "bodySm" : "bodyStrong"}
                 color={sub ? c.ink2 : c.ink}
                 style={{ flex: 1.4, paddingLeft: sub ? 12 : 0 }}
               >
                 {label}
               </Text>
-              <Text color={c.ink2} tabular style={styles.num}>
+              <Text variant="bodySm" color={c.ink2} tabular style={styles.num}>
                 {fmt(per!, unit)} {unit}
               </Text>
-              <Text weight={600} tabular style={styles.num}>
+              <Text variant="bodyStrong" tabular style={styles.num}>
                 {fmt(per! * k, unit)} {unit}
               </Text>
             </View>
@@ -59,15 +59,16 @@ export function NutritionTable({ food, amountG }: { food: FoodDto; amountG: numb
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   table: {
     borderRadius: radius.card,
     backgroundColor: c.surface,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 4,
+    ...shadows.card,
   },
   tr: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
-  rowLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
+  rowLine: { borderTopWidth: 1, borderTopColor: c.line },
   num: { flex: 1, textAlign: "right" },
 }));

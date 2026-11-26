@@ -1,9 +1,11 @@
 import { Trash2 } from "lucide-react-native";
 import { useState } from "react";
-import { Alert, Platform, View } from "react-native";
+import { View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Button, Chip, FieldError, MenuGroup, MenuRow, Text, TextField } from "@/components/ui";
 import { api } from "@/lib/api";
+import { confirmAction } from "@/lib/confirm";
+import { PLATFORM_STORE } from "@/components/health/status";
 import { queryClient } from "@/lib/query";
 import { fonts, makeStyles, useColors } from "@/lib/theme";
 import type { DeleteReason } from "@fitr8/contracts";
@@ -57,16 +59,12 @@ export function DangerZone({ onDeleted, onSignOut }: { onDeleted: () => void; on
     }
   }
 
-  /** The last stop: a system alert, so it can't be a stray tap. */
-  function confirmLast() {
-    if (Platform.OS === "web") {
-      if (globalThis.confirm?.("Delete your FITR8 account for good? This can't be undone.")) void remove();
-      return;
-    }
-    Alert.alert("Delete for good?", "Your account and all your data go now. This can't be undone.", [
-      { text: "Keep my account", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => void remove() },
-    ]);
+  /** The last stop: the app's confirm dialog, so it can't be a stray tap. */
+  async function confirmLast() {
+    if (
+      await confirmAction("Delete for good?", "Your account and all your data go now. This can't be undone.", "Delete")
+    )
+      void remove();
   }
 
   return (
@@ -87,8 +85,8 @@ export function DangerZone({ onDeleted, onSignOut }: { onDeleted: () => void; on
               bring them back. You can download a copy first from Settings → Privacy &amp; data.
             </Text>
             <Text size={13} color={c.cautionText}>
-              Paying for FITR8 Premium through the App Store or Google Play? Cancel it there too: deleting your account
-              doesn&apos;t stop the store billing you.
+              Paying for FITR8 Premium through {PLATFORM_STORE}? Cancel it there too: deleting your account doesn&apos;t
+              stop the store billing you.
             </Text>
             <View style={{ gap: 8 }}>
               <Text weight={600}>Why are you leaving? (optional)</Text>

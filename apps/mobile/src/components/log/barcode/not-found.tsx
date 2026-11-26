@@ -2,11 +2,11 @@ import { router } from "expo-router";
 import { BadgeCheck, Camera, SearchX } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { Button, FormField, Screen, Text, TextField } from "@/components/ui";
 import { openPremium, usePremium } from "@/lib/premium";
 import { makeStyles, useColors } from "@/lib/theme";
 import { TipsCard } from "../tips-card";
+import { BackRow } from "./back-row";
 
 /** Why the lookup came back empty: not in any database, not a valid code, or the database didn't answer. */
 export type NotFoundReason = "unknown" | "invalid" | "unreachable";
@@ -70,15 +70,15 @@ export function NotFound({
         </>
       }
     >
-      <BackHeader />
+      <BackRow />
       <View style={{ gap: 8 }}>
         <View style={styles.searchX}>
-          <SearchX size={24} color={c.ink2} />
+          <SearchX size={22} color={c.ink} strokeWidth={2} />
         </View>
-        <Text variant="h1" size={26}>
+        <Text variant="heading1" accessibilityRole="header">
           {title}
         </Text>
-        <Text color={c.ink2}>
+        <Text variant="bodySm" color={c.ink2}>
           {reason === "invalid"
             ? "Scan it again, or photograph the nutrition label instead."
             : reason === "unreachable"
@@ -88,7 +88,7 @@ export function NotFound({
                 : "Photograph its nutrition label once and it's saved for everyone."}
         </Text>
         {reason !== "invalid" && (
-          <Text size={13} color={c.ink3} tabular>
+          <Text variant="labelRegular" color={c.ink3} tabular>
             Barcode {code}
           </Text>
         )}
@@ -106,12 +106,14 @@ export function NotFound({
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   searchX: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: c.sunken,
+    borderRadius: 16,
+    backgroundColor: c.surface,
+    marginBottom: 4,
+    ...shadows.card,
     alignItems: "center",
     justifyContent: "center",
   },

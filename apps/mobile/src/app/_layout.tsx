@@ -1,4 +1,5 @@
 import "@/lib/web-pointer-fix";
+import "@/lib/web-styles";
 import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque";
 import {
   Inter_400Regular,
@@ -9,7 +10,8 @@ import {
 } from "@expo-google-fonts/inter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useSegments } from "expo-router";
+import { DarkTheme, DefaultTheme, ThemeProvider, useSegments } from "expo-router";
+import { AppStack } from "@/components/app-stack";
 import * as SplashScreen from "expo-splash-screen";
 import * as WebBrowser from "expo-web-browser";
 import { WifiOff } from "lucide-react-native";
@@ -26,8 +28,9 @@ import { configureNotifications } from "@/lib/reminders";
 import { AppearanceProvider, palettes, useColors, useScheme } from "@/lib/theme";
 import { PremiumLockedSheet } from "@/components/premium/locked-sheet";
 import { Toast } from "@/components/toast";
-import { ScreenTransition } from "@/components/screen-transition";
-import { modalMotion, stackMotion } from "@/lib/motion";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CoverScreen } from "@/components/brand/cover-screen";
+import { modalMotion, stackBackground, stackMotion } from "@/lib/motion";
 
 SplashScreen.preventAutoHideAsync();
 // Finishes the sign-in popup when the web preview is used.
@@ -59,12 +62,31 @@ export default function RootLayout() {
                 <OfflineBanner />
                 <PremiumLockedSheet />
                 <Toast />
+                <ConfirmDialog />
+                {/* Over everything until the session is known; the native splash hides behind it. */}
+                <Cover fontsLoaded={fontsLoaded} />
               </AuthProvider>
             </NavigationTheme>
           </AppearanceProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * The Figma cover (components/brand/cover-screen.tsx) from launch until fonts are loaded and the
+ * session is checked. The native splash hides as soon as the cover has drawn, so there's no flash.
+ */
+function Cover({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { status } = useAuth();
+  return (
+    <CoverScreen
+      ready={fontsLoaded && status !== "loading"}
+      onShown={() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }}
+    />
   );
 }
 
@@ -106,9 +128,6 @@ function Routes() {
   useEffect(() => {
     if (status === "signedIn" || status === "signedOut") trackScreen(screen || "index");
   }, [screen, status]);
-  useEffect(() => {
-    if (status !== "loading") SplashScreen.hideAsync();
-  }, [status]);
   if (status === "loading") return null;
   if (status === "offline") return <OfflineStart />;
 
@@ -117,56 +136,48 @@ function Routes() {
   // Back after 90+ days: only the welcome-back check-in until it's answered or dismissed.
   const welcomeBack = onboarded && Boolean(me?.welcomeBack);
   return (
-    <Stack
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }}
-      // Web preview only: animates screen changes the browser's native stack would hard-cut.
-      screenLayout={({ navigation, options, children }) => (
-        <ScreenTransition navigation={navigation} modal={options.presentation === "modal"}>
-          {children}
-        </ScreenTransition>
-      )}
-    >
+    <AppStack screenOptions={{ headerShown: false, ...stackBackground(c.ground), ...stackMotion }}>
       {/*
         Order matters: when a guard flips (sign-in, sign-out), the stack falls back to the FIRST screen
         still allowed. The app must come before onboarding, or a returning user who signs in again
         lands on the (prefilled) edit-goal form instead of Today.
       */}
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="login" />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn && welcomeBack}>
-        <Stack.Screen name="welcome-back" />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn && onboarded && !welcomeBack}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="log" />
-        <Stack.Screen name="briefing" />
-        <Stack.Screen name="progress" />
-        <Stack.Screen name="goal" />
-        <Stack.Screen name="coach" />
-        <Stack.Screen name="coach-memory" />
-        <Stack.Screen name="reminders" />
-        <Stack.Screen name="measurements" />
-        <Stack.Screen name="workout-session" />
-        <Stack.Screen name="training/[date]" />
-        <Stack.Screen name="training/setup" />
-        <Stack.Screen name="profile" />
-        <Stack.Screen name="health/index" />
-        <Stack.Screen name="health/connect" />
-        <Stack.Screen name="settings/index" />
-        <Stack.Screen name="settings/account" />
-        <Stack.Screen name="settings/notifications" />
-        <Stack.Screen name="settings/privacy" />
-        <Stack.Screen name="support/index" />
-        <Stack.Screen name="support/faq" />
-        <Stack.Screen name="support/feedback" />
-        <Stack.Screen name="pro" options={modalMotion} />
-      </Stack.Protected>
+      <AppStack.Protected guard={!signedIn}>
+        <AppStack.Screen name="login" />
+      </AppStack.Protected>
+      <AppStack.Protected guard={signedIn && welcomeBack}>
+        <AppStack.Screen name="welcome-back" />
+      </AppStack.Protected>
+      <AppStack.Protected guard={signedIn && onboarded && !welcomeBack}>
+        <AppStack.Screen name="(tabs)" />
+        <AppStack.Screen name="log" />
+        <AppStack.Screen name="briefing" />
+        <AppStack.Screen name="progress" />
+        <AppStack.Screen name="goal" />
+        <AppStack.Screen name="coach" />
+        <AppStack.Screen name="coach-memory" />
+        <AppStack.Screen name="reminders" />
+        <AppStack.Screen name="measurements" />
+        <AppStack.Screen name="workout-session" />
+        <AppStack.Screen name="training/[date]" />
+        <AppStack.Screen name="training/setup" />
+        <AppStack.Screen name="profile" />
+        <AppStack.Screen name="health/index" />
+        <AppStack.Screen name="health/connect" />
+        <AppStack.Screen name="settings/index" />
+        <AppStack.Screen name="settings/account" />
+        <AppStack.Screen name="settings/notifications" />
+        <AppStack.Screen name="settings/privacy" />
+        <AppStack.Screen name="support/index" />
+        <AppStack.Screen name="support/faq" />
+        <AppStack.Screen name="support/feedback" />
+        <AppStack.Screen name="pro" options={modalMotion} />
+      </AppStack.Protected>
       {/* First-time setup, and where an onboarded user edits their goal (pushed from Profile). */}
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="onboarding" />
-      </Stack.Protected>
-    </Stack>
+      <AppStack.Protected guard={signedIn}>
+        <AppStack.Screen name="onboarding" />
+      </AppStack.Protected>
+    </AppStack>
   );
 }
 

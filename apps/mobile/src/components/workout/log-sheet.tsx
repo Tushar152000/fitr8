@@ -46,7 +46,7 @@ export function LogSheet({ open, onClose, day }: { open: boolean; onClose: () =>
           {withDistance && <NumberField label="Distance (optional)" unit="km" value={km} onValueChange={setKm} />}
         </View>
         {withDistance && (
-          <Text size={13} color={c.ink3}>
+          <Text variant="labelRegular" color={c.ink2}>
             With a distance, your easy pace adjusts after 2 logged runs.
           </Text>
         )}

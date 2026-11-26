@@ -11,7 +11,7 @@ export function LoggedRow({ log }: { log: TrainingLogDto }) {
   const remove = useRemoveTrainingLog();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <Text style={{ flex: 1 }} tabular>
+      <Text variant="bodyMedium" style={{ flex: 1 }} tabular>
         {DAY_LABEL[log.type]} · {log.minutes} min{log.distanceKm ? ` · ${log.distanceKm} km` : ""} ·{" "}
         {kcalText(log.kcal)} kcal
       </Text>
@@ -22,7 +22,7 @@ export function LoggedRow({ log }: { log: TrainingLogDto }) {
         onPress={() => remove.mutate(log.id)}
         style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 8 }}
       >
-        <Text weight={600} size={13} color={c.danger}>
+        <Text variant="labelStrong" color={c.danger}>
           Remove
         </Text>
       </PressableScale>

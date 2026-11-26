@@ -16,27 +16,27 @@ export function ProductSummary({ food }: { food: FoodDto }) {
   // Stored names carry the brand / barcode to stay unique; the brand is shown separately.
   const displayName = food.name.replace(/ · \d+$/, "").replace(food.brand ? ` (${food.brand})` : /$^/, "");
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 12 }}>
       <VerifiedBadge>{fromOff || food.verified ? "Exact label values" : "Your label scan"}</VerifiedBadge>
       <View style={{ flexDirection: "row", gap: 16, alignItems: "flex-start" }}>
         <View style={styles.pack}>
           {food.imageUrl ? (
             <Image source={{ uri: food.imageUrl }} style={StyleSheet.absoluteFill} contentFit="contain" />
           ) : (
-            <Package size={32} color={c.ink3} />
+            <Package size={28} color={c.ink2} strokeWidth={2} />
           )}
         </View>
         <View style={{ flex: 1 }}>
           {food.brand && (
-            <Text weight={600} size={13} color={c.ink3}>
+            <Text variant="labelStrong" color={c.ink2}>
               {food.brand}
             </Text>
           )}
-          <Text variant="h1" size={24}>
+          <Text variant="heading1" accessibilityRole="header">
             {displayName}
           </Text>
           {food.servingSizeG && (
-            <Text size={13} color={c.ink2} tabular style={{ marginTop: 4 }}>
+            <Text variant="labelRegular" color={c.ink2} tabular style={{ marginTop: 4 }}>
               1 serving = {formatQty(food.servingSizeG)} {measure}
               {food.servingLabel && food.servingLabel !== `${food.servingSizeG} ${measure}`
                 ? ` (${food.servingLabel})`
@@ -49,7 +49,7 @@ export function ProductSummary({ food }: { food: FoodDto }) {
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   pack: {
     width: 80,
     height: 80,
@@ -59,5 +59,6 @@ const useStyles = makeStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    ...shadows.card,
   },
 }));

@@ -13,13 +13,13 @@ export function TotalCard({ kcal, live = false, children }: { kcal: number; live
   const styles = useStyles();
   return (
     <View style={styles.total}>
-      <View>
-        <Text weight={600} size={12} color={c.ink3}>
+      <View style={{ gap: 2 }}>
+        <Text variant="labelStrong" color={c.ink2}>
           Total
         </Text>
-        <Text variant="h1" size={26} tabular accessibilityLiveRegion={live ? "polite" : undefined}>
+        <Text variant="stat" tabular accessibilityLiveRegion={live ? "polite" : undefined}>
           {formatInt(kcal)}{" "}
-          <Text weight={600} size={13} color={c.ink3}>
+          <Text variant="labelMedium" color={c.ink2}>
             kcal
           </Text>
         </Text>
@@ -29,7 +29,7 @@ export function TotalCard({ kcal, live = false, children }: { kcal: number; live
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   total: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -38,5 +38,7 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surface,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    gap: 12,
+    ...shadows.card,
   },
 }));

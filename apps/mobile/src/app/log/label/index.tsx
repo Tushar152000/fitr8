@@ -1,6 +1,7 @@
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { ChevronLeft, Image as ImageIcon } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -9,6 +10,7 @@ import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
 import { cam } from "@/components/log/camera/cam";
 import { CameraSideButton, CameraTopButton, Shutter } from "@/components/log/camera/camera-buttons";
 import { CameraBusy, CameraError, CameraPermission } from "@/components/log/camera/camera-overlays";
+import { Corners } from "@/components/log/camera/corners";
 import { Text } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { choiceParams, dayFromParam, mealFromParam } from "@/lib/meal-param";
@@ -71,80 +73,103 @@ export default function LabelCamera() {
 
   const granted = permission?.granted;
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.top}>
-        <CameraTopButton icon={ChevronLeft} label="Back" onPress={() => router.back()} />
-        <Text variant="heading2" color={cam.white}>
-          Photograph the label
-        </Text>
-        {/* Balances the back button so the title stays centred. */}
-        <View style={styles.spacer} />
-      </View>
-
-      <View style={styles.viewfinder}>
-        {granted ? (
+    <View style={styles.root}>
+      {/* As /log: the camera fills the whole screen; the header and controls sit on it over shades. */}
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient colors={VIEWFINDER} style={StyleSheet.absoluteFill} />
+        {granted && (
           <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" onCameraReady={() => setReady(true)} />
-        ) : (
-          <CameraPermission
-            message="Allow the camera to photograph the label, or pick a photo from your gallery."
-            canAsk={permission?.canAskAgain !== false}
-            onAllow={requestPermission}
-          />
         )}
-        {/* Tall frame for the nutrition table. */}
-        <View style={[styles.frame, { pointerEvents: "none" }]} />
-        <View style={[styles.hint, { pointerEvents: "none" }]}>
-          <Text variant="labelMedium" color={cam.white}>
-            Whole table in frame · per 100 g visible
+      </View>
+      <LinearGradient
+        colors={SHADE_TOP}
+        locations={[0, (insets.top + TOP_CONTENT) / (insets.top + TOP_CONTENT + FADE), 1]}
+        style={[styles.shade, { top: 0, height: insets.top + TOP_CONTENT + FADE, pointerEvents: "none" }]}
+      />
+      <LinearGradient
+        colors={SHADE_BOTTOM}
+        locations={[0, FADE / (FADE + BOTTOM_CONTENT + insets.bottom), 1]}
+        style={[styles.shade, { bottom: 0, height: FADE + BOTTOM_CONTENT + insets.bottom, pointerEvents: "none" }]}
+      />
+
+      <View style={[styles.layout, { paddingTop: insets.top + 8, pointerEvents: "box-none" }]}>
+        <View style={styles.header}>
+          <CameraTopButton icon={ChevronLeft} label="Back" onPress={() => router.back()} />
+          <Text variant="heading2" color={cam.white} numberOfLines={1} style={{ flex: 1 }}>
+            Photograph the label
           </Text>
         </View>
-        {busy && <CameraBusy label={phase === "uploading" ? "Uploading…" : "Reading the label…"} />}
+
+        {/* The framing area: corner guides round the nutrition table, the hint at its foot. */}
+        <View style={[styles.frame, { pointerEvents: "box-none" }]}>
+          {!granted && (
+            <CameraPermission
+              message="Allow the camera to photograph the label, or pick a photo from your gallery."
+              canAsk={permission?.canAskAgain !== false}
+              onAllow={requestPermission}
+            />
+          )}
+          <View style={[StyleSheet.absoluteFill, { marginHorizontal: 20, marginBottom: 56, pointerEvents: "none" }]}>
+            <Corners />
+          </View>
+          <View style={[styles.hint, { pointerEvents: "none" }]}>
+            <Text variant="labelMedium" color={cam.white}>
+              Whole table in frame · per 100 g visible
+            </Text>
+          </View>
+        </View>
+
+        {error && <CameraError message={error} />}
+
+        <View style={[styles.controls, { paddingBottom: Math.max(24, insets.bottom + 11) }]}>
+          <CameraSideButton
+            caption="Gallery"
+            accessibilityLabel="Pick from gallery"
+            icon={ImageIcon}
+            onPress={pick}
+            disabled={busy}
+          />
+          <View style={{ alignItems: "center", gap: 8 }}>
+            <Shutter
+              accessibilityLabel="Take photo of label"
+              onPress={shoot}
+              disabled={busy || !granted || !ready}
+              dimmed={busy || !granted}
+            />
+            <Text variant="labelStrong" color={cam.white}>
+              Snap
+            </Text>
+          </View>
+          {/* Balances the gallery button so the shutter stays centred. */}
+          <View style={{ width: 56 }} />
+        </View>
       </View>
 
-      {error && <CameraError message={error} />}
-
-      <View style={[styles.controls, { paddingBottom: Math.max(28, insets.bottom + 8) }]}>
-        <CameraSideButton icon={ImageIcon} accessibilityLabel="Pick from gallery" onPress={pick} disabled={busy} />
-        <Shutter
-          accessibilityLabel="Take photo of label"
-          onPress={shoot}
-          disabled={busy || !granted || !ready}
-          dimmed={busy || !granted}
-        />
-        <View style={{ width: 56 }} />
-      </View>
+      {busy && <CameraBusy label={phase === "uploading" ? "Uploading…" : "Reading the label…"} />}
 
       <AiLimitSheet {...limit.sheet} params={choice} />
     </View>
   );
 }
 
+/** The same viewfinder fill and shades as /log (Figma "Snap your meal"). */
+const VIEWFINDER = ["#2a2e33", "#121416"] as const;
+const SHADE_TOP = ["rgba(0,0,0,0.75)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0)"] as const;
+const SHADE_BOTTOM = ["rgba(0,0,0,0)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.75)"] as const;
+/** Height of the header under the status bar (8 + 44) and of the controls. */
+const TOP_CONTENT = 52;
+const BOTTOM_CONTENT = 150;
+const FADE = 70;
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cam.panel },
-  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
-  spacer: { width: 44, height: 44 },
-  viewfinder: {
-    flex: 1,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 28,
-    overflow: "hidden",
-    backgroundColor: "#1c1f22",
-  },
-  frame: {
-    position: "absolute",
-    left: 40,
-    right: 40,
-    top: 24,
-    bottom: 64,
-    borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.9)",
-    borderRadius: 18,
-    boxShadow: "0 0 0 999px rgba(23, 24, 28, 0.5)",
-  },
+  shade: { position: "absolute", left: 0, right: 0 },
+  layout: { flex: 1, paddingHorizontal: 20, gap: 16 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12 },
+  frame: { flex: 1 },
   hint: {
     position: "absolute",
-    bottom: 24,
+    bottom: 8,
     alignSelf: "center",
     borderRadius: 100,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -155,7 +180,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 32,
-    paddingTop: 24,
+    paddingHorizontal: 12,
+    paddingTop: 16,
   },
 });

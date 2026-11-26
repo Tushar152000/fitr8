@@ -74,11 +74,12 @@ function SaveMealForm({
 
   return (
     <>
-      <Text color={c.ink2}>
+      <Text variant="bodySm" color={c.ink2}>
         Next time, add these {rows.length} {rows.length === 1 ? "item" : "items"} with one tap from &quot;Type&quot; —
         no photo, no AI scan.
       </Text>
       <MealNameField
+        filled
         autoFocus
         value={name}
         onChangeText={(v) => {

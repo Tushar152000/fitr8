@@ -4,7 +4,7 @@ import { router, useIsFocused } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Crown, Image as ImageIcon, Keyboard, X, Zap } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
@@ -140,19 +140,24 @@ export default function CameraScreen() {
           />
         )}
       </View>
-      {/* Soft shades keep the title, chips and buttons readable over a bright plate. */}
+      {/* Shades behind the top block (close, title, meal chips) and the bottom buttons: dark where
+          the content sits, fading out into the camera beyond it. */}
       <LinearGradient
         colors={SHADE_TOP}
-        style={[styles.shade, { top: 0, height: insets.top + 170, pointerEvents: "none" }]}
+        locations={[0, (insets.top + TOP_CONTENT) / (insets.top + TOP_CONTENT + FADE), 1]}
+        style={[styles.shade, { top: 0, height: insets.top + TOP_CONTENT + FADE, pointerEvents: "none" }]}
       />
       <LinearGradient
         colors={SHADE_BOTTOM}
-        style={[styles.shade, { bottom: 0, height: insets.bottom + 220, pointerEvents: "none" }]}
+        locations={[0, FADE / (FADE + BOTTOM_CONTENT + insets.bottom), 1]}
+        style={[styles.shade, { bottom: 0, height: FADE + BOTTOM_CONTENT + insets.bottom, pointerEvents: "none" }]}
       />
 
       <View style={[styles.layout, { paddingTop: insets.top + 8, pointerEvents: "box-none" }]}>
         <View style={styles.header}>
-          <CameraTopButton icon={X} label="Close" onPress={() => router.back()} />
+          {/* iPhone has no back button, so it keeps the close button left of the title, as before.
+              Android and the web use the system back (user decision 2026-11-27). */}
+          {Platform.OS === "ios" && <CameraTopButton icon={X} label="Close" onPress={() => router.back()} />}
           <View style={{ flex: 1, gap: 4 }}>
             <Text variant="heading2" color={cam.white} numberOfLines={1}>
               Snap your meal
@@ -222,7 +227,8 @@ export default function CameraScreen() {
           <CameraSideButton
             caption="Type"
             icon={Keyboard}
-            onPress={() => router.replace({ pathname: "/log/type", params })}
+            // Pushed on top of the camera, so Type's close button comes back here.
+            onPress={() => router.push({ pathname: "/log/type", params })}
           />
         </View>
       </View>
@@ -236,8 +242,13 @@ export default function CameraScreen() {
 
 /** Figma "Viewfinder": the screen's fill, seen until the camera feed draws over it. */
 const VIEWFINDER = ["#2a2e33", "#121416"] as const;
-const SHADE_TOP = ["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"] as const;
-const SHADE_BOTTOM = ["rgba(0,0,0,0)", "rgba(0,0,0,0.6)"] as const;
+const SHADE_TOP = ["rgba(0,0,0,0.75)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0)"] as const;
+const SHADE_BOTTOM = ["rgba(0,0,0,0)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.75)"] as const;
+/** Height of the top block under the status bar (8 + header 44 + 16 + meal chips 44) and of the controls. */
+const TOP_CONTENT = 112;
+const BOTTOM_CONTENT = 150;
+/** How far each shade fades out past its content. */
+const FADE = 70;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cam.panel },

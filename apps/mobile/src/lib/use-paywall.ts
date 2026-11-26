@@ -71,16 +71,27 @@ export function usePaywall(source: PaywallSource) {
     track("paywall_viewed", { source });
   }, [source]);
 
-  // Already Premium: nothing to sell here. Go back, and open the store's subscription page.
+  // Leave the paywall once: back where the user came from, else `fallback` (opened by a link or a
+  // reload, there is no history and GO_BACK would be unhandled). A restore or purchase that leaves
+  // must not be followed by the already-Premium redirect below popping a second screen.
+  const left = useRef(false);
+  const leave = (fallback: "/today" | "/profile") => {
+    if (left.current) return;
+    left.current = true;
+    if (router.canGoBack()) router.back();
+    else router.replace(fallback);
+  };
+  const close = () => leave("/today");
+
+  // Already Premium: nothing to sell here. Leave (to Profile, where the plan is managed, when there
+  // is no history), and open the store's subscription page.
   const alreadyPremium = billing.data?.plan === "PRO" && busy === null;
   const store = billing.data?.store;
   useEffect(() => {
-    if (!alreadyPremium) return;
-    router.back();
+    if (!alreadyPremium || left.current) return;
+    leave("/profile");
     if (store && store !== "TEST") void Linking.openURL(manageSubscriptionUrl);
   }, [alreadyPremium, store]);
-
-  const close = () => (router.canGoBack() ? router.back() : router.replace("/today"));
 
   async function unlocked() {
     await Promise.all([

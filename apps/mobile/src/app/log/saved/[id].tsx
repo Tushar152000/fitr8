@@ -3,13 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus, Trash2 } from "lucide-react-native";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { BackHeader } from "@/components/back-header";
+import { View } from "react-native";
 import { AddItemSheet } from "@/components/log/add-item-sheet";
 import { MealItemList } from "@/components/log/meal-item-list";
 import { MealNameField } from "@/components/log/meal-name-field";
 import { FormSkeleton } from "@/components/skeletons";
-import { Button, Card, Chip, FieldError, FormField, PressableScale, Screen, Text } from "@/components/ui";
+import { TotalCard } from "@/components/log/total-card";
+import {
+  Button,
+  ChipGroup,
+  FieldError,
+  FormField,
+  PageHeader,
+  PressableScale,
+  Screen,
+  SectionLabel,
+  Text,
+} from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { confirmAction } from "@/lib/confirm";
@@ -19,7 +29,7 @@ import { totals, type Row } from "@/lib/meal-rows";
 import { savedMealsQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
 import { rowsFromSaved, toSavedPayload } from "@/lib/saved-meals";
-import { useColors } from "@/lib/theme";
+import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Build or edit a saved meal: a name, an optional usual slot, and the items. `id` is "new" to create. */
 export default function SavedMealRoute() {
@@ -31,7 +41,7 @@ export default function SavedMealRoute() {
   if (!creating && list.isPending) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader title="Edit saved meal" />
         <FormSkeleton />
       </Screen>
     );
@@ -40,10 +50,11 @@ export default function SavedMealRoute() {
   if (!creating && !existing) {
     return (
       <Screen>
-        <BackHeader />
-        <View style={{ gap: 8, marginTop: 24 }}>
-          <Text variant="h1">Saved meal not found</Text>
-          <Text color={c.ink2}>It may have been deleted on another device.</Text>
+        <View style={{ gap: 12 }}>
+          <PageHeader title="Saved meal not found" />
+          <Text variant="bodySm" color={c.ink2}>
+            It may have been deleted on another device.
+          </Text>
         </View>
       </Screen>
     );
@@ -53,6 +64,7 @@ export default function SavedMealRoute() {
 
 function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; defaultMeal: MealType | null }) {
   const c = useColors();
+  const styles = useStyles();
   const [name, setName] = useState(existing?.name ?? "");
   const [mealType, setMealType] = useState<MealType | null>(existing ? existing.mealType : defaultMeal);
   const [rows, setRows] = useState<Row[]>(() => (existing ? rowsFromSaved(existing) : []));
@@ -108,27 +120,16 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
     <Screen
       footer={
         <>
-          <View style={styles.total}>
-            <View>
-              <Text weight={600} size={12} color={c.ink3}>
-                Total
-              </Text>
-              <Text variant="h1" size={26} tabular accessibilityLiveRegion="polite">
-                {formatInt(sum.kcal)}{" "}
-                <Text weight={600} size={13} color={c.ink3}>
-                  kcal
-                </Text>
-              </Text>
-            </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text weight={600} size={13} color={c.protein} tabular>
+          <TotalCard kcal={sum.kcal} live>
+            <View style={{ alignItems: "flex-end", gap: 2 }}>
+              <Text variant="labelStrong" color={c.protein} tabular>
                 {formatInt(sum.proteinG)} g protein
               </Text>
-              <Text weight={600} size={13} color={c.carbsText} tabular>
+              <Text variant="labelStrong" color={c.carbsText} tabular>
                 {formatInt(sum.carbsG)} g carbs · {formatInt(sum.fatG)} g fat
               </Text>
             </View>
-          </View>
+          </TotalCard>
           {error && <FieldError>{error}</FieldError>}
           <Button onPress={save} loading={busy} disabled={rows.length === 0}>
             {existing ? "Save changes" : "Save meal"}
@@ -136,25 +137,21 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
         </>
       }
     >
-      <BackHeader>
-        {existing && (
-          <PressableScale
-            accessibilityRole="button"
-            onPress={remove}
-            style={[styles.delete, { alignSelf: "flex-end" }]}
-            hitSlop={6}
-          >
-            <Trash2 size={16} color={c.ink3} />
-            <Text weight={600} size={13} color={c.ink3}>
-              Delete
-            </Text>
-          </PressableScale>
-        )}
-      </BackHeader>
-
-      <View style={{ gap: 6 }}>
-        <Text variant="h1">{existing ? "Edit saved meal" : "New saved meal"}</Text>
-        <Text color={c.ink2}>
+      <View style={{ gap: 12 }}>
+        <PageHeader
+          title={existing ? "Edit saved meal" : "New saved meal"}
+          trailing={
+            existing && (
+              <PressableScale accessibilityRole="button" onPress={remove} style={styles.delete} hitSlop={6}>
+                <Trash2 size={16} color={c.danger} strokeWidth={2} />
+                <Text variant="labelStrong" color={c.danger}>
+                  Delete
+                </Text>
+              </PressableScale>
+            )
+          }
+        />
+        <Text variant="bodySm" color={c.ink2}>
           Save a meal you eat often. Next time it&apos;s one tap to log — no photo, no AI scan.
         </Text>
       </View>
@@ -171,24 +168,24 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
       </FormField>
 
       <FormField label="Usually for (optional)" gap={8}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }} accessibilityLabel="Usually for">
-          {MEAL_TYPES.map((t) => (
-            <Chip key={t} selected={t === mealType} onPress={() => setMealType(t === mealType ? null : t)}>
-              {MEAL_LABEL[t]}
-            </Chip>
-          ))}
-        </View>
+        {/* Tapping the chosen meal again clears it (no usual slot). */}
+        <ChipGroup
+          label="Usually for"
+          value={mealType ?? undefined}
+          onChange={(t) => setMealType(t === mealType ? null : t)}
+          options={MEAL_TYPES.map((t) => ({ value: t, label: MEAL_LABEL[t] }))}
+        />
       </FormField>
 
-      <View style={{ gap: 10 }}>
-        <Text variant="h2">Items</Text>
+      <View style={{ gap: 12 }}>
+        <SectionLabel>Items</SectionLabel>
         {rows.length === 0 && (
-          <Card>
-            <Text color={c.ink2}>
+          <View style={styles.card}>
+            <Text variant="bodySm" color={c.ink2}>
               Search the food list, or describe it (&quot;2 roti and 1 katori dal&quot;) and we&apos;ll work out the
               numbers.
             </Text>
-          </Card>
+          </View>
         )}
         <MealItemList rows={rows} onRowsChange={setRows} />
         <Button variant="dashed" icon={Plus} onPress={() => setAddOpen(true)}>
@@ -210,7 +207,7 @@ function Builder({ existing, defaultMeal }: { existing: SavedMealDto | null; def
   );
 }
 
-const styles = StyleSheet.create({
-  total: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
-  delete: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
-});
+const useStyles = makeStyles((c, shadows) => ({
+  card: { borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
+  delete: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: 4 },
+}));

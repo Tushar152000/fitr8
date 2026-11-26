@@ -70,12 +70,11 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
   };
 
   const calendarMode = mode === "calendar";
+  // One way in: the calendar button on the streak. The calendar has only its month arrows (user
+  // decision 2026-11-27: no flame "back to streak" button there); the sheet's close button leaves.
   const toggle = (
-    <RoundButton
-      label={calendarMode ? "Back to your streak" : "Open the calendar"}
-      onPress={() => switchTo(calendarMode ? "streak" : "calendar")}
-    >
-      {calendarMode ? <StreakFlame size={20} /> : <CalendarDays size={20} color={c.ink} strokeWidth={2} />}
+    <RoundButton label="Open the calendar" onPress={() => switchTo("calendar")}>
+      <CalendarDays size={20} color={c.ink} strokeWidth={2} />
     </RoundButton>
   );
 
@@ -87,7 +86,6 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
             <View style={{ gap: 18 }}>
               <Header title={cal.title} subtitle={cal.subtitle}>
                 <MonthArrows month={cal.month} setMonth={cal.setMonth} />
-                {toggle}
               </Header>
               <CalendarBody
                 month={cal.month}

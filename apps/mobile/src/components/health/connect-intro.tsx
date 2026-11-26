@@ -1,7 +1,7 @@
 import { Heart, Lock } from "lucide-react-native";
 import { View } from "react-native";
 import { Card, IconTile, Text } from "@/components/ui";
-import { useColors } from "@/lib/theme";
+import { radius, useColors } from "@/lib/theme";
 
 const PROMISES = [
   "Read only: FITR8 never changes your health data",
@@ -13,7 +13,7 @@ const PROMISES = [
 export function ConnectIntro({ label }: { label: string }) {
   const c = useColors();
   return (
-    <Card style={{ gap: 14 }}>
+    <Card style={{ gap: 14, padding: 20, borderRadius: radius.card }}>
       <IconTile icon={Heart} accent />
       <View style={{ gap: 6 }}>
         <Text variant="heading3">See your health data next to your food</Text>
@@ -32,7 +32,7 @@ export function ConnectIntro({ label }: { label: string }) {
           </View>
         ))}
       </View>
-      <Text variant="labelRegular" color={c.ink3} style={{ lineHeight: 18 }}>
+      <Text variant="labelRegular" color={c.ink2} style={{ lineHeight: 18 }}>
         On the next screen, {label} asks which data to share. Allow what you&apos;re comfortable with; FITR8 works with
         any of it.
       </Text>

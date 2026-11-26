@@ -1,6 +1,6 @@
 import type { MealDetailDto } from "@fitr8/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, ScrollView, View } from "react-native";
@@ -11,7 +11,6 @@ import { MealItemList } from "@/components/log/meal-item-list";
 import { Analysing, Failed, Found } from "@/components/log/meal-states";
 import { MealWhen } from "@/components/log/meal-when";
 import { DetailsCard } from "@/components/log/review/details-card";
-import { EditHistoryBar } from "@/components/log/review/edit-history-bar";
 import { GheeCard } from "@/components/log/review/ghee-card";
 import { MealHeader } from "@/components/log/review/meal-header";
 import { ReviewFooter } from "@/components/log/review/review-footer";
@@ -22,14 +21,15 @@ import { QueryError } from "@/components/query-error";
 import { MealSkeleton } from "@/components/skeletons";
 import { Button, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
+import { showToast } from "@/lib/toast";
+import { useLeaveLog } from "@/lib/use-leave-log";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { confirmAction } from "@/lib/confirm";
 import { MEAL_LABEL, mealTitle } from "@/lib/format";
 import { choiceParams, dayFromParam, dayLabel } from "@/lib/meal-param";
 import { fromItems, toConfirmPayload, totals, type Row } from "@/lib/meal-rows";
 import { refreshDay } from "@/lib/query";
-import { useColors } from "@/lib/theme";
-import { useHistory } from "@/lib/use-history";
+import { gutter, useColors } from "@/lib/theme";
 import { useScanLimit } from "@/lib/use-scan-limit";
 import { showDay } from "@/lib/view-day";
 import { haptic } from "@/lib/haptics";
@@ -70,14 +70,14 @@ export default function ConfirmMealScreen() {
 
   if (meal.isPending) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.ground, padding: 20, paddingTop: 80, gap: 12 }}>
+      <View style={{ flex: 1, backgroundColor: c.ground, padding: gutter, paddingTop: 80, gap: 12 }}>
         <MealSkeleton />
       </View>
     );
   }
   if (meal.isError) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.ground, padding: 20, paddingTop: 80 }}>
+      <View style={{ flex: 1, backgroundColor: c.ground, padding: gutter, paddingTop: 80 }}>
         <QueryError error={meal.error} onRetry={() => meal.refetch()} />
       </View>
     );
@@ -110,18 +110,15 @@ function Editor({
   onRechecked: () => void;
 }) {
   const c = useColors();
+  // After saving or deleting: back where logging started (Home, Meals …), not always Home.
+  const leaveLog = useLeaveLog();
   const insets = useSafeAreaInsets();
   const analysing = meal.status === "PENDING" || meal.status === "ANALYZING";
   const saved = meal.status === "CONFIRMED";
   const initial = fromItems(meal.items);
-  // Items and the ghee switch share one undo / redo history.
-  const edits = useHistory<{ rows: Row[]; ghee: boolean }>({
-    rows: initial.rows,
-    ghee: saved ? initial.ghee : Boolean(meal.aiRaw?.hiddenFatLikely) || initial.ghee,
-  });
-  const { rows, ghee } = edits.value;
-  const setRows = (f: (all: Row[]) => Row[]) => edits.set((e) => ({ ...e, rows: f(e.rows) }));
-  const setGhee = (g: boolean) => edits.set((e) => ({ ...e, ghee: g }));
+  const [rows, setRowsState] = useState<Row[]>(initial.rows);
+  const setRows = (f: (all: Row[]) => Row[]) => setRowsState(f);
+  const [ghee, setGhee] = useState(saved ? initial.ghee : Boolean(meal.aiRaw?.hiddenFatLikely) || initial.ghee);
   const [note, setNote] = useState(meal.note ?? "");
   // Starts as the slot it was logged in (from the time of day); the user can move it.
   const [slot, setSlot] = useState(meal.mealType);
@@ -145,7 +142,7 @@ function Editor({
   const limitParams = choiceParams(meal.mealType, pastDay);
   const backToDay = () => {
     showDay(pastDay);
-    router.dismissTo("/today");
+    leaveLog();
   };
   const manual = meal.source === "TEXT" && !meal.inputText;
 
@@ -221,7 +218,7 @@ function Editor({
         contentContainerStyle={{ flexGrow: 1, paddingBottom: editing ? 16 : Math.max(16, insets.bottom) }}
       >
         <MealHeader meal={meal} scanning={analysing} top={insets.top} />
-        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20, gap: 12 }}>
+        <View style={{ flex: 1, paddingHorizontal: gutter, paddingTop: 16, gap: 16 }}>
           {analysing ? (
             <Analysing slow={slow} mealType={meal.mealType} hasPhoto={Boolean(meal.photoUrl)} />
           ) : meal.status === "FAILED" ? (
@@ -237,32 +234,40 @@ function Editor({
             <Found count={rows.length} onReview={() => setFound(false)} />
           ) : (
             <>
-              <ReviewTitle title={title} onDelete={remove} />
-              {meal.aiNotes && !manual && (
-                <Text size={13} color={c.ink3}>
-                  {meal.aiNotes}
-                </Text>
+              <View style={{ gap: 4 }}>
+                <ReviewTitle title={title} onDelete={remove} />
+                {meal.aiNotes && !manual && (
+                  <Text variant="bodySm" color={c.ink2}>
+                    {meal.aiNotes}
+                  </Text>
+                )}
+              </View>
+              {/* A meal being edited keeps its slot: no meal chips (user decision 2026-11-27). */}
+              {!saved && <MealWhen mealType={slot} onMealType={setSlot} />}
+              {(pastDay || (rows.length > 0 && !manual)) && (
+                <View style={{ gap: 4 }}>
+                  {pastDay && (
+                    <Text variant="labelStrong" color={c.brandText}>
+                      {dayLabel(pastDay) === "Yesterday" ? "Logging for yesterday" : `Logging for ${dayLabel(pastDay)}`}
+                    </Text>
+                  )}
+                  {rows.length > 0 && !manual && (
+                    <Text variant="labelRegular" color={c.ink2}>
+                      Check portions — tap − or + to adjust.
+                    </Text>
+                  )}
+                </View>
               )}
-              <MealWhen mealType={slot} onMealType={setSlot} />
-              {pastDay && (
-                <Text weight={600} size={13} color={c.brandText}>
-                  {dayLabel(pastDay) === "Yesterday" ? "Logging for yesterday" : `Logging for ${dayLabel(pastDay)}`}
-                </Text>
-              )}
-              <EditHistoryBar
-                hint={rows.length > 0 && !manual ? "Check portions — tap − or + to adjust." : ""}
-                onUndo={edits.undo}
-                onRedo={edits.redo}
-                canUndo={edits.canUndo}
-                canRedo={edits.canRedo}
-              />
 
-              <View style={{ gap: 10, marginTop: 4 }}>
+              <View style={{ gap: 12 }}>
                 <MealItemList rows={rows} onRowsChange={setRows} />
-                <Button variant="dashed" icon={Plus} onPress={() => setAddOpen(true)}>
-                  {rows.length ? "Add a missed item" : "Add an item"}
-                </Button>
-                {rows.length > 0 && <SaveAsMeal savedAs={savedAs} onSave={() => setSaveOpen(true)} />}
+                {/* One compact line: add an item, and save as a meal (icon). */}
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Button variant="dashed" icon={Plus} style={{ flex: 1 }} onPress={() => setAddOpen(true)}>
+                    Add item
+                  </Button>
+                  {rows.length > 0 && <SaveAsMeal savedAs={savedAs} onSave={() => setSaveOpen(true)} />}
+                </View>
               </View>
 
               {gheeRelevant && <GheeCard checked={ghee} onChange={setGhee} />}
@@ -292,6 +297,7 @@ function Editor({
         onSaved={(name) => {
           setSavedAs(name);
           setSaveOpen(false);
+          showToast(`Saved as "${name}" — one tap to log it next time`);
         }}
         rows={rows}
         ghee={withGhee}

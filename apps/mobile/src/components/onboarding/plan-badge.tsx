@@ -19,7 +19,7 @@ export function PlanBadge({
   return (
     <View style={[styles.badge, { backgroundColor: background }]}>
       {icon}
-      <Text weight={600} size={13} color={color}>
+      <Text variant="labelStrong" color={color}>
         {label}
       </Text>
     </View>
@@ -34,6 +34,6 @@ const useStyles = makeStyles(() => ({
     alignSelf: "flex-start",
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
 }));

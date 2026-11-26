@@ -21,3 +21,20 @@ export function useKeyboardVisible(onShow?: () => void): boolean {
   }, [onShow]);
   return visible;
 }
+
+/** The on-screen keyboard's height (0 when hidden), so a panel can size itself to the space above it. */
+export function useKeyboardHeight(): number {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const ios = Platform.OS === "ios";
+    const show = Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", (e) =>
+      setHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return height;
+}

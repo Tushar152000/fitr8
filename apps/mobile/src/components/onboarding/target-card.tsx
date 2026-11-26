@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { Card, Text } from "@/components/ui";
 import { formatInt } from "@/lib/format";
-import { makeStyles, useColors, type Colors } from "@/lib/theme";
+import { makeStyles, radius, useColors, type Colors } from "@/lib/theme";
 import type { PlanSummary } from "@/lib/types-plan";
 
 /** Dots on the dark target card; protein and fat are lifted shades that read on the panel. */
@@ -18,17 +18,17 @@ export function TargetCard({ summary }: { summary: PlanSummary }) {
   const total = k.p + k.c + k.f || 1;
   const white70 = "rgba(255,255,255,0.7)";
   return (
-    <Card dark style={{ padding: 20, gap: 0 }}>
-      <Text weight={600} size={13} color={white70}>
+    <Card dark style={{ padding: 20, gap: 0, borderRadius: radius.card }}>
+      <Text variant="labelStrong" color={white70}>
         Daily target
       </Text>
       <Text variant="display" color={c.white} tabular>
         {formatInt(kcal)}{" "}
-        <Text weight={600} size={15} color={white70}>
+        <Text variant="bodyStrong" color={white70} style={{ letterSpacing: 0 }}>
           kcal
         </Text>
       </Text>
-      <Text size={13} color={white70} tabular style={{ marginTop: 6 }}>
+      <Text variant="labelRegular" color={white70} tabular style={{ marginTop: 6 }}>
         Maintenance {formatInt(summary.plan.tdee)} kcal
         {Math.abs(adjustment) >= 10 &&
           ` ${adjustment < 0 ? "−" : "+"} ${formatInt(Math.abs(adjustment))} kcal ${adjustment < 0 ? "deficit" : "surplus"}`}
@@ -57,11 +57,11 @@ function Macro({ label, grams, dot }: { label: string; grams: number; dot: strin
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} />
-        <Text size={13} color="rgba(255,255,255,0.7)">
+        <Text variant="labelRegular" color="rgba(255,255,255,0.7)">
           {label}
         </Text>
       </View>
-      <Text weight={700} size={16} color={c.white} tabular>
+      <Text variant="heading3" color={c.white} tabular>
         {grams} g
       </Text>
     </View>

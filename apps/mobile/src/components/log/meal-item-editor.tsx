@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 import { Stepper, Text } from "@/components/ui";
 import { formatInt, formatPortion, sentenceCase, unitStep } from "@/lib/format";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 
 const LOW_CONFIDENCE = 0.6;
 
@@ -49,13 +49,12 @@ export function MealItemEditor({
     <View style={[styles.card, unsure && styles.unsure]}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text weight={600} size={16}>
-            {sentenceCase(item.name)}
-          </Text>
+          <Text variant="heading3">{sentenceCase(item.name)}</Text>
           {editing ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
               <View style={styles.amountBox}>
                 <TextInput
+                  {...INPUT_CARET}
                   accessibilityLabel={`Amount in ${measure}`}
                   autoFocus
                   keyboardType="decimal-pad"
@@ -65,12 +64,12 @@ export function MealItemEditor({
                   onSubmitEditing={commit}
                   style={styles.amountInput}
                 />
-                <Text weight={600} size={13} color={c.ink3}>
+                <Text variant="labelMedium" color={c.ink2}>
                   {measure}
                 </Text>
               </View>
               <Pressable onPress={commit} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: 8 }}>
-                <Text weight={600} size={13} color={c.brandText}>
+                <Text variant="labelStrong" color={c.brandText}>
                   Done
                 </Text>
               </Pressable>
@@ -85,19 +84,19 @@ export function MealItemEditor({
               }}
               style={{ flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32, alignSelf: "flex-start" }}
             >
-              <Text weight={500} size={13} color={c.ink3} tabular>
+              <Text variant="labelMedium" color={c.ink2} tabular>
                 {portion}
               </Text>
-              <Pencil size={14} color={c.ink3} />
+              <Pencil size={12} color={c.ink2} strokeWidth={2} />
             </Pressable>
           ) : (
-            <Text weight={500} size={13} color={c.ink3} tabular>
+            <Text variant="labelMedium" color={c.ink2} tabular>
               {portion}
             </Text>
           )}
           {unsure && (
             <View style={styles.tag}>
-              <Text weight={600} size={12} color={c.cautionText}>
+              <Text variant="captionStrong" color={c.cautionText}>
                 Not sure — check this
               </Text>
             </View>
@@ -117,7 +116,7 @@ export function MealItemEditor({
               justifyContent: "center",
             }}
           >
-            <X size={20} color={c.ink3} />
+            <X size={18} color={c.ink2} strokeWidth={2} />
           </Pressable>
         )}
       </View>
@@ -128,9 +127,9 @@ export function MealItemEditor({
           step={unitStep(item.unit)}
           onChange={onQuantityChange}
         />
-        <Text weight={700} size={16} tabular>
+        <Text variant="heading3" tabular>
           {formatInt(item.kcal)}{" "}
-          <Text weight={600} size={13} color={c.ink3}>
+          <Text variant="labelMedium" color={c.ink2}>
             kcal
           </Text>
         </Text>
@@ -139,16 +138,16 @@ export function MealItemEditor({
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  card: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16 },
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 12, borderRadius: radius.card, backgroundColor: c.surface, padding: 16, ...shadows.card },
   unsure: { borderWidth: 1.5, borderColor: c.caution, padding: 14.5 },
   tag: {
     marginTop: 4,
     alignSelf: "flex-start",
     borderRadius: 999,
     backgroundColor: c.cautionSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   amountBox: {
     height: 44,
@@ -160,5 +159,5 @@ const useStyles = makeStyles((c) => ({
     borderRadius: radius.input,
     paddingHorizontal: 12,
   },
-  amountInput: { width: 64, fontFamily: fonts.sans600, fontSize: 15, color: c.ink, padding: 0 },
+  amountInput: { width: 64, fontFamily: fonts.sans600, fontSize: 16, color: c.ink, padding: 0, outlineWidth: 0 },
 }));

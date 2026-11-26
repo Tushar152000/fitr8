@@ -37,7 +37,7 @@ export function AboutYouStep({
   return (
     <>
       <FoldSection
-        icon={<PersonStanding size={18} color={c.brand} />}
+        icon={<PersonStanding size={18} color={c.ink} strokeWidth={2} />}
         title="Your body"
         summary={bodySummary(draft)}
         done={bodyDone}
@@ -52,13 +52,11 @@ export function AboutYouStep({
           onPress={onFinishBody}
           style={[styles.nextPart, !bodyDone && { opacity: 0.5 }]}
         >
-          <Text weight={600} size={16} color={c.brand}>
-            Next: Food and training
-          </Text>
+          <Text variant="bodyStrong">Next: Food and training</Text>
         </PressableScale>
       </FoldSection>
       <FoldSection
-        icon={<Utensils size={16} color={c.brand} />}
+        icon={<Utensils size={18} color={c.ink} strokeWidth={2} />}
         title="Food and training"
         summary={trainingSummary(draft)}
         done={foodDone}
@@ -72,13 +70,14 @@ export function AboutYouStep({
   );
 }
 
+/** PillButton's `soft` pill (canvas grey on the white card), kept pressable while not done: the tap shows what's missing. */
 const useStyles = makeStyles((c) => ({
   nextPart: {
     alignSelf: "flex-start",
     minHeight: 48,
     justifyContent: "center",
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    backgroundColor: c.sunken,
+    paddingHorizontal: 24,
+    borderRadius: 100,
+    backgroundColor: c.ground,
   },
 }));
