@@ -47,7 +47,7 @@ export function Screen({
     <KeyboardAvoidingView behavior="padding" style={[styles.root, dark && { backgroundColor: c.panel }]}>
       <ScrollView
         contentContainerStyle={[
-          { paddingTop: insets.top + 8, paddingHorizontal: gutter, paddingBottom: footer ? 16 : bottom + 32, gap: 24 },
+          { paddingTop: insets.top + 8, paddingHorizontal: gutter, paddingBottom: footer ? 16 : bottom + 32, gap: 18 },
           contentStyle,
         ]}
         keyboardShouldPersistTaps="handled"
@@ -134,6 +134,6 @@ export function Card({
 }
 
 const useCardStyles = makeStyles((c) => ({
-  card: { backgroundColor: c.surface, borderRadius: 20, padding: 16, gap: 12 },
+  card: { backgroundColor: c.surface, borderRadius: 18, padding: 14, gap: 10 },
   dark: { backgroundColor: c.panel, borderWidth: StyleSheet.hairlineWidth, borderColor: c.panelLine },
 }));

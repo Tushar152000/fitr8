@@ -4,6 +4,7 @@ Record decisions as `YYYY-MM-DD — decision — why`. Move a question to Decide
 
 ## Decided
 
+- 2026-11-25 — Food log: older days are view-only, meals can be added for the last 7 (owner chose view-only). Shipped by Tushar as a calendar that jumps to any earlier day (`lib/meal-param.ts` `viewableDay`/`pagerDays`/`canLogOn`). App UI is ~8% more compact (owner asked); colours follow Tushar’s v2 olive/lime system.
 - 2026-11-22 — Blog is built in-house (NestJS `blog` module + Tiptap editor), not Ghost/Payload/Strapi: reuses Google sign-in, sessions, storage and deploys, no second backend or user system.
 - 2026-11-22 — `/admin` is one universal staff admin (owner asked): `admin` module owns `staff_members` (ADMIN/EDITOR/AUTHOR, app-wide), first admins from `ADMIN_EMAILS`; the blog is its first section (`/admin/blog`, API `/api/admin/blog`) and keeps only blog data (`blog_authors` keyed by staff id). New sections follow docs/ADMIN.md.
 - 2026-11-22 — Blog pages render per request (`cache: "no-store"`). Next's fetch cache kept serving a post after it was renamed or unpublished (it doesn't replace a cached 200 with a 404). Open: add caching via Cache Components (`"use cache"` + tags) if blog traffic needs it; that flag changes the whole web app.

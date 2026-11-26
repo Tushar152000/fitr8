@@ -30,7 +30,28 @@ type Variant =
   | "captionStrong"
   | "nav";
 
-const VARIANTS: Record<Variant, TextStyle> = {
+/**
+ * Compact type (2026-11-24): every size in the app (variants and the `size` prop) is scaled by
+ * TYPE_SCALE in one place, never below MIN_SIZE so small print stays readable.
+ */
+const TYPE_SCALE = 0.92;
+const MIN_SIZE = 11;
+const scaled = (n: number) => Math.max(MIN_SIZE, Math.round(n * TYPE_SCALE));
+
+/** One style at the compact scale: size scaled, line height and tracking kept in proportion. */
+const compact = (t: TextStyle): TextStyle => {
+  if (!t.fontSize) return t;
+  const size = scaled(t.fontSize);
+  const k = size / t.fontSize;
+  return {
+    ...t,
+    fontSize: size,
+    ...(t.lineHeight ? { lineHeight: Math.round(t.lineHeight * k) } : null),
+    ...(t.letterSpacing ? { letterSpacing: t.letterSpacing * k } : null),
+  };
+};
+
+const DESIGN_SIZES: Record<Variant, TextStyle> = {
   display: { fontFamily: fonts.display700, fontSize: 40, lineHeight: 42, letterSpacing: -1.2 },
   h1: { fontFamily: fonts.display700, fontSize: 28, lineHeight: 33, letterSpacing: -0.5 },
   h2: { fontFamily: fonts.display700, fontSize: 19, lineHeight: 24 },
@@ -53,6 +74,11 @@ const VARIANTS: Record<Variant, TextStyle> = {
   captionStrong: { fontFamily: fonts.sans600, fontSize: 11 },
   nav: { fontFamily: fonts.sans600, fontSize: 11.5, letterSpacing: -0.23 },
 };
+
+const VARIANTS = Object.fromEntries(Object.entries(DESIGN_SIZES).map(([k, t]) => [k, compact(t)])) as Record<
+  Variant,
+  TextStyle
+>;
 
 /** Figma styles whose default colour is text/secondary. */
 const SECONDARY: ReadonlySet<Variant> = new Set(["labelRegular", "labelMedium", "caption"]);
@@ -89,7 +115,10 @@ export function Text({ variant = "body", weight, size, color, tabular, center, s
         base,
         weight && !display ? { fontFamily: WEIGHTS[weight] } : null,
         size
-          ? { fontSize: size, lineHeight: base.lineHeight ? Math.round(size * (display ? 1.15 : 1.4)) : undefined }
+          ? {
+              fontSize: scaled(size),
+              lineHeight: base.lineHeight ? Math.round(scaled(size) * (display ? 1.15 : 1.4)) : undefined,
+            }
           : null,
         color ? { color } : null,
         tabular ? { fontVariant: ["tabular-nums"] } : null,

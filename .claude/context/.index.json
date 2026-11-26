@@ -1,7 +1,7 @@
 {
  "api": {
-  "syncedAt": "2026-11-26T12:20:34.389Z",
-  "head": "dc96d97",
+  "syncedAt": "2026-11-26T12:53:50.665Z",
+  "head": "60fbce5",
   "files": {
    "apps/api/.oxlintrc.json": "c46d7bfdcb62",
    "apps/api/Dockerfile": "5008ec25a6d3",
@@ -210,10 +210,9 @@
   }
  },
  "web": {
-  "syncedAt": "2026-11-25T19:21:51.869Z",
-  "head": "54be656",
+  "syncedAt": "2026-11-26T12:53:50.671Z",
+  "head": "60fbce5",
   "files": {
-   "apps/web/src/app/admin/(panel)/feedback/page.tsx": "4ef268367468",
    "apps/web/AGENTS.md": "8a38a9be445f",
    "apps/web/CLAUDE.md": "c140473a3a5f",
    "apps/web/Dockerfile": "6aa8ecf428aa",
@@ -337,6 +336,7 @@
    "apps/web/src/app/admin/(panel)/blog/profile/page.tsx": "5579141b9dd4",
    "apps/web/src/app/admin/(panel)/blog/redirects/page.tsx": "373d74a922ab",
    "apps/web/src/app/admin/(panel)/blog/tags/page.tsx": "ae07f220ba7e",
+   "apps/web/src/app/admin/(panel)/feedback/page.tsx": "4ef268367468",
    "apps/web/src/app/admin/(panel)/layout.tsx": "0e718207db17",
    "apps/web/src/app/admin/(panel)/page.tsx": "8d288f46ea0a",
    "apps/web/src/app/admin/(panel)/team/page.tsx": "29d8ae990b53",
@@ -449,8 +449,8 @@
   }
  },
  "mobile": {
-  "syncedAt": "2026-11-26T12:20:34.400Z",
-  "head": "dc96d97",
+  "syncedAt": "2026-11-26T12:53:50.676Z",
+  "head": "60fbce5",
   "files": {
    "apps/mobile/.claude/settings.json": "14b797af98bf",
    "apps/mobile/.gitignore": "1b3d2a4eff0b",
@@ -490,7 +490,7 @@
    "apps/mobile/src/app/log/label/index.tsx": "f3723527c914",
    "apps/mobile/src/app/log/saved/[id].tsx": "99aa4ae0cbe5",
    "apps/mobile/src/app/log/type.tsx": "4935f89e46b6",
-   "apps/mobile/src/app/login.tsx": "ee30802b0cc0",
+   "apps/mobile/src/app/login.tsx": "59fdea6f0ba3",
    "apps/mobile/src/app/measurements.tsx": "9b9c7664cbae",
    "apps/mobile/src/app/onboarding/_layout.tsx": "1c4e7d49b71c",
    "apps/mobile/src/app/onboarding/index.tsx": "07359208b45f",
@@ -549,7 +549,7 @@
    "apps/mobile/src/components/log/camera/camera-overlays.tsx": "0988020ef103",
    "apps/mobile/src/components/log/camera/corners.tsx": "e3b7059eb5f1",
    "apps/mobile/src/components/log/camera/scan-guide.tsx": "8ffebcee48d5",
-   "apps/mobile/src/components/log/camera/scan-hint.tsx": "8e68d90cd707",
+   "apps/mobile/src/components/log/camera/scan-hint.tsx": "f56a08b3f673",
    "apps/mobile/src/components/log/label/label-check.tsx": "e7aa6d7faa22",
    "apps/mobile/src/components/log/label/per-100g-fields.tsx": "de9c1df037cb",
    "apps/mobile/src/components/log/meal-item-editor.tsx": "0f9cc8bc301a",
@@ -574,7 +574,7 @@
    "apps/mobile/src/components/login/hero-plate.tsx": "47c48b940870",
    "apps/mobile/src/components/meals/daily-summary.tsx": "20ba184aff65",
    "apps/mobile/src/components/meals/day-meals.tsx": "d6d9ff5ac1b8",
-   "apps/mobile/src/components/meals/meal-slot-card.tsx": "4e3373427a6b",
+   "apps/mobile/src/components/meals/meal-slot-card.tsx": "7b0132bcadcc",
    "apps/mobile/src/components/meals/quick-log.tsx": "0efc383eca27",
    "apps/mobile/src/components/measurements/add-measurement-sheet.tsx": "c136512a5191",
    "apps/mobile/src/components/offline-banner.tsx": "e5d6ff00128a",
@@ -637,14 +637,14 @@
    "apps/mobile/src/components/reminders/schedule-fields.tsx": "543b9bf191d3",
    "apps/mobile/src/components/screen-transition.tsx": "7dfa1fc682b4",
    "apps/mobile/src/components/sheet.tsx": "0299e15434d2",
-   "apps/mobile/src/components/skeletons.tsx": "4fc567d36aca",
+   "apps/mobile/src/components/skeletons.tsx": "38c52b40999c",
    "apps/mobile/src/components/support/faqs.ts": "335ade99f3d7",
    "apps/mobile/src/components/swipe-tabs.tsx": "a20be4f97489",
    "apps/mobile/src/components/tab-bar.tsx": "c2a630205c74",
    "apps/mobile/src/components/toast.tsx": "f510aa89812c",
    "apps/mobile/src/components/ui/animated-row.tsx": "6bd14a3a88d6",
    "apps/mobile/src/components/ui/avatar.tsx": "173059cd7f07",
-   "apps/mobile/src/components/ui/button.tsx": "6c7a389b87a2",
+   "apps/mobile/src/components/ui/button.tsx": "97c9d2deec84",
    "apps/mobile/src/components/ui/chip.tsx": "1a11e5dcd67b",
    "apps/mobile/src/components/ui/choice-card.tsx": "f24ebbbad406",
    "apps/mobile/src/components/ui/date-field.tsx": "9e14ab90f533",
@@ -665,7 +665,7 @@
    "apps/mobile/src/components/ui/progress-fill.tsx": "b2a9da59ed0b",
    "apps/mobile/src/components/ui/progress-steps.tsx": "126e40b55bf9",
    "apps/mobile/src/components/ui/ring-arc.tsx": "fe9fdf4cb6b1",
-   "apps/mobile/src/components/ui/screen.tsx": "62789ba6cd07",
+   "apps/mobile/src/components/ui/screen.tsx": "4b63ab02a5d4",
    "apps/mobile/src/components/ui/section.tsx": "e1e4587542a9",
    "apps/mobile/src/components/ui/segmented.tsx": "357a0e3dfe6b",
    "apps/mobile/src/components/ui/skeleton.tsx": "b4ba7064fa06",
@@ -673,7 +673,7 @@
    "apps/mobile/src/components/ui/stepper.tsx": "643a68f49145",
    "apps/mobile/src/components/ui/switch.tsx": "fc252a8157f3",
    "apps/mobile/src/components/ui/text-field.tsx": "60e5fc34a556",
-   "apps/mobile/src/components/ui/text.tsx": "000852e63db0",
+   "apps/mobile/src/components/ui/text.tsx": "09f36acff1c7",
    "apps/mobile/src/components/ui/tile-group.tsx": "fa2bf83b3970",
    "apps/mobile/src/components/workout/briefing/coach-rules.tsx": "506cd30a91bc",
    "apps/mobile/src/components/workout/briefing/energy-check.tsx": "831d4ddaa8b4",
@@ -737,7 +737,7 @@
    "apps/mobile/src/lib/onboarding-draft.ts": "7c8e7344ca67",
    "apps/mobile/src/lib/onboarding-hints.ts": "1b9b5bac0401",
    "apps/mobile/src/lib/onboarding-summary.ts": "4ce4f5cd52f0",
-   "apps/mobile/src/lib/palette.ts": "9345a727b7fe",
+   "apps/mobile/src/lib/palette.ts": "0d42506b8a2d",
    "apps/mobile/src/lib/person.ts": "7cf124c18dcb",
    "apps/mobile/src/lib/photo.ts": "401419cf9dbd",
    "apps/mobile/src/lib/plan-pace.ts": "2cbdaa37d0e4",
@@ -782,8 +782,8 @@
   }
  },
  "packages": {
-  "syncedAt": "2026-11-26T12:20:34.409Z",
-  "head": "dc96d97",
+  "syncedAt": "2026-11-26T12:53:50.684Z",
+  "head": "60fbce5",
   "files": {
    "packages/contracts/.oxlintrc.json": "c46d7bfdcb62",
    "packages/contracts/package.json": "ba213d965337",
@@ -936,8 +936,8 @@
   }
  },
  "infra": {
-  "syncedAt": "2026-11-25T20:07:14.115Z",
-  "head": "54be656",
+  "syncedAt": "2026-11-26T12:53:50.687Z",
+  "head": "60fbce5",
   "files": {
    ".env.example": "42506fe3fcde",
    ".env.production.example": "bd14e92dcb3b",

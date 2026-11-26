@@ -74,7 +74,7 @@ export default function LoginScreen() {
               }
               cornerRadius={radius.button}
               onPress={() => !busy && run(appleSignIn)}
-              style={{ width: "100%", height: 54 }}
+              style={{ width: "100%", height: 48 }}
             />
           )}
           <Button variant={showApple ? "secondary" : "strong"} onPress={() => run(signIn)} loading={busy}>
@@ -175,7 +175,7 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: 20,
   },
   input: {
-    height: 54,
+    height: 48,
     borderWidth: 1,
     borderColor: c.lineStrong,
     borderRadius: radius.input,

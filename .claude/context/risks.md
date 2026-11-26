@@ -5,6 +5,8 @@ Baseline: HEAD 107c0ee, 2026-11-11.
 
 ## Blockers / high
 
+- **v2 app needs the API deployed from the same `main` (2026-11-26).** The app reads new API fields (dashboard item `quantity`/`unit`/`grams`, progress `weeks`, profile extras, training). Against an older API it crashes on launch (`toFixed` in `components/meals/meal-slot-card.tsx` FoodRow, `find` in `components/home/weight-card.tsx:28`). Deploy only runs when CI on `main` is green: 0bdbc81 failed on prettier for `.claude/plans/figma-v2-ui.md`, so Deploy was skipped and the API stayed on 54be656. Fixed by PR #53 (formatting) + PR #54 (drop web-only `backdropFilter` in `scan-hint.tsx`). Ship API before app builds/OTA that depend on it.
+
 1. FIXED (branch feat/ai-coach-knowledge, 2026-11-19): coach daily cap now counts only typed user messages (`text <> ''`), so tool_result rows no longer use up the limit; e2e "counts only typed messages".
 2. ✔ **Auth cleanup never runs in prod.** `auth-cleanup.service.ts:33` skips `APP_ROLE=api`; prod runs only api. Sessions/codes/events grow forever; "90-day retention" false.
 3. FIXED (uncommitted): OTA now runs as the last Deploy job, after the API, with `--environment` per channel (preview + production).
