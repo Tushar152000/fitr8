@@ -27,7 +27,7 @@ export function SessionList({
     : day.steps.map((s) => ({ name: s.name, sub: s.detail, right: null, rightSub: null }));
 
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 10 }}>
       <View style={styles.head}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="labelStrong" color={c.ink2}>

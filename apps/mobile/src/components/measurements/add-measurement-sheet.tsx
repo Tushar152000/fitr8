@@ -134,9 +134,7 @@ const useStyles = makeStyles((c) => ({
     alignItems: "center",
     gap: 10,
     borderRadius: 16,
-    backgroundColor: c.surface,
-    paddingVertical: 14,
-    paddingLeft: 14,
-    paddingRight: 16,
+    backgroundColor: c.ground,
+    padding: 16,
   },
 }));

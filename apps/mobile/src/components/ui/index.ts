@@ -6,7 +6,7 @@ export { InsightCard } from "./insight-card";
 export { Logo } from "./logo";
 export { NumberField } from "./number-field";
 export { ProgressSteps } from "./progress-steps";
-export { Card, Screen } from "./screen";
+export { Card, Screen, StatusBarShade } from "./screen";
 export { Segmented } from "./segmented";
 export { Skeleton } from "./skeleton";
 export { Stepper } from "./stepper";

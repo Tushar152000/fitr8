@@ -61,16 +61,19 @@ export function MenuGroup({
   label,
   children,
   dividerInset = 48,
+  flush,
 }: {
   label?: string;
   children: ReactNode;
+  /** No card: the rows sit straight on a white surface (a sheet), edge to edge with its title. */
+  flush?: boolean;
   /** Where the divider starts: 48 clears the icon tile; 0 for rows without icons. */
   dividerInset?: number;
 }) {
   const styles = useStyles();
   const rows = Children.toArray(children).filter(isValidElement);
   const card = (
-    <View style={styles.group}>
+    <View style={flush ? styles.flush : styles.group}>
       {rows.map((row, i) => (
         <View key={row.key ?? i}>
           {row}
@@ -165,6 +168,7 @@ export function MenuRow({
 const useStyles = makeStyles((c) => ({
   tile: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   group: { backgroundColor: c.surface, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 4 },
+  flush: { paddingVertical: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   divider: { height: 1, backgroundColor: c.line },
   pill: {

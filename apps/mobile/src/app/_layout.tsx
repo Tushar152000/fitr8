@@ -1,3 +1,4 @@
+import "@/lib/web-pointer-fix";
 import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque";
 import {
   Inter_400Regular,
@@ -25,6 +26,7 @@ import { configureNotifications } from "@/lib/reminders";
 import { AppearanceProvider, palettes, useColors, useScheme } from "@/lib/theme";
 import { PremiumLockedSheet } from "@/components/premium/locked-sheet";
 import { Toast } from "@/components/toast";
+import { ScreenTransition } from "@/components/screen-transition";
 import { modalMotion, stackMotion } from "@/lib/motion";
 
 SplashScreen.preventAutoHideAsync();
@@ -115,7 +117,15 @@ function Routes() {
   // Back after 90+ days: only the welcome-back check-in until it's answered or dismissed.
   const welcomeBack = onboarded && Boolean(me?.welcomeBack);
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }}>
+    <Stack
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.ground }, ...stackMotion }}
+      // Web preview only: animates screen changes the browser's native stack would hard-cut.
+      screenLayout={({ navigation, options, children }) => (
+        <ScreenTransition navigation={navigation} modal={options.presentation === "modal"}>
+          {children}
+        </ScreenTransition>
+      )}
+    >
       {/*
         Order matters: when a guard flips (sign-in, sign-out), the stack falls back to the FIRST screen
         still allowed. The app must come before onboarding, or a returning user who signs in again

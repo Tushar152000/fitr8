@@ -1,7 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarSheet } from "@/components/calendar/calendar-sheet";
 import { DaySwitcher } from "@/components/home/day-switcher";
 import { DayMeals } from "@/components/meals/day-meals";
@@ -28,7 +27,6 @@ const eyebrow = (ymd: string) => {
  */
 export default function MealsScreen() {
   const c = useColors();
-  const insets = useSafeAreaInsets();
   const [calendar, setCalendar] = useState(false);
   const viewDay = viewableDay(useViewDay());
   const days = pagerDays(viewDay);
@@ -44,12 +42,7 @@ export default function MealsScreen() {
   );
 
   return (
-    <Screen
-      tabBar
-      refreshing={pull.refreshing}
-      onRefresh={pull.onRefresh}
-      contentStyle={{ gap: 20, paddingTop: insets.top + 4 }}
-    >
+    <Screen tabBar refreshing={pull.refreshing} onRefresh={pull.onRefresh} contentStyle={{ gap: 16 }}>
       <View style={{ gap: 2 }}>
         <Text variant="labelStrong" color={c.ink2}>
           {eyebrow(days[index])}

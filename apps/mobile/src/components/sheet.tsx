@@ -26,9 +26,10 @@ import { makeStyles, radius, useColors } from "@/lib/theme";
  * rides up with the keyboard (padding on both platforms, as in `Screen`: Android is edge-to-edge),
  * so a field or Save button inside a sheet is never covered.
  *
- * `figma` = the v2 sheet (Figma "Sheet/Streak", "Sheet/Calendar"): white panel, 36 px grabber,
- * Heading/H1 title with an optional Label/Medium `subtitle` and `trailing` controls, 20 px between
- * blocks.
+ * One spec for every sheet: white panel, 36 × 5 grabber 8 px from the top, Heading/H1 title with an
+ * optional Label/Medium `subtitle` and `trailing` controls, 16 px between grabber, title and blocks
+ * (`gap` overrides), bottom padding max(24, safe area + 8). `figma` keeps the title on one line and
+ * allows `bare` (no title row; the content draws its own).
  */
 export function Sheet({
   open,
@@ -49,7 +50,7 @@ export function Sheet({
   figma?: boolean;
   /** `figma` only: no title row; the content draws its own (e.g. to animate it). `title` stays the label. */
   bare?: boolean;
-  /** Space between blocks in a `figma` sheet (default 20). */
+  /** Space between blocks (default 16). */
   gap?: number;
   children: ReactNode;
 }) {
@@ -90,61 +91,37 @@ export function Sheet({
         <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, backdrop]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
         </Animated.View>
-        {figma ? (
-          <Animated.View
-            onLayout={(e) => measure(e.nativeEvent.layout.height)}
-            style={[
-              styles.sheet,
-              { maxHeight },
-              styles.figma,
-              { gap: gap ?? 20, paddingBottom: Math.max(34, insets.bottom + 8) },
-              panel,
-            ]}
-          >
-            <CloseButton onPress={onClose} />
-            <View style={styles.grabber} />
-            {!bare && (
-              <View style={styles.figmaHead}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="heading1" accessibilityRole="header" numberOfLines={1}>
-                    {title}
-                  </Text>
-                  {subtitle ? (
-                    <Text variant="labelMedium" color={c.ink2} numberOfLines={1}>
-                      {subtitle}
-                    </Text>
-                  ) : null}
-                </View>
-                {trailing}
-              </View>
-            )}
-            <ScrollView contentContainerStyle={{ gap: gap ?? 20 }} keyboardShouldPersistTaps="handled">
-              {children}
-            </ScrollView>
-          </Animated.View>
-        ) : (
-          <Animated.View
-            onLayout={(e) => measure(e.nativeEvent.layout.height)}
-            style={[styles.sheet, { maxHeight, paddingBottom: Math.max(20, insets.bottom + 8) }, panel]}
-          >
-            <CloseButton onPress={onClose} />
-            <View style={styles.handle} />
+        <Animated.View
+          onLayout={(e) => measure(e.nativeEvent.layout.height)}
+          style={[styles.sheet, { maxHeight, gap: gap ?? 16, paddingBottom: Math.max(24, insets.bottom + 8) }, panel]}
+        >
+          <CloseButton onPress={onClose} />
+          <View style={styles.grabber} />
+          {!(figma && bare) && Boolean(title || trailing) && (
             <View style={styles.head}>
-              <Text variant="h2" style={{ flex: 1 }}>
-                {title}
-              </Text>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="heading1" accessibilityRole="header" numberOfLines={figma ? 1 : undefined}>
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text variant="labelMedium" color={c.ink2} numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+              {trailing}
             </View>
-            <ScrollView contentContainerStyle={{ gap: 16 }} keyboardShouldPersistTaps="handled">
-              {children}
-            </ScrollView>
-          </Animated.View>
-        )}
+          )}
+          <ScrollView contentContainerStyle={{ gap: gap ?? 16 }} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-/** 40 px white circle with ×, 12 px above the panel's top-right corner. */
+/** 40 px white circle with ×, 12 px above the panel's top-right corner, 20 from its edge. */
 function CloseButton({ onPress }: { onPress: () => void }) {
   const c = useColors();
   const styles = useStyles();
@@ -167,20 +144,17 @@ const useStyles = makeStyles((c, shadows) => ({
   sheet: {
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
-    backgroundColor: c.ground,
+    backgroundColor: c.surface,
     paddingHorizontal: 20,
     paddingTop: 8,
-    gap: 12,
+    boxShadow: "0 -8px 16px rgba(0, 0, 0, 0.12)",
   },
-  figma: { backgroundColor: c.surface, paddingTop: 10, gap: 20, boxShadow: "0 -8px 16px rgba(0, 0, 0, 0.12)" },
   grabber: { alignSelf: "center", width: 36, height: 5, borderRadius: 100, backgroundColor: c.track },
-  figmaHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  handle: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.lineStrong },
-  head: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  head: { flexDirection: "row", alignItems: "center", gap: 8 },
   close: {
     position: "absolute",
     top: -52,
-    right: 16,
+    right: 20,
     width: 40,
     height: 40,
     borderRadius: 20,

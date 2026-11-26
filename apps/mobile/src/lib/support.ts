@@ -22,6 +22,6 @@ export async function emailSupport() {
   try {
     await Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
   } catch {
-    showToast(`Email us at ${SUPPORT_EMAIL}`);
+    showToast(`Email us at ${SUPPORT_EMAIL}`, 3000, true);
   }
 }

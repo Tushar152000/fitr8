@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { makeStyles, useColors } from "@/lib/theme";
 import { Text } from "./text";
 import { PressableScale } from "./pressable-scale";
+import { haptic } from "@/lib/haptics";
 
 /**
  * Sunken track; the selected option is a raised surface. `tone="dark"` is the Figma pill version on
@@ -32,7 +33,10 @@ export function Segmented<T extends string | number>({
             key={String(o.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (o.value !== value) haptic.select();
+              onChange(o.value);
+            }}
             style={
               dark ? [styles.darkOption, selected && styles.darkSelected] : [styles.option, selected && styles.selected]
             }

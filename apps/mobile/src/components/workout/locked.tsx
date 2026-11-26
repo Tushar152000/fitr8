@@ -58,9 +58,9 @@ export function WorkoutLocked({ source }: { source: "banner" | "tab" }) {
       await api("/api/billing/refresh", { method: "POST" });
       const now = await queryClient.fetchQuery({ ...billingQuery, staleTime: 0 });
       // Premium: the tab re-renders into setup (16b) on its own.
-      if (now.plan !== "PRO") showToast("No Premium found on this account");
+      if (now.plan !== "PRO") showToast("No Premium found on this account", 3000, true);
     } catch {
-      showToast("Couldn't check your purchases. Try again.");
+      showToast("Couldn't check your purchases. Try again.", 3000, true);
     } finally {
       setRestoring(false);
     }

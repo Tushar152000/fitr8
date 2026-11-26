@@ -9,6 +9,7 @@ import {
   type ViewProps,
   type ViewStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { makeStyles, useColors, gutter as defaultGutter } from "@/lib/theme";
 
@@ -46,7 +47,7 @@ export function Screen({
     <KeyboardAvoidingView behavior="padding" style={[styles.root, dark && { backgroundColor: c.panel }]}>
       <ScrollView
         contentContainerStyle={[
-          { paddingTop: insets.top + 16, paddingHorizontal: gutter, paddingBottom: footer ? 16 : bottom + 32, gap: 24 },
+          { paddingTop: insets.top + 8, paddingHorizontal: gutter, paddingBottom: footer ? 16 : bottom + 32, gap: 24 },
           contentStyle,
         ]}
         keyboardShouldPersistTaps="handled"
@@ -58,6 +59,7 @@ export function Screen({
       >
         {children}
       </ScrollView>
+      <StatusBarShade dark={dark} />
       {footer && (
         <View
           style={[
@@ -83,6 +85,34 @@ const useStyles = makeStyles((c) => ({
     borderTopColor: c.line,
   },
 }));
+
+/**
+ * A backdrop behind the status bar (clock, notch, Dynamic Island) for scrolling screens: content
+ * scrolled up slides under it and fades out instead of running under the clock. The screen's own
+ * colour, then a short fade. Nothing on web or a phone without a top inset.
+ */
+export function StatusBarShade({ dark }: { dark?: boolean }) {
+  const insets = useSafeAreaInsets();
+  const c = useColors();
+  if (insets.top <= 0) return null;
+  const bg = dark ? c.panel : c.ground;
+  return (
+    <View style={[styles.shade, { height: insets.top + 12 }]}>
+      <View style={{ height: insets.top, backgroundColor: bg }} />
+      <LinearGradient colors={[bg, withAlpha(bg, 0)]} style={{ height: 12 }} />
+    </View>
+  );
+}
+
+/** `#rrggbb` → `rgba(r, g, b, a)` (a transparent end for the fade that keeps the hue). */
+function withAlpha(hex: string, a: number) {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+const styles = StyleSheet.create({
+  shade: { position: "absolute", top: 0, left: 0, right: 0, pointerEvents: "none" },
+});
 
 /** A white card with the standard radius and padding. */
 export function Card({

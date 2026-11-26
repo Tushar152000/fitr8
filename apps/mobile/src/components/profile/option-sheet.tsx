@@ -32,7 +32,7 @@ export function OptionSheet<T extends string>({
   const c = useColors();
   return (
     <Sheet open={open} onClose={onClose} title={title}>
-      <MenuGroup dividerInset={0}>
+      <MenuGroup dividerInset={0} flush>
         {options.map((o) => (
           <MenuRow
             key={o.value}

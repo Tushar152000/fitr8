@@ -79,8 +79,7 @@ export interface AppTextProps extends TextProps {
 export function Text({ variant = "body", weight, size, color, tabular, center, style, ...props }: AppTextProps) {
   const c = useColors();
   const base = VARIANTS[variant];
-  const defaultColor =
-    variant === "meta" ? c.ink3 : variant === "label" || SECONDARY.has(variant) ? c.ink2 : c.ink;
+  const defaultColor = variant === "meta" ? c.ink3 : variant === "label" || SECONDARY.has(variant) ? c.ink2 : c.ink;
   const display = variant === "display" || variant === "h1" || variant === "h2";
   return (
     <RNText

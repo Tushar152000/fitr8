@@ -16,6 +16,7 @@ import { savedMealsQuery } from "@/lib/queries";
 import { queryClient, refreshDay } from "@/lib/query";
 import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { showDay } from "@/lib/view-day";
+import { haptic } from "@/lib/haptics";
 
 /** Screen 7b: type what you ate, or relog a usual with one tap. Typing never uses a photo scan. */
 export default function TypeMealScreen() {
@@ -54,6 +55,7 @@ export default function TypeMealScreen() {
     try {
       await api("/api/meals/relog", { json: { mealId: u.mealId, mealType, ...dateBody } });
       track("meal_logged", { method: "usual" });
+      haptic.success();
       refreshDay();
       showDay(date);
       router.dismissTo("/today");
@@ -71,6 +73,7 @@ export default function TypeMealScreen() {
     try {
       await api(`/api/saved-meals/${m.id}/log`, { json: { mealType: slot, ...dateBody } });
       track("meal_logged", { method: "saved" });
+      haptic.success();
       refreshDay();
       queryClient.invalidateQueries({ queryKey: savedMealsQuery.queryKey });
       showDay(date);

@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { router, Tabs, type Href } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useEffect } from "react";
 import { ReminderPrompt } from "@/components/reminders/reminder-prompt";
 import { TabBar } from "@/components/tab-bar";
+import { SwipeTabs, type SwipeTabBarProps } from "@/components/swipe-tabs";
 import { useHealthSync } from "@/lib/health/use-health-sync";
 import type { MealTypeValue } from "@fitr8/contracts";
 import { localYmd } from "@/lib/meal-param";
@@ -10,7 +11,6 @@ import { loggedToday } from "@/lib/meal-reminder-plan";
 import { dayQuery, remindersQuery } from "@/lib/queries";
 import { useMe } from "@/lib/auth";
 import { listenForNotificationLinks, syncCustomReminders, syncRoutineReminders } from "@/lib/reminders";
-import { tabMotion } from "@/lib/motion";
 
 /**
  * Home (today), Meals, Workout, [coach] and the [camera] (tab-bar.tsx; coach and camera open stacks).
@@ -21,11 +21,12 @@ export default function TabsLayout() {
   useHealthSync();
   return (
     <>
-      <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, ...tabMotion }}>
-        <Tabs.Screen name="today" />
-        <Tabs.Screen name="meals" />
-        <Tabs.Screen name="workout" />
-      </Tabs>
+      {/* Swipe sideways anywhere to move between tabs (components/swipe-tabs.tsx). */}
+      <SwipeTabs tabBar={(props: SwipeTabBarProps) => <TabBar {...props} />}>
+        <SwipeTabs.Screen name="today" />
+        <SwipeTabs.Screen name="meals" />
+        <SwipeTabs.Screen name="workout" />
+      </SwipeTabs>
       {/* Once per install: offer reminders, then the system notification prompt. */}
       <ReminderPrompt />
     </>

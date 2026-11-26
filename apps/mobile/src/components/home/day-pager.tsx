@@ -28,7 +28,7 @@ const EDGE_RESISTANCE = 0.2;
  * the pan activates). Swallow the click that lands right after a swipe ends.
  */
 let swipeEndedAt = 0;
-const markSwipeEnded = () => {
+export const markSwipeEnded = () => {
   swipeEndedAt = Date.now();
 };
 if (Platform.OS === "web" && typeof window !== "undefined") {

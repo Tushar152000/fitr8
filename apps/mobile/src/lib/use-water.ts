@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
+import { haptic } from "@/lib/haptics";
 import { waterQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
 import { syncWaterReminders } from "@/lib/reminders";
@@ -36,6 +37,9 @@ export function useWater() {
     mutationFn: (ml: number) => api<WaterDay>("/api/water", { json: { ml } }),
     onMutate: async (ml) => {
       const before = await snapshot();
+      // A glass lands with a light tap; the one that reaches the target gets "success".
+      if (before && before.consumedMl < before.targetMl && before.consumedMl + ml >= before.targetMl) haptic.success();
+      else haptic.tap();
       if (before) {
         const log = { id: `${PENDING}${Date.now()}`, ml, createdAt: new Date().toISOString() };
         queryClient.setQueryData<WaterDay>(KEY, {
@@ -46,7 +50,10 @@ export function useWater() {
       }
       return { before };
     },
-    onError: (_e, _ml, ctx) => ctx?.before && queryClient.setQueryData(KEY, ctx.before),
+    onError: (_e, _ml, ctx) => {
+      haptic.error();
+      if (ctx?.before) queryClient.setQueryData(KEY, ctx.before);
+    },
     onSettled: settle,
   });
 
@@ -54,6 +61,7 @@ export function useWater() {
     mutationKey: MUTATION_KEY,
     mutationFn: (id: string) => api(`/api/water/${id}`, { method: "DELETE" }),
     onMutate: async (id) => {
+      haptic.soft();
       const before = await snapshot();
       if (before) {
         const gone = before.logs.find((l) => l.id === id);
@@ -65,7 +73,10 @@ export function useWater() {
       }
       return { before };
     },
-    onError: (_e, _id, ctx) => ctx?.before && queryClient.setQueryData(KEY, ctx.before),
+    onError: (_e, _id, ctx) => {
+      haptic.error();
+      if (ctx?.before) queryClient.setQueryData(KEY, ctx.before);
+    },
     onSettled: settle,
   });
 

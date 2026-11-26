@@ -55,7 +55,12 @@ export default function MeasurementsScreen() {
   }, [add]);
 
   return (
-    <ProfilePage title="Measurements" refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
+    <ProfilePage
+      title="Measurements"
+      refreshing={pull.refreshing}
+      onRefresh={pull.onRefresh}
+      footer={<PillButton label="Add measurement" onPress={() => openAt(null)} />}
+    >
       {query.isPending ? (
         <ListSkeleton rows={6} />
       ) : query.isError ? (
@@ -88,8 +93,6 @@ export default function MeasurementsScreen() {
         </Text>
       </View>
 
-      <PillButton label="Add measurement" onPress={() => openAt(null)} />
-
       <AddMeasurementSheet
         open={open}
         focus={focus}
@@ -107,8 +110,6 @@ const useStyles = makeStyles((c) => ({
     flexDirection: "row",
     borderRadius: 16,
     backgroundColor: c.brandSoft,
-    paddingVertical: 14,
-    paddingLeft: 14,
-    paddingRight: 16,
+    padding: 16,
   },
 }));

@@ -70,7 +70,11 @@ export default function AccountScreen() {
   }
 
   return (
-    <ProfilePage title="Account" eyebrow="Settings">
+    <ProfilePage
+      title="Account"
+      eyebrow="Settings"
+      footer={<PillButton label="Save changes" onPress={save} loading={busy} disabled={!changed} />}
+    >
       {me.email ? (
         <MenuGroup>
           <MenuRow icon={Mail} title="Signed in as" subtitle={me.email} />
@@ -80,7 +84,6 @@ export default function AccountScreen() {
       <View style={{ gap: 16 }}>
         <DetailsStep person={person} setPerson={setPerson} errors={errors} />
         {error ? <FieldError>{error}</FieldError> : null}
-        <PillButton label="Save changes" onPress={save} loading={busy} disabled={!changed} />
       </View>
 
       <DangerZone onDeleted={signOut} onSignOut={signOut} />

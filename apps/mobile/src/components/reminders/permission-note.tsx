@@ -6,7 +6,7 @@ import type { NotificationStatus } from "@/lib/use-notification-status";
 
 /**
  * Explains why nothing will ring, with the way to fix it, in the Profile tip-card shape (radius 16,
- * 14 px padding, Label/Medium). Hidden when notifications work or can still be asked for.
+ * 16 px padding, Label/Medium). Hidden when notifications work or can still be asked for.
  */
 export function PermissionNote({ status }: { status: NotificationStatus | null }) {
   const c = useColors();
@@ -39,8 +39,6 @@ const useStyles = makeStyles((c) => ({
     gap: 10,
     borderRadius: 16,
     backgroundColor: c.cautionSoft,
-    paddingVertical: 14,
-    paddingLeft: 14,
-    paddingRight: 16,
+    padding: 16,
   },
 }));

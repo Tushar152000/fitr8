@@ -14,7 +14,7 @@ export function SessionBlocks({ day }: { day: TrainingDayDto }) {
   const col = dayColors(c, day.type);
   const total = day.blocks.reduce((t, b) => t + b.minutes, 0) || 1;
   return (
-    <Section title="The session" gap={8}>
+    <Section title="The session">
       <TrackBar accessible accessibilityLabel={day.blocks.map((b) => `${b.label} ${b.minutes} min`).join(", ")}>
         {day.blocks.map((b, i) => (
           <View

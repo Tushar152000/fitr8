@@ -53,27 +53,31 @@ export function TrainingWeekView({
     track("training_day_opened", { type: d.type, weekday: d.weekday });
   }
 
+  // The day (header, strip, hero) is one group, 16 apart; the titled session lists and the week
+  // summary sit 24 below it and each other.
   return (
     <>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="labelStrong" color={c.ink2} numberOfLines={1}>
-            {dayEyebrow(day, isToday, week.plan)}
-          </Text>
-          <Text variant="title" accessibilityRole="header" numberOfLines={2}>
-            {dayTitle(day, isToday)}
-          </Text>
+      <View style={{ gap: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="labelStrong" color={c.ink2} numberOfLines={1}>
+              {dayEyebrow(day, isToday, week.plan)}
+            </Text>
+            <Text variant="title" accessibilityRole="header" numberOfLines={2}>
+              {dayTitle(day, isToday)}
+            </Text>
+          </View>
+          <IconButton
+            label="Change your training setup"
+            onPress={() => router.push("/training/setup")}
+            icon={<SlidersHorizontal size={20} color={c.ink} strokeWidth={2} absoluteStrokeWidth />}
+          />
         </View>
-        <IconButton
-          label="Change your training setup"
-          onPress={() => router.push("/training/setup")}
-          icon={<SlidersHorizontal size={20} color={c.ink} strokeWidth={2} absoluteStrokeWidth />}
-        />
+
+        <TrainingStrip days={week.days} today={week.today} selected={day.date} onSelect={pick} />
+
+        <DayHero day={day} today={week.today} restDay={week.restDay} />
       </View>
-
-      <TrainingStrip days={week.days} today={week.today} selected={day.date} onSelect={pick} />
-
-      <DayHero day={day} today={week.today} restDay={week.restDay} />
 
       {day.type === "gym" && day.exercises?.length ? (
         <SessionList day={day} eyebrow={`${isToday ? "Today" : day.weekday} · ${day.exercises.length} exercises`} />

@@ -45,7 +45,12 @@ export default function GoalScreen() {
   const error = plan.error ?? progress.error;
 
   return (
-    <ProfilePage title="Your goal" refreshing={pull.refreshing} onRefresh={pull.onRefresh}>
+    <ProfilePage
+      title="Your goal"
+      refreshing={pull.refreshing}
+      onRefresh={pull.onRefresh}
+      footer={plan.data && progress.data && profile ? <PillButton label="Update goal" onPress={editGoal} /> : undefined}
+    >
       {error ? (
         <QueryError error={error} onRetry={() => Promise.all([plan.refetch(), progress.refetch()])} />
       ) : !plan.data || !progress.data || !profile ? (
@@ -72,7 +77,6 @@ export default function GoalScreen() {
               onPress={editBody}
             />
           </MenuGroup>
-          <PillButton label="Update goal" onPress={editGoal} />
           <MenuGroup label="About you">
             <MenuRow icon={Ruler} title="Height" value={`${profile.heightCm} cm`} onPress={editBody} />
             <MenuRow icon={Salad} title="Diet" value={DIET_LABEL[profile.dietType]} onPress={editFood} />

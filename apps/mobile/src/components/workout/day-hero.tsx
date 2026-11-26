@@ -167,8 +167,8 @@ function Chip({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
 }
 
 const useStyles = makeStyles((c, shadows) => ({
-  // Figma "Recovery": inverse surface (always dark), 18 px padding, 20 radius, card lift.
-  card: { gap: 14, padding: 18, borderRadius: 20, overflow: "hidden", backgroundColor: c.panel, ...shadows.card },
+  // Figma "Recovery": inverse surface (always dark), 20 px padding (hero card), 20 radius, card lift.
+  card: { gap: 14, padding: 20, borderRadius: 20, overflow: "hidden", backgroundColor: c.panel, ...shadows.card },
   icon: {
     width: 40,
     height: 40,
@@ -177,7 +177,7 @@ const useStyles = makeStyles((c, shadows) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 4.5 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
   chip: {
     flexDirection: "row",
     alignItems: "center",

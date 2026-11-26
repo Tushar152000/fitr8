@@ -16,6 +16,7 @@ import { compressPhoto, uploadPhoto } from "@/lib/photo";
 import { handlePremiumError } from "@/lib/premium";
 import { useCameraAutoPermission } from "@/lib/use-camera-auto-permission";
 import { useScanLimit } from "@/lib/use-scan-limit";
+import { haptic } from "@/lib/haptics";
 
 /** Labels have small print, so keep more pixels than a plate photo. */
 const LABEL_MAX_SIDE = 1600;
@@ -54,6 +55,7 @@ export default function LabelCamera() {
   async function shoot() {
     if (!camera.current || !ready) return;
     try {
+      haptic.press(); // the shutter
       const photo = await camera.current.takePictureAsync({ quality: 0.95 });
       if (photo) await submit(photo);
     } catch {

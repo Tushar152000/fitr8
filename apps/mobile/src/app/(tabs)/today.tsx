@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CalendarSheet } from "@/components/calendar/calendar-sheet";
 import { DayPage } from "@/components/home/day-page";
 import { DAY_WINDOW_RADIUS, DayStrip, useDayPager } from "@/components/home/day-pager";
@@ -22,13 +20,12 @@ const refreshHome = () =>
 /**
  * Home (Figma "Home"): avatar, Premium and streak pills, the day switcher, then the day's calories
  * and macros, today's water and the latest weight (banners under them). Meals live on the Meals tab.
- * Swipe or use the arrows to look at a recent day (a week back); the calendar (middle of the day
+ * Use the arrows to look at a recent day (a week back); the calendar (middle of the day
  * switcher, same sheet as Meals) jumps to any earlier day.
  */
 export default function HomeScreen() {
   const me = useMe();
   usePremiumIntro(me);
-  const insets = useSafeAreaInsets();
   const [calendar, setCalendar] = useState(false);
   // null = today. Older than the week window only when picked in the calendar.
   const viewDay = viewableDay(useViewDay());
@@ -51,41 +48,35 @@ export default function HomeScreen() {
   const pull = usePullRefresh(refreshHome);
 
   return (
-    // A horizontal swipe anywhere on the screen pages between days; only the day strip moves.
-    <GestureDetector gesture={pager.gesture}>
-      <View style={{ flex: 1 }}>
-        <Screen
-          tabBar
-          refreshing={pull.refreshing}
-          onRefresh={pull.onRefresh}
-          contentStyle={{ gap: 14, paddingTop: insets.top + 10 }}
-        >
-          <HomeHeader me={me} />
+    // A sideways swipe moves between tabs (user decision 2026-11-26); the arrows and the calendar
+    // change the day, and the day strip still slides.
+    <View style={{ flex: 1 }}>
+      <Screen tabBar refreshing={pull.refreshing} onRefresh={pull.onRefresh} contentStyle={{ gap: 16 }}>
+        <HomeHeader me={me} />
 
-          <DaySwitcher
-            day={days[index]}
-            canOlder={index < days.length - 1}
-            canNewer={index > 0}
-            onOlder={() => go(index + 1)}
-            onNewer={() => go(index - 1)}
-            onToday={() => go(0)}
-            onCalendar={() => setCalendar(true)}
-          />
-
-          <DayStrip
-            pager={pager}
-            days={days}
-            index={index}
-            renderDay={(date, current) => <DayPage date={date} isToday={date === days[0]} current={current} />}
-          />
-        </Screen>
-        <CalendarSheet
-          open={calendar}
-          onClose={() => setCalendar(false)}
-          selected={days[index]}
-          onPick={(ymd) => showDay(ymd === days[0] ? null : ymd)}
+        <DaySwitcher
+          day={days[index]}
+          canOlder={index < days.length - 1}
+          canNewer={index > 0}
+          onOlder={() => go(index + 1)}
+          onNewer={() => go(index - 1)}
+          onToday={() => go(0)}
+          onCalendar={() => setCalendar(true)}
         />
-      </View>
-    </GestureDetector>
+
+        <DayStrip
+          pager={pager}
+          days={days}
+          index={index}
+          renderDay={(date, current) => <DayPage date={date} isToday={date === days[0]} current={current} />}
+        />
+      </Screen>
+      <CalendarSheet
+        open={calendar}
+        onClose={() => setCalendar(false)}
+        selected={days[index]}
+        onPick={(ymd) => showDay(ymd === days[0] ? null : ymd)}
+      />
+    </View>
   );
 }

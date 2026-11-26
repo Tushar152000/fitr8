@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, Platform } from "react-native";
-import {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  FadeOut,
-  FadeOutUp,
-  LinearTransition,
-} from "react-native-reanimated";
+import { Easing, FadeIn, FadeInDown, FadeInUp, FadeOut, FadeOutUp, LinearTransition } from "react-native-reanimated";
 
 /**
  * Use the native animation driver on phones. The web preview has none, and there

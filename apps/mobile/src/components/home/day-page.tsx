@@ -45,7 +45,7 @@ function DayContent({ day, pastDay }: { day: Day; pastDay: string | null }) {
         : "Logging it honestly is the hard part, and you did it. Tomorrow resets.";
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 16 }}>
       {target ? (
         <CalorieCard eaten={day.eaten} target={target} />
       ) : (

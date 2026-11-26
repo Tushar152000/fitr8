@@ -3,10 +3,9 @@ import { router } from "expo-router";
 import { Clock, Dumbbell, ListOrdered } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { BackHeader } from "@/components/back-header";
 import { QueryError } from "@/components/query-error";
 import { WorkoutSkeleton } from "@/components/skeletons";
-import { Button, FieldError, Screen, Text } from "@/components/ui";
+import { Button, FieldError, PageHeader, Screen } from "@/components/ui";
 import { ActiveExercise, type SetState } from "@/components/workout/session/active-exercise";
 import { SessionDoneCard } from "@/components/workout/session/done-card";
 import { ExerciseList } from "@/components/workout/session/exercise-list";
@@ -23,6 +22,11 @@ import { minutesSince } from "@/lib/training";
 import type { Energy, TodayWorkout } from "@/lib/types";
 import { usePullRefresh } from "@/lib/use-pull-refresh";
 
+function backToWeek() {
+  if (router.canGoBack()) router.back();
+  else router.replace("/workout");
+}
+
 /**
  * Focus mode (15b, from the Workout tab's "Start workout"): today's gym session from the strength
  * engine, with the 10a energy check applied. Finishing logs the session's duration to the week.
@@ -35,7 +39,7 @@ export default function WorkoutSessionScreen() {
   if (workout.isPending) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader onBack={backToWeek} eyebrow="Today's session" title="Workout" />
         <WorkoutSkeleton />
       </Screen>
     );
@@ -43,7 +47,7 @@ export default function WorkoutSessionScreen() {
   if (workout.isError) {
     return (
       <Screen>
-        <BackHeader />
+        <PageHeader onBack={backToWeek} eyebrow="Today's session" title="Workout" />
         <QueryError error={workout.error} onRetry={() => workout.refetch()} />
       </Screen>
     );
@@ -170,14 +174,11 @@ function Session({
 
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh}>
-      <BackHeader />
-      <View>
-        <Text variant="meta">
-          {session ? "Today's session" : "Rest day"} · {data.split}
-          {data.deload ? " · deload week" : ""}
-        </Text>
-        <Text variant="h1">{session ? session.name : "Recover today"}</Text>
-      </View>
+      <PageHeader
+        onBack={backToWeek}
+        eyebrow={`${session ? "Today's session" : "Rest day"} · ${data.split}${data.deload ? " · deload week" : ""}`}
+        title={session ? session.name : "Recover today"}
+      />
 
       {!session ? (
         <RestDay data={data} />
@@ -208,10 +209,7 @@ function Session({
             </Button>
           )}
           {finished && (
-            <Button
-              variant="secondary"
-              onPress={() => (router.canGoBack() ? router.back() : router.replace("/workout"))}
-            >
+            <Button variant="secondary" onPress={backToWeek}>
               Back to your week
             </Button>
           )}

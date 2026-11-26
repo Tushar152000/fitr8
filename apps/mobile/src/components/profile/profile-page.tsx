@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { View } from "react-native";
 import { PageHeader, Screen, Text } from "@/components/ui";
 import { useColors } from "@/lib/theme";
 
 /**
- * The frame every Profile page shares (Figma "Profile / …"): content 8 px under the status bar, the
- * Top Bar (round back, eyebrow, H1 title), an optional intro line (Body/Regular, secondary), then
- * the page's groups 24 px apart.
+ * The frame every Profile page shares (Figma "Profile / …"): content 8 px under the status bar (Screen), the
+ * Top Bar (round back, eyebrow, H1 title) with an optional intro line 12 below it (Body/Regular,
+ * secondary), then the page's groups 24 px apart.
  */
 export function ProfilePage({
   title,
@@ -30,21 +30,16 @@ export function ProfilePage({
   onBack?: () => void;
 }) {
   const c = useColors();
-  const insets = useSafeAreaInsets();
   return (
-    <Screen
-      tabBar={tabBar}
-      footer={footer}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      contentStyle={{ paddingTop: insets.top + 8 }}
-    >
-      <PageHeader title={title} eyebrow={eyebrow ?? undefined} onBack={onBack} />
-      {intro ? (
-        <Text variant="bodySm" color={c.ink2}>
-          {intro}
-        </Text>
-      ) : null}
+    <Screen tabBar={tabBar} footer={footer} refreshing={refreshing} onRefresh={onRefresh}>
+      <View style={{ gap: 12 }}>
+        <PageHeader title={title} eyebrow={eyebrow ?? undefined} onBack={onBack} />
+        {intro ? (
+          <Text variant="bodySm" color={c.ink2}>
+            {intro}
+          </Text>
+        ) : null}
+      </View>
       {children}
     </Screen>
   );

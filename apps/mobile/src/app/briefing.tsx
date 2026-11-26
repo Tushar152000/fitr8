@@ -19,6 +19,7 @@ import { workoutQuery } from "@/lib/queries";
 import { refreshDay } from "@/lib/query";
 import { useColors } from "@/lib/theme";
 import type { Energy, TodayWorkout } from "@/lib/types";
+import { haptic } from "@/lib/haptics";
 
 /** Screen 10a: fuel, pre-workout snack, energy check, the coach's rules and today's prescriptions. */
 export default function BriefingScreen() {
@@ -62,6 +63,7 @@ function Briefing({ data, energy, switching }: { data: TodayWorkout; energy: Ene
       }
       setSnackState("done");
       track("meal_logged", { method: data.snack.log.kind === "usual" ? "usual" : "type" });
+      haptic.success();
       refreshDay();
     } catch (e) {
       setError(errorMessage(e, "Couldn't log it. Try again."));

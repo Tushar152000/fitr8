@@ -5,7 +5,7 @@ import { dayLabel } from "@/lib/meal-param";
 import { makeStyles, useColors } from "@/lib/theme";
 
 /**
- * Figma "Day Switcher": a white pill, ‹ day › with a hint under the day ("Swipe for earlier days",
+ * Figma "Day Switcher": a white pill, ‹ day › with a hint under the day ("Tap for the calendar"; the swipe moves between tabs,
  * or "Back to today" on a past day). Tapping the middle opens the month calendar (`onCalendar`).
  * Fixed height, so nothing below moves when the day changes. A disabled arrow is drawn in
  * text/secondary, as in the design.
@@ -49,7 +49,7 @@ export function DaySwitcher({
           </Text>
           {!canNewer && (
             <Text variant="labelRegular" color={c.ink2} style={styles.tight}>
-              Swipe for earlier days
+              Tap for the calendar
             </Text>
           )}
         </PressableScale>

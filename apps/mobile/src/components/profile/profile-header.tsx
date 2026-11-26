@@ -66,7 +66,7 @@ export function ProfileHeader({ me }: { me: Me }) {
       </PressableScale>
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title="Profile photo">
-        <MenuGroup>
+        <MenuGroup flush>
           {canTakePhoto ? <MenuRow icon={Camera} title="Take a photo" onPress={run(photo.take)} /> : null}
           <MenuRow icon={ImageIcon} title="Choose from your photos" onPress={run(photo.choose)} />
           {me.hasPhoto ? (

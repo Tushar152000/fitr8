@@ -74,7 +74,7 @@ export default function HealthConnectScreen() {
     setError(null);
     try {
       const r = await syncHealth(me.id, { force: true });
-      showToast(r ? `Synced ${formatInt(r.samples)} new readings` : "Up to date");
+      showToast(r ? `Synced ${formatInt(r.samples)} new readings` : "Up to date", 3000, true);
       await refresh();
     } catch (e) {
       setError(errorMessage(e, "Couldn't sync. Try again."));

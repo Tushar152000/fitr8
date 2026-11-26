@@ -26,6 +26,7 @@ import { usageQuery } from "@/lib/queries";
 import { useCameraAutoPermission } from "@/lib/use-camera-auto-permission";
 import { useLiveBarcode } from "@/lib/use-live-barcode";
 import { useScanLimit } from "@/lib/use-scan-limit";
+import { haptic } from "@/lib/haptics";
 
 type Phase = "idle" | "checking" | "uploading" | "analysing";
 type Photo = { uri: string; width: number; height: number };
@@ -107,6 +108,7 @@ export default function CameraScreen() {
     if (photoLocked) return openPremium("photo_scan", logContext);
     if (!camera.current || !ready) return;
     try {
+      haptic.press(); // the shutter
       const photo = await camera.current.takePictureAsync({ quality: 0.9 });
       if (photo) await route(photo);
     } catch (e) {

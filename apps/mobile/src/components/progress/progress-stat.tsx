@@ -25,5 +25,5 @@ export function ProgressStat({ label, value, caption }: { label: string; value: 
 }
 
 const useStyles = makeStyles((c, shadows) => ({
-  tile: { flex: 1, gap: 4, padding: 14, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
+  tile: { flex: 1, gap: 4, padding: 16, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
 }));

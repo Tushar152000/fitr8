@@ -22,5 +22,5 @@ export function StatTile({ label, value, sub }: { label: string; value: string; 
 }
 
 const useStyles = makeStyles((c) => ({
-  tile: { flex: 1, borderRadius: radius.card, backgroundColor: c.surface, padding: 12 },
+  tile: { flex: 1, borderRadius: radius.card, backgroundColor: c.surface, padding: 16 },
 }));

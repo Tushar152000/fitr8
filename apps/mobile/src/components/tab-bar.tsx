@@ -1,4 +1,4 @@
-import type { BottomTabBarProps } from "expo-router/tabs";
+import type { SwipeTabBarProps } from "@/components/swipe-tabs";
 import { router } from "expo-router";
 import {
   Camera,
@@ -9,7 +9,15 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react-native";
+import { useEffect } from "react";
 import { View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GradientFab, PressableScale, Text } from "@/components/ui";
 import { makeStyles, useColors } from "@/lib/theme";
@@ -31,7 +39,7 @@ const TABS: Record<string, { label: string; icon: LucideIcon; active?: LucideIco
  * gradient camera beside it. Coach and the camera open full-screen stacks (the chat with its
  * keyboard, the logger).
  */
-export function TabBar({ state, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation }: SwipeTabBarProps) {
   const insets = useSafeAreaInsets();
   const c = useColors();
   const styles = useStyles();
@@ -52,8 +60,6 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         {tabs.map((route) => {
           const tab = TABS[route.name];
           const focused = state.routes[state.index]?.key === route.key;
-          const color = focused ? c.ink : c.ink2;
-          const Icon = focused && tab.active ? tab.active : tab.icon;
           return (
             <PressableScale
               key={route.key}
@@ -66,16 +72,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               }}
               style={styles.tab}
             >
-              <Icon
-                size={24}
-                color={color}
-                strokeWidth={2}
-                absoluteStrokeWidth
-                fill={focused && tab.fill ? color : "none"}
-              />
-              <Text variant="nav" color={color} numberOfLines={1}>
-                {tab.label}
-              </Text>
+              <TabItem tab={tab} focused={focused} />
             </PressableScale>
           );
         })}
@@ -107,6 +104,39 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+/**
+ * One tab's glyph and label. The idle (outline, text/secondary) and active (ink, filled or swapped
+ * glyph) looks are stacked and cross-fade, so switching tabs (and Meals' glyph swap) never snaps.
+ */
+function TabItem({ tab, focused }: { tab: (typeof TABS)[string]; focused: boolean }) {
+  const c = useColors();
+  const styles = useStyles();
+  const reduce = useReducedMotion();
+  const on = useSharedValue(focused ? 1 : 0);
+  useEffect(() => {
+    on.set(withTiming(focused ? 1 : 0, { duration: reduce ? 0 : 200, easing: Easing.out(Easing.quad) }));
+  }, [focused, reduce, on]);
+  const activeStyle = useAnimatedStyle(() => ({ opacity: on.get() }));
+  const idleStyle = useAnimatedStyle(() => ({ opacity: 1 - on.get() }));
+  const Active = tab.active ?? tab.icon;
+  return (
+    <View style={styles.item}>
+      <Animated.View style={[styles.layer, idleStyle]}>
+        <tab.icon size={24} color={c.ink2} strokeWidth={2} absoluteStrokeWidth />
+        <Text variant="nav" color={c.ink2} numberOfLines={1}>
+          {tab.label}
+        </Text>
+      </Animated.View>
+      <Animated.View style={[styles.layer, styles.over, activeStyle]}>
+        <Active size={24} color={c.ink} strokeWidth={2} absoluteStrokeWidth fill={tab.fill ? c.ink : "none"} />
+        <Text variant="nav" color={c.ink} numberOfLines={1}>
+          {tab.label}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
 const useStyles = makeStyles((c) => ({
   wrap: {
     flexDirection: "row",
@@ -126,6 +156,9 @@ const useStyles = makeStyles((c) => ({
     borderRadius: 100,
     backgroundColor: c.surface,
   },
-  // 52 wide as drawn; 44 tall (24 glyph + 6 + label) with the pill's 8 px makes the 60 px bar.
-  tab: { width: 52, minHeight: 44, alignItems: "center", justifyContent: "center", gap: 6 },
+  // 52 wide as drawn; at least 44 tall (24 glyph + 4 + label) with the pill's 8 px makes the 60 px bar.
+  tab: { width: 52, minHeight: 44, alignItems: "center", justifyContent: "center", gap: 4 },
+  item: { alignItems: "center" },
+  layer: { alignItems: "center", gap: 4 },
+  over: { position: "absolute", top: 0, left: -8, right: -8 },
 }));

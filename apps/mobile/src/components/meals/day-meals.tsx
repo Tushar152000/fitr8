@@ -22,7 +22,7 @@ export function DayMeals({ day, pastDay, canLog }: { day: Day; pastDay: string |
   const logged = MEAL_TYPES.filter((t) => day.meals.some((m) => m.mealType === t && m.status === "CONFIRMED"));
 
   return (
-    <View style={{ gap: 20 }}>
+    <View style={{ gap: 16 }}>
       <DailySummary day={day} eatenLabel={eatenLabel} />
       {canLog ? (
         <QuickLog date={pastDay} />

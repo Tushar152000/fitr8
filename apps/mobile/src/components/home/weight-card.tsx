@@ -80,16 +80,18 @@ export function WeightCard({ p }: { p: ProgressDto }) {
         </Week>
       </View>
       <View style={[styles.divider, styles.noTouch]} />
-      <Text variant="bodySm" color={c.ink2} style={[styles.tight, styles.noTouch, { lineHeight: undefined }]}>
-        {change == null
-          ? "Weigh in once a week to see your trend against the plan"
-          : onTrack
-            ? `On track with the plan (${kg(planned)} a week). Logged ${p.daysLogged}/7 days.`
-            : `Plan is ${kg(planned)} a week. Logged ${p.daysLogged}/7 days.`}
-      </Text>
-      <Text variant="bodyStrong" color={c.accentText} style={[styles.tight, styles.noTouch, { marginTop: -8 }]}>
-        Weekly check-in and trend
-      </Text>
+      <View style={[styles.foot, styles.noTouch]}>
+        <Text variant="bodySm" color={c.ink2} style={[styles.tight, { lineHeight: undefined }]}>
+          {change == null
+            ? "Weigh in once a week to see your trend against the plan"
+            : onTrack
+              ? `On track with the plan (${kg(planned)} a week). Logged ${p.daysLogged}/7 days.`
+              : `Plan is ${kg(planned)} a week. Logged ${p.daysLogged}/7 days.`}
+        </Text>
+        <Text variant="bodyStrong" color={c.accentText} style={styles.tight}>
+          Weekly check-in and trend
+        </Text>
+      </View>
     </View>
   );
 }
@@ -100,7 +102,7 @@ const useStyles = makeStyles((c, shadows) => ({
     backgroundColor: c.surface,
     paddingHorizontal: 20,
     paddingVertical: 20,
-    gap: 22,
+    gap: 16,
     ...shadows.card,
   },
   row: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
@@ -114,6 +116,7 @@ const useStyles = makeStyles((c, shadows) => ({
     marginLeft: 52,
   },
   divider: { height: 1, backgroundColor: c.lineStrong },
+  foot: { gap: 4 },
   layer: { borderRadius: radius.card },
   passThrough: { pointerEvents: "box-none" },
   noTouch: { pointerEvents: "none" },

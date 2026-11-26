@@ -21,7 +21,7 @@ export function ExerciseList({
   const c = useColors();
   const styles = useStyles();
   return (
-    <Section title="Recommended exercises" gap={8}>
+    <Section title="Recommended exercises">
       {exercises.map((e, i) => {
         const done = sets[i]?.every((s) => s.done);
         return (

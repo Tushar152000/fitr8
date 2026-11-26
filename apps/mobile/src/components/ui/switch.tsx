@@ -1,5 +1,6 @@
 import { Pressable, View } from "react-native";
 import { makeStyles, useColors } from "@/lib/theme";
+import { haptic } from "@/lib/haptics";
 
 /**
  * Figma "Toggle": 44×26 track (accent/primary when on, bg/track when off), 22 px white knob 2 px
@@ -24,7 +25,10 @@ export function Switch({
       accessibilityLabel={label}
       accessibilityState={{ checked, disabled }}
       disabled={disabled}
-      onPress={() => onChange(!checked)}
+      onPress={() => {
+        haptic.select();
+        onChange(!checked);
+      }}
       hitSlop={8}
       style={[styles.track, { backgroundColor: checked ? c.brand : c.track }, disabled && { opacity: 0.5 }]}
     >

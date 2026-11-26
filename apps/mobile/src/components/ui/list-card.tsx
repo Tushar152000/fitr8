@@ -11,7 +11,7 @@ export function ListCard({ title, children }: { title: string; children: ReactNo
   const styles = useStyles();
   const items = Children.toArray(children);
   return (
-    <View style={{ gap: 8 }} accessibilityLabel={title}>
+    <View style={{ gap: 10 }} accessibilityLabel={title}>
       <Text variant="h2">{title}</Text>
       <View style={styles.card}>
         {items.map((child, i) => (

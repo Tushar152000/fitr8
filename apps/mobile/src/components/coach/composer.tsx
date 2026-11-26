@@ -67,7 +67,7 @@ const useStyles = makeStyles((c) => ({
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 7,
+    gap: 8,
     paddingTop: 10,
     paddingHorizontal: gutter,
     backgroundColor: c.ground,
@@ -78,8 +78,7 @@ const useStyles = makeStyles((c) => ({
     maxHeight: 140,
     borderRadius: 30,
     backgroundColor: c.surface,
-    paddingLeft: 22,
-    paddingRight: 18,
+    paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 20,
     fontFamily: fonts.sans400,
