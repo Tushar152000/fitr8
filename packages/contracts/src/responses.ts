@@ -121,6 +121,11 @@ export interface MeDto {
   profile: ProfileDto | null;
   /** FITR8 Pro or the free plan (docs/PREMIUM.md). */
   plan: "FREE" | "PRO";
+  /**
+   * First day the user has in the app (YYYY-MM-DD, their timezone): the sign-up day, or an earlier
+   * day a meal was back-filled to. Day switchers and the calendar stop here.
+   */
+  startedOn: string;
 }
 
 /** GET /api/profile/phone-check */

@@ -9,6 +9,7 @@ import { CalendarBody, MonthArrows, RoundButton, useCalendarMonth } from "@/comp
 import { QueryError } from "@/components/query-error";
 import { Sheet } from "@/components/sheet";
 import { PillButton, Skeleton, Text } from "@/components/ui";
+import { useMe } from "@/lib/auth";
 import { localYmd, viewableDay } from "@/lib/meal-param";
 import { useReduceMotion } from "@/lib/motion";
 import { dotState, isPersonalBest, streakQuery, streakTip, weekdayLetter } from "@/lib/streak";
@@ -35,7 +36,7 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
   const streak = useQuery({ ...streakQuery, enabled: open });
   const s = streak.data;
   const lit = s ? isPersonalBest(s) : false;
-  const selected = viewableDay(useViewDay()) ?? localYmd();
+  const selected = viewableDay(useViewDay(), undefined, useMe().startedOn) ?? localYmd();
   const [mode, setMode] = useState<Mode>("streak");
   const cal = useCalendarMonth(selected, open && mode === "calendar");
   const [wasOpen, setWasOpen] = useState(open);
