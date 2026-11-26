@@ -54,3 +54,4 @@ Full list with context: `.claude/plans/figma-v2-ui.md`. In short: Inter font app
 
 - OPEN (2026-11-27): payments plan — store billing via RevenueCat (UPI AutoPay works natively on App Store and Google Play in India), 7-day trial as store intro offer; unknown: whether Google Play India allows free trials now (fallback: server-side 7-day trial without mandate); Razorpay web checkout later. Awaiting user decisions: trial on both plans or yearly only; Android fallback; Razorpay timing.
 - 2026-11-27 — Login per Figma: both "Sign Up For Free" and "Log In" open one sign-in sheet (server decides new vs returning); slides auto-advance 3.5 s + swipe, looping; page dots olive (not Figma purple); login always light; cover screen follows the theme.
+- 2026-11-27 — Dependabot version-update PRs turned off (user): `.github/dependabot.yml` removed; dependency updates are done by hand when needed. Automatic security-fix PRs were already off.
