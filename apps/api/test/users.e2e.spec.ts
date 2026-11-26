@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { localDate } from "@fitr8/domain/dates";
 import { PHONE_TAKEN } from "@fitr8/domain/person";
 import { createTestApp, onboard, type TestApp } from "./support/app.js";
 
@@ -187,6 +188,38 @@ describe("users", () => {
       remindLunch: true,
       remindDinner: false,
     });
+  });
+
+  it("starts the user's days at sign-up, or at an earlier back-filled meal", async () => {
+    const { userId, agent } = await t.signIn();
+    await onboard(agent);
+    const stranger = await t.signIn();
+    const me = await agent.get("/api/me").expect(200);
+    const tz = (me.body.profile?.timezone as string | undefined) ?? "Asia/Kolkata";
+    const signupDay = localDate(
+      tz,
+      (await t.prisma.user.findUniqueOrThrow({ where: { id: userId } })).createdAt,
+    );
+    expect(me.body.startedOn).toBe(signupDay.toISOString().slice(0, 10));
+
+    // Someone else's older meal doesn't count; the user's own back-filled one does.
+    const twoDaysBefore = new Date(signupDay.getTime() - 2 * 86_400_000);
+    const meal = {
+      date: twoDaysBefore,
+      mealType: "LUNCH" as const,
+      source: "TEXT" as const,
+      status: "CONFIRMED" as const,
+    };
+    await t.prisma.mealLog.create({
+      data: { userId: stranger.userId, ...meal, date: new Date("2020-01-01") },
+    });
+    expect((await agent.get("/api/me").expect(200)).body.startedOn).toBe(
+      signupDay.toISOString().slice(0, 10),
+    );
+    await t.prisma.mealLog.create({ data: { userId, ...meal } });
+    expect((await agent.get("/api/me").expect(200)).body.startedOn).toBe(
+      twoDaysBefore.toISOString().slice(0, 10),
+    );
   });
 
   it("exports the caller's confirmed meals and weigh-ins as CSV", async () => {

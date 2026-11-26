@@ -28,14 +28,19 @@ export default function HomeScreen() {
   usePremiumIntro(me);
   const [calendar, setCalendar] = useState(false);
   // null = today. Older than the week window only when picked in the calendar.
-  const viewDay = viewableDay(useViewDay());
-  const days = pagerDays(viewDay); // today first
+  // Never before the user's first day in the app (`/me` startedOn).
+  const startedOn = me.startedOn;
+  const viewDay = viewableDay(useViewDay(), undefined, startedOn);
+  const days = pagerDays(viewDay, undefined, startedOn); // today first
   const index = viewDay ? Math.max(0, days.indexOf(viewDay)) : 0;
   // Stable on purpose: the day pager builds its swipe gesture once from it (see day-pager.tsx).
-  const go = useCallback((i: number) => {
-    const all = pagerDays(viewableDay(currentViewDay()));
-    showDay(i <= 0 ? null : all[Math.min(i, all.length - 1)]);
-  }, []);
+  const go = useCallback(
+    (i: number) => {
+      const all = pagerDays(viewableDay(currentViewDay(), undefined, startedOn), undefined, startedOn);
+      showDay(i <= 0 ? null : all[Math.min(i, all.length - 1)]);
+    },
+    [startedOn],
+  );
   const pager = useDayPager({ days, index, onIndex: go });
   // Prefetch the day just outside the rendered window so a swipe never waits (see day-pager.tsx).
   useEffect(() => {

@@ -38,8 +38,10 @@ export function HomeHeader({ me }: { me: Pick<Me, "name" | "image" | "plan"> }) 
         </PressableScale>
         <PressableScale
           accessibilityRole="button"
-          accessibilityLabel={premium ? "FITR8 Premium" : "Go Premium"}
-          onPress={() => openPaywall("home_header")}
+          accessibilityLabel={premium ? "FITR8 Premium. See your plan" : "Go Premium"}
+          // Premium: the paywall has nothing to sell (it closed at once, so the tap looked dead);
+          // Profile's Premium card shows the plan and renewal date instead.
+          onPress={() => (premium ? router.push("/profile") : openPaywall("home_header"))}
           style={styles.premium}
         >
           <LinearGradient {...PRIMARY_PILL} style={styles.premiumFill}>

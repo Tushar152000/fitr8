@@ -15,6 +15,7 @@ import { usePaywall } from "@/lib/use-paywall";
 
 const SOURCES: PaywallSource[] = [
   "home_banner",
+  "home_header",
   "profile",
   "onboarding",
   "locked_photo",

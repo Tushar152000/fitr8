@@ -14,6 +14,7 @@ import {
   monthWeeks,
   type CalendarStatus,
 } from "@/lib/calendar";
+import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
 import { makeStyles, useColors } from "@/lib/theme";
 
@@ -36,14 +37,19 @@ export function useCalendarMonth(selected: string, enabled: boolean) {
   };
 }
 
-/** ‹ › round buttons for the sheet header (next is off at the current month). */
+/**
+ * ‹ › round buttons for the sheet header: next is off at the current month, previous at the month
+ * the user started in (`/me` `startedOn`).
+ */
 export function MonthArrows({ month, setMonth }: { month: string; setMonth: (m: string) => void }) {
   const c = useColors();
+  const startedOn = useMe().startedOn;
   const atNow = month >= monthOf(localYmd());
+  const atStart = Boolean(startedOn) && month <= monthOf(startedOn);
   return (
     <>
-      <RoundButton label="Previous month" onPress={() => setMonth(addMonths(month, -1))}>
-        <ChevronLeft size={20} color={c.ink} strokeWidth={2} />
+      <RoundButton label="Previous month" disabled={atStart} onPress={() => setMonth(addMonths(month, -1))}>
+        <ChevronLeft size={20} color={atStart ? c.ink3 : c.ink} strokeWidth={2} />
       </RoundButton>
       <RoundButton label="Next month" disabled={atNow} onPress={() => setMonth(addMonths(month, 1))}>
         <ChevronRight size={20} color={atNow ? c.ink3 : c.ink} strokeWidth={2} />
@@ -118,6 +124,8 @@ export function CalendarBody({
   const c = useColors();
   const styles = useStyles();
   const today = localYmd();
+  // Days before the user's first day can't be opened, drawn like future days.
+  const startedOn = useMe().startedOn ?? "";
   const status = new Map((cal.data?.month === month ? cal.data.days : []).map((d) => [d.date, d.status]));
   return (
     <View style={{ gap: 18 }}>
@@ -142,7 +150,7 @@ export function CalendarBody({
                     status={status.get(ymd) ?? "none"}
                     selected={ymd === selected}
                     isToday={ymd === today}
-                    future={ymd > today}
+                    future={ymd > today || ymd < startedOn}
                     onPress={() => onPick(ymd)}
                   />
                 ) : (
