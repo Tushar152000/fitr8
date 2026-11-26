@@ -449,11 +449,9 @@
   }
  },
  "mobile": {
-  "syncedAt": "2026-11-26T20:29:07.766Z",
-  "head": "67d01ee",
+  "syncedAt": "2026-11-26T20:32:44.878Z",
+  "head": "edc1809",
   "files": {
-   "apps/mobile/src/components/home/hydration-glow.tsx": "789771a04f59",
-   "apps/mobile/src/lib/use-keyboard.ts": "0d8e40047e1a",
    "apps/mobile/.claude/settings.json": "14b797af98bf",
    "apps/mobile/.gitignore": "1b3d2a4eff0b",
    "apps/mobile/.vscode/extensions.json": "c745cc723589",
@@ -536,6 +534,7 @@
    "apps/mobile/src/components/home/glass.tsx": "49035e455c5c",
    "apps/mobile/src/components/home/home-header.tsx": "787bc61901e2",
    "apps/mobile/src/components/home/hydration-card.tsx": "7c832cc6df3a",
+   "apps/mobile/src/components/home/hydration-glow.tsx": "789771a04f59",
    "apps/mobile/src/components/home/streak-flame.tsx": "d7c7c021735f",
    "apps/mobile/src/components/home/streak-sheet.tsx": "03a12f58054e",
    "apps/mobile/src/components/home/weight-card.tsx": "4cd1029f7006",
@@ -550,7 +549,7 @@
    "apps/mobile/src/components/log/camera/camera-buttons.tsx": "53343c174732",
    "apps/mobile/src/components/log/camera/camera-overlays.tsx": "0988020ef103",
    "apps/mobile/src/components/log/camera/corners.tsx": "e3b7059eb5f1",
-   "apps/mobile/src/components/log/camera/scan-guide.tsx": "8ffebcee48d5",
+   "apps/mobile/src/components/log/camera/scan-guide.tsx": "fcdc8de3da5a",
    "apps/mobile/src/components/log/camera/scan-hint.tsx": "f56a08b3f673",
    "apps/mobile/src/components/log/label/label-check.tsx": "e7aa6d7faa22",
    "apps/mobile/src/components/log/label/per-100g-fields.tsx": "de9c1df037cb",
@@ -766,6 +765,7 @@
    "apps/mobile/src/lib/use-camera-auto-permission.ts": "c56121121107",
    "apps/mobile/src/lib/use-coach-chat.ts": "1815ac28feac",
    "apps/mobile/src/lib/use-history.ts": "2535cd4c7919",
+   "apps/mobile/src/lib/use-keyboard.ts": "0d8e40047e1a",
    "apps/mobile/src/lib/use-live-barcode.ts": "270308a28d67",
    "apps/mobile/src/lib/use-notification-status.ts": "8fadca553cbc",
    "apps/mobile/src/lib/use-onboarding-form.ts": "c8411b8cb256",
