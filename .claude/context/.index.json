@@ -449,8 +449,8 @@
   }
  },
  "mobile": {
-  "syncedAt": "2026-11-26T20:32:44.878Z",
-  "head": "edc1809",
+  "syncedAt": "2026-11-26T20:35:48.115Z",
+  "head": "c948dbc",
   "files": {
    "apps/mobile/.claude/settings.json": "14b797af98bf",
    "apps/mobile/.gitignore": "1b3d2a4eff0b",
@@ -485,7 +485,7 @@
    "apps/mobile/src/app/log/_layout.tsx": "b98fe2f0712b",
    "apps/mobile/src/app/log/barcode/[code].tsx": "a1d13f3e6e5b",
    "apps/mobile/src/app/log/barcode/index.tsx": "50a60656f329",
-   "apps/mobile/src/app/log/index.tsx": "0f62287f7139",
+   "apps/mobile/src/app/log/index.tsx": "18057cbd9339",
    "apps/mobile/src/app/log/label/[id].tsx": "4b104275ccb3",
    "apps/mobile/src/app/log/label/index.tsx": "f3723527c914",
    "apps/mobile/src/app/log/saved/[id].tsx": "99aa4ae0cbe5",
