@@ -166,3 +166,5 @@ Screens in `src/app` are thin; sub-components live in `src/components/<area>/`, 
 - Removed: `/history` route (Past logs), `components/log/history/*`, `components/meals/meal-row.tsx`, `HistorySkeleton`; the `history` Stack.Screen in `_layout.tsx`. `Sheet` gained `figma` / `subtitle` / `trailing` / `gap`.
 
 - `app/workout-session.tsx` (focus mode) has no M–S week strip any more (user, 2026-11-26); `components/workout/session/week-strip.tsx` deleted.
+
+- Sheet close (2026-11-26, user): no × inside any sheet; `CloseButton` in `components/sheet.tsx` = 40 px white circle with ×, absolutely positioned 52 px above the panel's top-right (rides with the panel animation; off-screen distance = height + 72). Sheet `maxHeight` = window height − top inset − 72 so the button always fits under the status bar. Backdrop tap still closes.

@@ -17,7 +17,9 @@ import { SHEET_CLOSE, SHEET_OPEN, useReduceMotion } from "@/lib/motion";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /**
- * Bottom sheet (radius 28) over a dimmed backdrop. Tapping the backdrop or × closes it. Opening, the
+ * Bottom sheet (radius 28) over a dimmed backdrop. Tapping the backdrop or the round × button that
+ * floats just above the panel's top-right corner (outside the sheet, user decision 2026-11-26; it
+ * rides with the panel) closes it. Opening, the
  * backdrop fades in while the panel slides up; closing plays the same in reverse (panel slides down,
  * backdrop fades out) and only then unmounts the Modal, so a sheet never just vanishes. Under Reduce
  * Motion both are instant. The dim layer never slides. The panel
@@ -25,8 +27,8 @@ import { makeStyles, radius, useColors } from "@/lib/theme";
  * so a field or Save button inside a sheet is never covered.
  *
  * `figma` = the v2 sheet (Figma "Sheet/Streak", "Sheet/Calendar"): white panel, 36 px grabber,
- * Heading/H1 title with an optional Label/Medium `subtitle` and `trailing` controls instead of ×
- * (the backdrop and back gesture close it), 20 px between blocks.
+ * Heading/H1 title with an optional Label/Medium `subtitle` and `trailing` controls, 20 px between
+ * blocks.
  */
 export function Sheet({
   open,
@@ -77,7 +79,10 @@ export function Sheet({
 
   const backdrop = useAnimatedStyle(() => ({ opacity: shown.get() }));
   const panel = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - shown.get()) * panelH.get() }] }));
-  const measure = (h: number) => panelH.set(h + 40);
+  // Off-screen distance includes the close button floating 52 px above the panel.
+  const measure = (h: number) => panelH.set(h + 72);
+  // Room above the tallest sheet for the close button, below the status bar.
+  const maxHeight = screenH - insets.top - 72;
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -90,11 +95,13 @@ export function Sheet({
             onLayout={(e) => measure(e.nativeEvent.layout.height)}
             style={[
               styles.sheet,
+              { maxHeight },
               styles.figma,
               { gap: gap ?? 20, paddingBottom: Math.max(34, insets.bottom + 8) },
               panel,
             ]}
           >
+            <CloseButton onPress={onClose} />
             <View style={styles.grabber} />
             {!bare && (
               <View style={styles.figmaHead}>
@@ -118,21 +125,14 @@ export function Sheet({
         ) : (
           <Animated.View
             onLayout={(e) => measure(e.nativeEvent.layout.height)}
-            style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 8) }, panel]}
+            style={[styles.sheet, { maxHeight, paddingBottom: Math.max(20, insets.bottom + 8) }, panel]}
           >
+            <CloseButton onPress={onClose} />
             <View style={styles.handle} />
             <View style={styles.head}>
               <Text variant="h2" style={{ flex: 1 }}>
                 {title}
               </Text>
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-                onPress={onClose}
-                style={styles.close}
-              >
-                <X size={22} color={c.ink2} />
-              </PressableScale>
             </View>
             <ScrollView contentContainerStyle={{ gap: 16 }} keyboardShouldPersistTaps="handled">
               {children}
@@ -144,11 +144,27 @@ export function Sheet({
   );
 }
 
-const useStyles = makeStyles((c) => ({
+/** 40 px white circle with ×, 12 px above the panel's top-right corner. */
+function CloseButton({ onPress }: { onPress: () => void }) {
+  const c = useColors();
+  const styles = useStyles();
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel="Close"
+      onPress={onPress}
+      hitSlop={8}
+      style={styles.close}
+    >
+      <X size={20} color={c.ink} strokeWidth={2} />
+    </PressableScale>
+  );
+}
+
+const useStyles = makeStyles((c, shadows) => ({
   root: { flex: 1, justifyContent: "flex-end" },
   scrim: { backgroundColor: c.scrim },
   sheet: {
-    maxHeight: "88%",
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
     backgroundColor: c.ground,
@@ -161,5 +177,17 @@ const useStyles = makeStyles((c) => ({
   figmaHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   handle: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.lineStrong },
   head: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  close: { width: 44, height: 44, marginRight: -10, marginTop: -8, alignItems: "center", justifyContent: "center" },
+  close: {
+    position: "absolute",
+    top: -52,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+    ...shadows.card,
+  },
 }));
