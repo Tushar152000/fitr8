@@ -17,23 +17,23 @@ mode; dark mode keeps working through the palette tokens.
 
 ## Frames → routes
 
-| # | Frame | Node | Route |
-|---|---|---|---|
-| 1 | Home ("iPhone 13 & 14 - 24") | 5244:10228 | `/today` |
-| 2 | Today – Streak sheet | 5250:2530 | sheet on `/today` (tap streak pill) |
-| 3 | Meals – Calendar | 5265:3580 | sheet on `/meals` (tap the middle of the day switcher) |
-| 4 | Meals | 5261:3170 | `/meals` |
-| 5 | Snap your meal | 5244:9923 | `/log` |
-| 6 | Your coach | 5244:9990 | `/coach` |
-| 7 | Workout – Recover today | 5244:10068 | `/workout` (week view, Premium + training set up) |
-| 8 | Profile | 5253:2566 | `/profile` (hub) |
-| 9 | Profile / Goal | 5255:2779 | new `/goal` |
-| 10 | Profile / Progress | 5255:2874 | `/progress` |
-| 11 | Profile / Measurements | 5255:2962 | new `/measurements` |
-| 12 | Profile / Reminders | 5255:3091 | `/reminders` |
-| 13 | Profile / Apps & devices | 5255:3110 | `/health` |
-| 14 | Profile / Help & support | 5255:3129 | new `/support` |
-| 15 | Profile / Settings | 5255:3148 | new `/settings` |
+| #   | Frame                        | Node       | Route                                                  |
+| --- | ---------------------------- | ---------- | ------------------------------------------------------ |
+| 1   | Home ("iPhone 13 & 14 - 24") | 5244:10228 | `/today`                                               |
+| 2   | Today – Streak sheet         | 5250:2530  | sheet on `/today` (tap streak pill)                    |
+| 3   | Meals – Calendar             | 5265:3580  | sheet on `/meals` (tap the middle of the day switcher) |
+| 4   | Meals                        | 5261:3170  | `/meals`                                               |
+| 5   | Snap your meal               | 5244:9923  | `/log`                                                 |
+| 6   | Your coach                   | 5244:9990  | `/coach`                                               |
+| 7   | Workout – Recover today      | 5244:10068 | `/workout` (week view, Premium + training set up)      |
+| 8   | Profile                      | 5253:2566  | `/profile` (hub)                                       |
+| 9   | Profile / Goal               | 5255:2779  | new `/goal`                                            |
+| 10  | Profile / Progress           | 5255:2874  | `/progress`                                            |
+| 11  | Profile / Measurements       | 5255:2962  | new `/measurements`                                    |
+| 12  | Profile / Reminders          | 5255:3091  | `/reminders`                                           |
+| 13  | Profile / Apps & devices     | 5255:3110  | `/health`                                              |
+| 14  | Profile / Help & support     | 5255:3129  | new `/support`                                         |
+| 15  | Profile / Settings           | 5255:3148  | new `/settings`                                        |
 
 ## User decisions (do not re-ask)
 
