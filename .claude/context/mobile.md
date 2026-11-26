@@ -35,6 +35,10 @@ SafeArea → QueryClientProvider → AuthProvider; splash until auth not "loadin
 
 ## Theme / dark mode (2026-11-17)
 
+- Meals `FoodRow` (`components/meals/meal-slot-card.tsx:135`) shows an item amount only when the dashboard sent numeric `quantity`/`grams` and a `unit`; an older API (name only) shows no amount instead of crashing.
+
+- Compact sizing (owner asked 2026-11-24; re-applied on v2 2026-11-26): `components/ui/text.tsx` `TYPE_SCALE 0.92` / `MIN_SIZE 11` applied by `compact()` to every style in `DESIGN_SIZES` (Figma styles included) and to the `size` prop; `Button` 48 (dashed 44); `gutter` 16; `Screen` gap 18; `Card` padding 14 radius 18; login buttons/input 48.
+
 - `lib/palette.ts`: `palettes.light` / `.dark` (same keys incl. semantic `panel`, `panelLine`, `strong`/`onStrong`, `brandText`, `brandSoft`, `raised`, `danger`, `scrim`), `shadowsFor(scheme)`. `lib/appearance.tsx`: `AppearanceProvider` (root `_layout.tsx`; preference system/light/dark in SecureStore `fitr8.appearance` read synchronously, `Appearance.setColorScheme`, `expo-system-ui` window bg, StatusBar), `useColors()`, `useScheme()`, `useShadows()`, `makeStyles((c, shadows) => …)` (cached per scheme). `lib/theme.ts` re-exports both; there is no static `colors` export any more. `_layout.tsx` `NavigationTheme` maps the palette onto React Navigation. Camera screens (`log/index`, `log/label/index`, `log/barcode/index`) use `palettes.light` constants on purpose (always dark UI). Settings → Appearance row → OptionSheet (System/Light/Dark). `app.json` `userInterfaceStyle: "automatic"`, version 0.4.0.
 
 ## Home v2 (2026-11-25)

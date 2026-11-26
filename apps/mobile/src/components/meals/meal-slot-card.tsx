@@ -132,8 +132,11 @@ function FoodRow({ meal, item, last }: { meal: Meal; item: Meal["items"][number]
       meal.items.map((i) => i.name),
       meal.source === "TEXT" ? (meal.inputText ?? "Typed meal") : "Photo",
     );
+  // An API older than the v2 dashboard sends items with a name only: show no amount, don't crash.
   const note = item
-    ? formatPortion(item.quantity, item.unit, item.grams, item.isLiquid)
+    ? typeof item.quantity === "number" && item.unit && typeof item.grams === "number"
+      ? formatPortion(item.quantity, item.unit, item.grams, item.isLiquid)
+      : ""
     : (STATUS_TEXT[meal.status] ?? "");
   return (
     <Pressable

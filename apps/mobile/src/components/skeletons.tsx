@@ -204,7 +204,7 @@ export function ProgressSkeleton() {
           ))}
         </View>
         <Line width="80%" height={12} tone="card" />
-        <Skeleton height={54} radius={radius.button} tone="card" />
+        <Skeleton height={48} radius={radius.button} tone="card" />
       </Box>
       <Skeleton height={88} />
       <Box style={{ gap: 14 }}>

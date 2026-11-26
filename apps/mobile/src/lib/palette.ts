@@ -182,8 +182,8 @@ export function fade(color: string, alpha: number): string {
 
 export const radius = { input: 14, button: 16, card: 20, sheet: 28 } as const;
 
-/** Screen gutter: 20 on app screens, 24 on onboarding. */
-export const gutter = 20;
+/** Screen gutter: 16 on app screens (compact, 2026-11-24), 24 on onboarding. */
+export const gutter = 16;
 
 /**
  * Custom fonts need one family per weight on native. The app is set in Inter (Figma "Fitr8" type

@@ -26,7 +26,7 @@ const fg = (c: Colors): Record<ButtonVariant, string> => ({
   danger: c.onDanger,
 });
 
-/** Full-width 54 px button (48 for dashed), radius 16. One primary per screen. */
+/** Full-width 48 px button (44 for dashed), radius 16. One primary per screen. */
 export function Button({
   children,
   onPress,
@@ -62,7 +62,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        { height: height ?? (variant === "dashed" ? 48 : 54), backgroundColor: fills[pressed ? 1 : 0] },
+        { height: height ?? (variant === "dashed" ? 44 : 48), backgroundColor: fills[pressed ? 1 : 0] },
         variant === "secondary" && styles.secondary,
         variant === "dashed" && styles.dashed,
         variant === "ghostDark" && styles.ghostDark,
