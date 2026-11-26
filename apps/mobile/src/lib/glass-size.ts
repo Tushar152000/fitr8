@@ -59,16 +59,38 @@ export function setGlassMl(ml: number) {
   }
 }
 
+/** Glasses in one row of the Home hydration card. */
+export const ROW_SLOTS = 8;
+
+export type GlassRow = {
+  /** Glasses shown in this round (8, or fewer in the last round: only what's still needed). */
+  slots: number;
+  /** How many of them are drunk. */
+  filled: number;
+  /** 0-based round; a target needing more than 8 glasses takes several rounds of the row. */
+  round: number;
+  rounds: number;
+};
+
+/** Slots in round `round` when the target needs `needed` glasses. */
+export const roundSlots = (round: number, needed: number) => Math.min(ROW_SLOTS, needed - round * ROW_SLOTS);
+
 /**
- * The glass row on the card: `slots` icons, the first `filled` drunk. Past the first few glasses
- * the window slides so there are always glasses left to tap until the target is reached.
+ * The glass row on the card (user decision 2026-11-26): every tap fills the next glass, all 8 fill;
+ * after the 8th the row starts the next round (the last round shows only the glasses still needed),
+ * so the final glass of the final round lands exactly on the target. At or past the target the
+ * last round stays full.
  */
-export function glassRow(consumedMl: number, targetMl: number, glass: number, slots = 8) {
+export function glassRow(consumedMl: number, targetMl: number, glass: number): GlassRow {
   const drunk = Math.floor(consumedMl / glass);
   const needed = Math.max(1, Math.ceil(targetMl / glass));
-  const reached = consumedMl >= targetMl;
-  if (reached) return { filled: slots, slots };
-  // Keep at least 2 empty glasses visible while there's water left to drink.
-  const filled = Math.min(drunk, slots - 2, needed);
-  return { filled: Math.max(0, filled), slots };
+  const rounds = Math.ceil(needed / ROW_SLOTS);
+  if (consumedMl >= targetMl) {
+    const round = rounds - 1;
+    const slots = roundSlots(round, needed);
+    return { slots, filled: slots, round, rounds };
+  }
+  const round = Math.min(Math.floor(drunk / ROW_SLOTS), rounds - 1);
+  const slots = roundSlots(round, needed);
+  return { slots, filled: Math.max(0, Math.min(slots, drunk - round * ROW_SLOTS)), round, rounds };
 }

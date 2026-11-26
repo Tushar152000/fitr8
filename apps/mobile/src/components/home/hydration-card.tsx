@@ -1,11 +1,11 @@
 import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
 import { FieldError, PressableScale, Text } from "@/components/ui";
-import { GLASS_SIZES, glassRow, setGlassMl, useGlassMl } from "@/lib/glass-size";
+import { GLASS_SIZES, glassRow, ROW_SLOTS, setGlassMl, useGlassMl, type GlassRow } from "@/lib/glass-size";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
 
@@ -18,7 +18,8 @@ const GLOW = require("../../../assets/home/hydration-glow.png");
 
 /**
  * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
- * full one takes it back off (undo). The pencil changes the glass size (a phone setting).
+ * full one takes it back off (undo). The pencil changes the glass size (a phone setting). A target
+ * of more than 8 glasses runs in rounds of the row ("Round 2 of 2" beside the title).
  */
 export function HydrationCard() {
   const styles = useStyles();
@@ -27,6 +28,7 @@ export function HydrationCard() {
   const [sizing, setSizing] = useState(false);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
+  const row = useShownRow(d ? glassRow(d.consumedMl, d.targetMl, glass) : null);
 
   return (
     <View style={styles.card}>
@@ -35,6 +37,11 @@ export function HydrationCard() {
         <View style={{ flex: 1, gap: 0 }}>
           <Text variant="labelMedium" color="#ffffff" style={{ letterSpacing: -0.24 }}>
             Current hydration
+            {d && row && row.rounds > 1 ? (
+              <Text variant="labelMedium" color="rgba(255,255,255,0.65)" tabular>
+                {` · Round ${row.round + 1} of ${row.rounds}`}
+              </Text>
+            ) : null}
           </Text>
           {d ? (
             <Text weight={600} size={22} color="#ffffff" tabular accessibilityLiveRegion="polite" style={styles.big}>
@@ -66,8 +73,7 @@ export function HydrationCard() {
       {d ? (
         <>
           <Glasses
-            consumedMl={d.consumedMl}
-            targetMl={d.targetMl}
+            row={row!}
             glass={glass}
             canUndo={Boolean(water.undoable)}
             onAdd={() => water.add.mutate(glass)}
@@ -100,23 +106,38 @@ export function HydrationCard() {
   );
 }
 
+/**
+ * The row to draw. When a tap completes a round, the full row stays on screen while the 8th glass
+ * fills (900 ms), then the next round appears; going back a round (undo) shows at once.
+ */
+function useShownRow(row: GlassRow | null): GlassRow | null {
+  const [shownRound, setShownRound] = useState(row?.round ?? 0);
+  const round = row?.round ?? 0;
+  useEffect(() => {
+    if (round === shownRound) return;
+    const t = setTimeout(() => setShownRound(round), round > shownRound ? 900 : 0);
+    return () => clearTimeout(t);
+  }, [round, shownRound]);
+  if (!row || shownRound >= row.round) return row;
+  // Still showing the round just completed: all of it full.
+  return { slots: ROW_SLOTS, filled: ROW_SLOTS, round: shownRound, rounds: row.rounds };
+}
+
 function Glasses({
-  consumedMl,
-  targetMl,
+  row,
   glass,
   canUndo,
   onAdd,
   onUndo,
 }: {
-  consumedMl: number;
-  targetMl: number;
+  row: GlassRow;
   glass: number;
   canUndo: boolean;
   onAdd: () => void;
   onUndo: () => void;
 }) {
   const styles = useStyles();
-  const { filled, slots } = glassRow(consumedMl, targetMl, glass);
+  const { filled, slots, round } = row;
   return (
     <View style={styles.glasses}>
       {Array.from({ length: slots }, (_, i) => {
@@ -124,7 +145,8 @@ function Glasses({
         const last = full && i === filled - 1;
         return (
           <Pressable
-            key={i}
+            // A new round gets fresh glasses (they start empty instead of draining).
+            key={`${round}-${i}`}
             accessibilityRole="button"
             accessibilityLabel={
               full ? (last ? `Remove the last glass` : `Glass ${i + 1}, drunk`) : `Add a glass, ${glass} ml`
@@ -139,6 +161,10 @@ function Glasses({
           </Pressable>
         );
       })}
+      {/* A shorter last round keeps the same glass spacing as a full row of 8. */}
+      {Array.from({ length: ROW_SLOTS - slots }, (_, i) => (
+        <View key={`pad-${i}`} style={styles.glass} />
+      ))}
     </View>
   );
 }

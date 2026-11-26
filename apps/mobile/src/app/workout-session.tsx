@@ -12,7 +12,6 @@ import { SessionDoneCard } from "@/components/workout/session/done-card";
 import { ExerciseList } from "@/components/workout/session/exercise-list";
 import { Pill } from "@/components/workout/session/pill";
 import { RestDay } from "@/components/workout/session/rest-day";
-import { WeekStrip } from "@/components/workout/session/week-strip";
 import { track } from "@/lib/analytics";
 import { api, errorMessage } from "@/lib/api";
 import { useEnergy } from "@/lib/energy";
@@ -179,8 +178,6 @@ function Session({
         </Text>
         <Text variant="h1">{session ? session.name : "Recover today"}</Text>
       </View>
-
-      <WeekStrip strip={data.strip} />
 
       {!session ? (
         <RestDay data={data} />
