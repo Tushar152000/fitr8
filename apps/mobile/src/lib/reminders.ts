@@ -369,3 +369,76 @@ export function listenForNotificationLinks(open: (url: string) => void): () => v
   const sub = Notifications.addNotificationResponseReceivedListener(go);
   return () => sub.remove();
 }
+
+// ── Timed sessions (walk, run, ride, yoga) ──────────────────────────────────
+
+const SESSION_DONE = "fitr8-session-done";
+const SESSION_RUNNING = "fitr8-session-running";
+
+type SessionNotice = {
+  date: string;
+  type: string;
+  title: string;
+  minutes: number;
+  startedAt: number;
+  pausedMs: number;
+  pausedAt: number | null;
+};
+
+const sessionUrl = (s: Pick<SessionNotice, "date">) => `/training/${s.date}?start=1`;
+
+/** Only when the user already allowed notifications: a session never asks for permission itself. */
+async function allowed(N: typeof NotificationsModule): Promise<boolean> {
+  try {
+    return (await N.getPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * "Your 60-min long walk is done · Tap to log it" at the planned end of a running session
+ * (2026-11-28). Re-timed on every start / pause / resume; none while paused or once past the end.
+ */
+export async function scheduleSessionDone(s: SessionNotice) {
+  const N = notifications();
+  if (!N || !(await allowed(N))) return;
+  await N.cancelScheduledNotificationAsync(SESSION_DONE).catch(() => {});
+  if (s.pausedAt) return;
+  const endsAt = s.startedAt + s.pausedMs + s.minutes * 60_000;
+  const seconds = Math.round((endsAt - Date.now()) / 1000);
+  if (seconds < 5) return;
+  await N.scheduleNotificationAsync({
+    identifier: SESSION_DONE,
+    content: {
+      title: `Your ${s.minutes}-min ${s.title.toLowerCase()} is done`,
+      body: "Nice work. Tap to log it.",
+      data: { url: sessionUrl(s) },
+    },
+    trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds, channelId: CHANNEL },
+  });
+}
+
+/** "Long walk in progress · 12 min so far" when the app goes to the background mid-session. */
+export async function notifySessionRunning(s: SessionNotice) {
+  const N = notifications();
+  if (!N || !(await allowed(N))) return;
+  const min = Math.floor(Math.max(0, (s.pausedAt ?? Date.now()) - s.startedAt - s.pausedMs) / 60_000);
+  await N.scheduleNotificationAsync({
+    identifier: SESSION_RUNNING,
+    content: {
+      title: s.pausedAt ? `${s.title} paused` : `${s.title} in progress`,
+      body: `${min} min so far. Tap to ${s.pausedAt ? "resume" : "return"}.`,
+      data: { url: sessionUrl(s) },
+    },
+    trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId: CHANNEL },
+  });
+}
+
+/** The session was logged or dropped: no more notices for it. */
+export async function cancelSessionNotices() {
+  const N = notifications();
+  if (!N) return;
+  await N.cancelScheduledNotificationAsync(SESSION_DONE).catch(() => {});
+  await N.dismissNotificationAsync(SESSION_RUNNING).catch(() => {});
+}

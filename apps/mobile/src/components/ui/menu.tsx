@@ -1,14 +1,38 @@
 import { Check, ChevronRight, type LucideIcon } from "lucide-react-native";
 import { Children, isValidElement, type ReactNode } from "react";
-import { View } from "react-native";
-import { makeStyles, radius, useColors } from "@/lib/theme";
+import { StyleSheet, View } from "react-native";
+import { makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { PressableScale } from "./pressable-scale";
 import { Text } from "./text";
 
-/** Figma "Icon Tile": 36 px, radius 12, 18 px glyph. `accent` = bg/accent-subtle with an olive icon. */
-export function IconTile({ icon: Icon, accent, color }: { icon: LucideIcon; accent?: boolean; color?: string }) {
+/**
+ * Figma "Icon Tile": 36 px, radius 12, 18 px glyph. `accent` = bg/accent-subtle with an olive icon.
+ * `solidDark` (Profile hub, user choice 2026-11-28): light mode = the normal grey tile; dark mode = a
+ * plain black tile (panel + hairline edge) with a white glyph. (A black → olive gradient tile was
+ * tried in light mode and dropped.)
+ * `color` (danger) still wins for the glyph.
+ */
+export function IconTile({
+  icon: Icon,
+  accent,
+  solidDark,
+  color,
+}: {
+  icon: LucideIcon;
+  accent?: boolean;
+  solidDark?: boolean;
+  color?: string;
+}) {
   const c = useColors();
   const styles = useStyles();
+  const dark = useScheme() === "dark";
+  if (solidDark && dark) {
+    return (
+      <View style={[styles.tile, styles.darkTile]}>
+        <Icon size={18} color={color ?? "#ffffff"} strokeWidth={2} />
+      </View>
+    );
+  }
   return (
     <View style={[styles.tile, { backgroundColor: accent ? c.brandSoft : c.ground }]}>
       <Icon size={18} color={color ?? (accent ? c.brandText : c.ink)} strokeWidth={2} />
@@ -99,6 +123,7 @@ export function MenuGroup({
 export function MenuRow({
   icon,
   accent,
+  solidDark,
   title,
   subtitle,
   value,
@@ -113,6 +138,8 @@ export function MenuRow({
   /** Optional: option lists (a sheet's choices) have no icon tile. */
   icon?: LucideIcon;
   accent?: boolean;
+  /** Black icon tile in dark mode, the normal grey one in light (see IconTile). */
+  solidDark?: boolean;
   title: string;
   subtitle?: string | null;
   value?: string | null;
@@ -130,7 +157,9 @@ export function MenuRow({
   const styles = useStyles();
   const body = (
     <>
-      {icon ? <IconTile icon={icon} accent={accent} color={danger ? c.danger : undefined} /> : null}
+      {icon ? (
+        <IconTile icon={icon} accent={accent} solidDark={solidDark} color={danger ? c.danger : undefined} />
+      ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text variant="bodyStrong" color={danger ? c.danger : undefined} numberOfLines={1}>
           {title}
@@ -166,7 +195,8 @@ export function MenuRow({
 }
 
 const useStyles = makeStyles((c) => ({
-  tile: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  tile: { width: 36, height: 36, borderRadius: radius.tile, alignItems: "center", justifyContent: "center" },
+  darkTile: { backgroundColor: c.panel, borderWidth: StyleSheet.hairlineWidth, borderColor: c.panelLine },
   group: { backgroundColor: c.surface, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 4 },
   flush: { paddingVertical: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },

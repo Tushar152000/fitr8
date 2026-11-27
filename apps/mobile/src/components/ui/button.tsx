@@ -1,9 +1,8 @@
 import type { LucideIcon } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { PRIMARY_PILL } from "@/lib/gradients";
+import { ActivityIndicator, View, type StyleProp, type ViewStyle } from "react-native";
 import { makeStyles, radius, useColors, type Colors } from "@/lib/theme";
+import { MovingGradient } from "./moving-gradient";
 import { Text } from "./text";
 import { PressableScale } from "./pressable-scale";
 
@@ -32,7 +31,8 @@ const fg = (c: Colors): Record<ButtonVariant, string> => ({
  * Full-width button in the v2 language (Figma "Button", user decision 2026-11-27: one look across
  * every screen): `primary` is the gradient pill (gradient/primary, white label), `secondary` a white
  * pill with a hairline, `strong` / `danger` / `ghostDark` solid pills; all 54 px tall. `dashed` (an
- * "add" row inside a list) stays a 44 px rounded rectangle. One primary per screen.
+ * "add" row inside a list) stays a 44 px rounded rectangle. One primary per screen. The primary
+ * gradient moves diagonally (`MovingGradient`, user request 2026-11-28: every gradient button).
  */
 export function Button({
   children,
@@ -82,7 +82,7 @@ export function Button({
         style,
       ]}
     >
-      {variant === "primary" && <LinearGradient {...PRIMARY_PILL} style={StyleSheet.absoluteFill} />}
+      {variant === "primary" && <MovingGradient />}
       {loading ? (
         <ActivityIndicator color={color} />
       ) : (

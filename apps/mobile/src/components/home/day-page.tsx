@@ -47,7 +47,7 @@ function DayContent({ day, pastDay }: { day: Day; pastDay: string | null }) {
   return (
     <View style={{ gap: 16 }}>
       {target ? (
-        <CalorieCard eaten={day.eaten} target={target} />
+        <CalorieCard eaten={day.eaten} target={target} meals={day.meals} today={!pastDay} />
       ) : (
         <Card>
           <Text color={c.ink2}>No targets yet. Finish your plan in Profile.</Text>
@@ -56,6 +56,9 @@ function DayContent({ day, pastDay }: { day: Day; pastDay: string | null }) {
 
       {target && over > 0 && <InsightCard headline="A little over. No stress." reason={positiveNote} />}
 
+      {/* Health right under the calories: today's recovery, steps and sleep (2026-11-28). */}
+      {!pastDay && <HealthTodayCard />}
+
       {pastDay ? (
         <PastDayMeals day={day} date={pastDay} />
       ) : (
@@ -63,9 +66,8 @@ function DayContent({ day, pastDay }: { day: Day; pastDay: string | null }) {
           <HydrationCard />
           <TodayWeight />
           <PremiumBanner />
-          {/* Design 16: workouts for free users. Then the health apps' numbers. */}
+          {/* Design 16: workouts for free users. */}
           <WorkoutUnlockBanner />
-          <HealthTodayCard />
         </>
       )}
     </View>

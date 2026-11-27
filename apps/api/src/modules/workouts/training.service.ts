@@ -21,6 +21,9 @@ import { recoveryAdvice } from "@fitr8/domain/health";
 import {
   burnKcal,
   fatKgFromKcal,
+  freeSampleDate,
+  previewExercises,
+  setupDefaults,
   MET_BY_TYPE,
   restDayCardio,
   trainingPlanName,
@@ -67,19 +70,21 @@ export class TrainingService {
     private readonly health: HealthDataService,
   ) {}
 
-  private async requirePremium(userId: string) {
-    if (!(await this.billing.limits(userId)).workouts)
-      throw proRequired("workouts", "Workouts are part of FITR8 Premium.");
+  /**
+   * Premium has the full Workout tab. The free plan gets a taste (product decision 2026-11-28): its
+   * training state and profile, the current week as a preview (`weekDto` with `premium` false) and
+   * logging its own sessions. Other weeks stay Premium.
+   */
+  private async isPremium(userId: string): Promise<boolean> {
+    return (await this.billing.limits(userId)).workouts;
   }
 
   /** GET /training: the profile (null before 16b), 16b's defaults and its onboarding summary. */
   async state(userId: string): Promise<TrainingStateDto> {
-    await this.requirePremium(userId);
     const [profile, { profile: body, metric, goal }] = await Promise.all([
       this.planner.profile(userId),
       this.targets.computePlan(userId),
     ]);
-    const where: TrainingType[] = body.equipment === "FULL_GYM" ? ["gym"] : ["home"];
     return {
       profile: profile ? profileDto(profile) : null,
       defaults: profile
@@ -88,18 +93,27 @@ export class TrainingService {
             daysPerWeek: profile.daysPerWeek,
             sessionMinutes: profile.sessionMinutes,
           }
-        : { types: where, daysPerWeek: 4, sessionMinutes: 45 },
+        : setupDefaults({
+            trainingDaysPerWeek: body.trainingDaysPerWeek,
+            sessionMinutes: body.sessionMinutes,
+            equipment: body.equipment,
+            goal: goal.type,
+          }),
       summary: {
         goal: goal.type === "FAT_LOSS" ? "lose" : goal.type === "MUSCLE_GAIN" ? "gain" : "maintain",
         weightKg: metric.weightKg,
         activityLevel: body.activityLevel,
+        experience: body.experience,
+        equipment: body.equipment,
+        injuries: body.injuries,
+        targetWeightKg: goal.targetWeightKg,
+        targetDate: ymdOf(goal.targetDate),
       },
     };
   }
 
   /** POST /training/profile (16b "Build my week"): saves the answers and returns this week. */
   async saveProfile(userId: string, input: TrainingProfileInput): Promise<TrainingWeekDto> {
-    await this.requirePremium(userId);
     // Onboarding first: the week needs the goal and weight.
     await this.targets.computePlan(userId);
     const data = {
@@ -107,21 +121,21 @@ export class TrainingService {
       daysPerWeek: input.daysPerWeek,
       sessionMinutes: input.sessionMinutes,
     };
-    const [, today] = await Promise.all([
+    const [, today, premium] = await Promise.all([
       this.prisma.trainingProfile.upsert({
         where: { userId },
         create: { userId, ...data },
         update: data,
       }),
       this.users.today(userId),
+      this.isPremium(userId),
     ]);
-    return this.weekDto(userId, weekStart(today), today);
+    return this.weekDto(userId, weekStart(today), today, premium);
   }
 
   /** GET /training/week?start=: the week containing `start` (default this week). */
   async week(userId: string, start?: string): Promise<TrainingWeekDto> {
-    await this.requirePremium(userId);
-    const today = await this.users.today(userId);
+    const [today, premium] = await Promise.all([this.users.today(userId), this.isPremium(userId)]);
     let monday = weekStart(today);
     if (start) {
       const date = parseDateOnly(start);
@@ -133,8 +147,11 @@ export class TrainingService {
         throw new AppError(400, "You can look one week ahead");
       if (monday.getTime() < thisWeek - MAX_WEEKS_BACK * 7 * DAY_MS)
         throw new AppError(400, "Pick a week within the last year");
+      // The free preview is this week only.
+      if (!premium && monday.getTime() !== thisWeek)
+        throw proRequired("workouts", "Other weeks are part of FITR8 Premium.");
     }
-    return this.weekDto(userId, monday, today);
+    return this.weekDto(userId, monday, today, premium);
   }
 
   /**
@@ -143,7 +160,6 @@ export class TrainingService {
    * replaced once logged).
    */
   async log(userId: string, input: TrainingLogInput): Promise<TrainingLogDto> {
-    await this.requirePremium(userId);
     const today = await this.users.today(userId);
     const date = parseDateOnly(input.date);
     if (Number.isNaN(date.getTime()) || ymdOf(date) !== input.date)
@@ -184,13 +200,17 @@ export class TrainingService {
 
   /** DELETE /training/logs/:id (undo). */
   async deleteLog(userId: string, id: string) {
-    await this.requirePremium(userId);
     const { count } = await this.prisma.trainingLog.deleteMany({ where: { id, userId } });
     if (!count) throw new AppError(404, "Session not found");
   }
 
   /** One week for the Workout tab; `today` is the user's local today (read once per request). */
-  private async weekDto(userId: string, monday: Date, today: Date): Promise<TrainingWeekDto> {
+  private async weekDto(
+    userId: string,
+    monday: Date,
+    today: Date,
+    premium: boolean,
+  ): Promise<TrainingWeekDto> {
     // One context: the planner and the strength engine share the plan maths and today.
     const ctx = planningContext({ targets: this.targets, users: this.users }, userId, today);
     const planned = await this.planner.week(userId, monday, ctx);
@@ -213,7 +233,10 @@ export class TrainingService {
       week.schedule.length
         ? this.gymPlan(userId, monday, isCurrentOrLater, { ctx, schedule: week.schedule })
         : Promise.resolve(null),
-      todayPlanned ? this.recovery(userId, todayPlanned.effort === "hard") : Promise.resolve(null),
+      // Recovery (health data) is part of Premium's full view.
+      todayPlanned && premium
+        ? this.recovery(userId, todayPlanned.effort === "hard")
+        : Promise.resolve(null),
     ]);
 
     const logsByDate = new Map<string, TrainingLog[]>();
@@ -226,6 +249,8 @@ export class TrainingService {
       setsByDate.get(key)!.add(l.exerciseSlug);
     }
     const createdOn = ymdOf(profile.createdAt);
+    // Free preview: one full sample session; other gym days list only their first exercises.
+    const sampleDate = premium ? null : freeSampleDate(week.days);
 
     const days: TrainingDayDto[] = week.days.map((d) => {
       const dayLogs = logsByDate.get(d.date) ?? [];
@@ -250,7 +275,11 @@ export class TrainingService {
         minutes: dayLogs.length ? dayLogs.reduce((t, l) => t + l.minutes, 0) : d.minutes,
         kcal: dayLogs.length ? dayLogs.reduce((t, l) => t + l.kcal, 0) : d.kcal,
         effort: d.effort,
-        steps: gymDay ? gymSteps(gymDay) : d.steps,
+        steps: gymDay
+          ? premium
+            ? gymSteps(gymDay)
+            : (previewExercises(gymSteps(gymDay), d.date === sampleDate).shown ?? [])
+          : d.steps,
         status,
         session: d.session,
         blocks: d.blocks,
@@ -261,16 +290,19 @@ export class TrainingService {
         logs: dayLogs.map(logDto),
         gym:
           d.type === "gym" ? { exercises: gymDay?.exercises.length ?? 0, logged: setsDone } : null,
-        exercises: gymDay
-          ? gymDay.exercises.map((e) => ({
-              name: e.name,
-              sets: e.sets,
-              repMin: e.repMin,
-              repMax: e.repMax,
-              timed: e.timed,
-              targetKg: e.targetKg,
-            }))
-          : null,
+        ...exerciseList(
+          gymDay
+            ? gymDay.exercises.map((e) => ({
+                name: e.name,
+                sets: e.sets,
+                repMin: e.repMin,
+                repMax: e.repMax,
+                timed: e.timed,
+                targetKg: e.targetKg,
+              }))
+            : null,
+          premium || d.date === sampleDate,
+        ),
       };
     });
 
@@ -289,6 +321,8 @@ export class TrainingService {
       recovery,
       plan: trainingPlanName(week.days),
       restDay: restDayCardio(deficit ? "deficit" : "maintenance"),
+      preview: !premium,
+      sampleDate,
     };
   }
 
@@ -318,6 +352,15 @@ export class TrainingService {
       return null;
     }
   }
+}
+
+/** A day's exercises and how many are held back: all of them in full, or the free preview's cut. */
+function exerciseList<T>(
+  list: T[] | null,
+  full: boolean,
+): { exercises: T[] | null; lockedExercises: number } {
+  const { shown, locked } = previewExercises(list, full);
+  return { exercises: shown, lockedExercises: locked };
 }
 
 /** 2–4 rows for a gym day: its first exercises with sets × reps × kg. */

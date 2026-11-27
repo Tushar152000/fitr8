@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Pause, Play, Square } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Vibration, View } from "react-native";
+import { clearSession, readSession, saveSession, togglePause, useActiveSession } from "@/lib/session-store";
 import { Button, FieldError, PressableScale, Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { errorMessage } from "@/lib/api";
@@ -17,24 +18,37 @@ const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padSt
 
 /**
  * The guided session: the current block, time left in it, what's next. Time comes from the start
- * timestamp, so it stays right if the phone locks or the app is in the background.
+ * timestamp, so it stays right if the phone locks or the app is in the background. The timing is
+ * saved on the phone (`lib/session-store.ts`) on every start, pause and resume, so leaving the
+ * screen or closing the app resumes it where it was (paused stays paused); cleared once logged.
  */
 export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () => void }) {
   const c = useColors();
   const styles = useStyles();
   const col = dayColors(c, day.type);
   const verbs = SESSION_VERB[day.type]!;
-  const [startedAt, setStartedAt] = useState(() => Date.now());
-  const [pausedMs, setPausedMs] = useState(0);
-  const [pausedAt, setPausedAt] = useState<number | null>(null);
+  // Resume a session left mid-way (screen closed, app killed), else start now.
+  // The shared session store is the one source of truth (the live bar can pause it too). A session
+  // left mid-way resumes; otherwise this screen starts one now.
+  const meta = { date: day.date, type: day.type, title: day.title, minutes: day.minutes };
+  const [saved] = useState(() => readSession(day.date, day.type));
+  const [fresh] = useState(() => ({ startedAt: Date.now(), pausedMs: 0, pausedAt: null as number | null }));
+  const live = useActiveSession();
+  const mine = live && live.date === day.date && live.type === day.type ? live : null;
+  const { startedAt, pausedMs, pausedAt } = mine ?? saved ?? fresh;
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastBlock = useRef(0);
 
+  // Starting (or resuming a saved one) makes it the active session: saved on the phone, shown in
+  // the live bar, with its notifications. Pause / resume go through the store too.
   useEffect(() => {
-    track("training_session_started", { type: day.type, minutes: day.minutes });
-  }, [day.type, day.minutes]);
+    if (!saved) track("training_session_started", { type: day.type, minutes: day.minutes });
+    if (!mine) saveSession(meta, saved ?? fresh);
+    // Once, on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 500);
     const sub = AppState.addEventListener("change", () => setNow(Date.now()));
@@ -73,6 +87,7 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
     setError(null);
     try {
       await logSession(day, minutes);
+      clearSession(day.date, day.type);
       showToast(`Logged ${minutes} min`);
       onStop();
       if (router.canGoBack()) router.back();
@@ -117,10 +132,7 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
             variant="secondary"
             icon={pausedAt ? Play : Pause}
             onPress={() => {
-              if (pausedAt) {
-                setPausedMs((p) => p + (Date.now() - pausedAt));
-                setPausedAt(null);
-              } else setPausedAt(Date.now());
+              togglePause();
             }}
           >
             {pausedAt ? "Resume" : "Pause"}
@@ -135,9 +147,7 @@ export function SessionTimer({ day, onStop }: { day: TrainingDayDto; onStop: () 
       <PressableScale
         accessibilityRole="button"
         onPress={() => {
-          setStartedAt(Date.now());
-          setPausedMs(0);
-          setPausedAt(null);
+          clearSession(day.date, day.type);
           onStop();
         }}
         style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}

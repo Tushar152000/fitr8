@@ -7,8 +7,8 @@ import { Faq } from "@/components/premium/paywall/faq";
 import { FeatureList } from "@/components/premium/paywall/feature-list";
 import { PaywallFooter } from "@/components/premium/paywall/paywall-footer";
 import { PlanPicker } from "@/components/premium/paywall/plan-picker";
-import { ProHero } from "@/components/premium/paywall/pro-hero";
-import { PageHeader, Screen } from "@/components/ui";
+import { PaywallHero } from "@/components/premium/paywall/paywall-hero";
+import { PageHeader, Screen, SectionLabel } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import type { PaywallSource } from "@/lib/premium";
 import { usePaywall } from "@/lib/use-paywall";
@@ -33,6 +33,10 @@ const SOURCES: PaywallSource[] = [
  * RevenueCat) and the per-month, per-day and savings figures are computed from them; until store
  * billing is connected, "Get Premium" is a one-tap test purchase (docs/PREMIUM.md "Buying").
  *
+ * First screen (redesign 2026-11-28): a personal headline from the goal, a living preview of the
+ * feature the person came for (`source`), three outcome lines, then the plan picker and the sticky
+ * button; features, comparison, billing notes and FAQ sit below under "Everything in Premium".
+ *
  * Never blocks: the back button and "Continue with Free" always return to where the user was. Already
  * Premium (a stale link, a reload): nothing to sell; usePaywall leaves, back or to Profile.
  */
@@ -51,7 +55,7 @@ export default function ProScreen() {
   return (
     <Screen footer={<PaywallFooter paywall={paywall} />}>
       <PageHeader eyebrow="FITR8" title="Premium" onBack={paywall.close} />
-      <ProHero />
+      <PaywallHero source={source} />
       <PlanPicker
         loading={paywall.loadingPrices}
         picked={paywall.picked}
@@ -63,6 +67,8 @@ export default function ProScreen() {
         yearPrice={paywall.yearPrice}
         monthPrice={paywall.monthPrice}
       />
+      {/* Detail for those who want it, below the first screen. */}
+      <SectionLabel>Everything in Premium</SectionLabel>
       <FeatureList
         open={open}
         onExpand={(key) => {

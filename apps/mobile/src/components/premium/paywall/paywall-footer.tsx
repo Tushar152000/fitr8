@@ -1,13 +1,15 @@
 import { View } from "react-native";
-import { Button, FieldError, PillButton, Text } from "@/components/ui";
+import { Button, FieldError, Text } from "@/components/ui";
 import { openLegal } from "@/lib/legal";
 import { purchasesAvailable } from "@/lib/purchases";
 import { makeStyles, useColors } from "@/lib/theme";
 import type { Paywall } from "@/lib/use-paywall";
 
 /**
- * Design 14c sticky footer: the chosen plan's price line, the upgrade button, purchase errors, the
- * test-purchase and auto-renew notes, then Restore purchases and Continue with Free.
+ * Design 14c sticky footer, compact (user request 2026-11-28): one button, then two small lines.
+ * Line 1 = what you pay and that it renews (trial, per-month for yearly, or test purchase) — the
+ * stores require price, period and auto-renew next to the button. Line 2 = Restore · Terms · Privacy
+ * · Not now (Continue with Free). Errors show under the button.
  */
 export function PaywallFooter({ paywall }: { paywall: Paywall }) {
   const c = useColors();
@@ -21,7 +23,6 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
     loadingPrices,
     canBuy,
     perMonth,
-    saving,
     trialDays,
     chosenPrice,
     storeSettings,
@@ -29,74 +30,65 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
     buy,
     restore,
   } = paywall;
+  const period = picked === "year" ? "year" : "month";
+
+  const label =
+    busy === "buy"
+      ? "Processing…"
+      : !canBuy && !loadingPrices
+        ? "Coming soon"
+        : trialDays
+          ? `Try ${trialDays} days free`
+          : `Get Premium · ${chosenPrice}/${period === "year" ? "yr" : "mo"}`;
+
+  const terms = testMode
+    ? "Test purchase · no money is charged"
+    : trialDays
+      ? `Then ${chosenPrice}/${period} · cancel anytime`
+      : picked === "year"
+        ? `${perMonth}/month, billed yearly · renews until you cancel`
+        : "Billed monthly · renews until you cancel";
+
+  const link = (text: string, onPress: () => void, disabled = false) => (
+    <Text
+      variant="captionStrong"
+      color={disabled ? c.ink3 : c.ink2}
+      onPress={disabled ? undefined : onPress}
+      accessibilityRole="link"
+      suppressHighlighting
+      style={styles.link}
+    >
+      {text}
+    </Text>
+  );
+
   return (
-    <View style={{ gap: 10 }}>
-      <View style={styles.priceLine}>
-        <Text variant="labelMedium" color={c.ink2} tabular>
-          {trialDays
-            ? `Free for ${trialDays} days, then ${chosenPrice}`
-            : picked === "year"
-              ? `${perMonth} a month, billed yearly`
-              : "Billed monthly"}
-        </Text>
-        {picked === "year" && saving && (
-          <Text variant="labelStrong" color={c.brandText} tabular>
-            You save {saving}
-          </Text>
-        )}
-      </View>
-      <Button onPress={buy} loading={busy === "buy"} disabled={!canBuy || busy !== null || loadingPrices}>
-        {busy === "buy"
-          ? "Processing…"
-          : !canBuy && !loadingPrices
-            ? "Coming soon"
-            : trialDays
-              ? `Start ${trialDays}-day free trial`
-              : `Get Premium · ${chosenPrice}`}
+    <View style={{ gap: 8 }}>
+      <Button height={50} onPress={buy} loading={busy === "buy"} disabled={!canBuy || busy !== null || loadingPrices}>
+        {label}
       </Button>
       {error && <FieldError>{error}</FieldError>}
-      {testMode && (
-        <Text variant="labelMedium" color={c.ink2} center>
-          Test purchase: no money is charged while FITR8 is in testing.
-        </Text>
-      )}
-      {hasStorePlan && (
-        <Text variant="caption" color={c.ink3} center>
-          Renews automatically until you cancel, at least 24 hours before the period ends, in {storeSettings}.{" "}
-          <Text variant="captionStrong" color={c.brandText} onPress={() => openLegal("terms")}>
-            Terms
-          </Text>
-          {" · "}
-          <Text variant="captionStrong" color={c.brandText} onPress={() => openLegal("privacy")}>
-            Privacy
-          </Text>
-        </Text>
-      )}
+      <Text
+        variant="caption"
+        color={c.ink2}
+        center
+        tabular
+        accessibilityLabel={hasStorePlan ? `${terms}. Cancel in ${storeSettings}.` : terms}
+      >
+        {terms}
+      </Text>
       <View style={styles.links}>
-        {purchasesAvailable && (
-          <PillButton
-            variant="link"
-            label={busy === "restore" ? "Restoring…" : "Restore purchases"}
-            onPress={restore}
-            disabled={busy !== null}
-            style={styles.link}
-          />
-        )}
-        <PillButton
-          variant="link"
-          label="Continue with Free"
-          onPress={close}
-          disabled={busy === "buy"}
-          style={styles.link}
-        />
+        {purchasesAvailable && link(busy === "restore" ? "Restoring…" : "Restore", restore, busy !== null)}
+        {link("Terms", () => openLegal("terms"))}
+        {link("Privacy", () => openLegal("privacy"))}
+        {link("Not now", close, busy === "buy")}
       </View>
     </View>
   );
 }
 
 const useStyles = makeStyles(() => ({
-  priceLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
-  links: { flexDirection: "row", justifyContent: "center", gap: 16 },
-  // Link pills have no padding of their own: keep the 44 px hit area.
-  link: { minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
+  links: { flexDirection: "row", justifyContent: "center", gap: 18 },
+  // Small text, but a comfortable tap area.
+  link: { paddingVertical: 6, paddingHorizontal: 2 },
 }));

@@ -1,8 +1,6 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { Camera, ScanBarcode, type LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
-import { PressableScale, Text } from "@/components/ui";
-import { PRIMARY_PILL } from "@/lib/gradients";
+import { MovingGradient, PressableScale, Text } from "@/components/ui";
 import { cam, CAM_GLASS, CAM_MUTED } from "./cam";
 
 /**
@@ -120,9 +118,10 @@ export function Shutter({
               <ScanBarcode size={28} color={cam.ink} strokeWidth={2.3} absoluteStrokeWidth />
             </View>
           ) : (
-            <LinearGradient {...PRIMARY_PILL} style={[StyleSheet.absoluteFill, styles.center]}>
+            <View style={[StyleSheet.absoluteFill, styles.center]}>
+              <MovingGradient width={68} height={68} />
               <Camera size={27.5} color={cam.white} strokeWidth={2} />
-            </LinearGradient>
+            </View>
           )}
         </View>
       )}

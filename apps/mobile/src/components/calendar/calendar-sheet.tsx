@@ -16,7 +16,7 @@ import {
 } from "@/lib/calendar";
 import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -287,7 +287,7 @@ const useStyles = makeStyles((c) => ({
     gap: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.ground,
   },
 }));

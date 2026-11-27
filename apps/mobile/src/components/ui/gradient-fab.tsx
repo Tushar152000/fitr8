@@ -1,11 +1,9 @@
-import { LinearGradient } from "expo-linear-gradient";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, type PressableProps } from "react-native";
-import { PRIMARY_PILL } from "@/lib/gradients";
+import { Pressable, StyleSheet, View, type PressableProps } from "react-native";
+import { MovingGradient } from "./moving-gradient";
 
 /**
- * Round button filled with gradient/primary (Figma: black easing into olive towards the bottom, no
- * shadow): the coach's send and stop buttons and the tab bar's camera (60 px). Sinks to 96 % while
+ * Round button filled with the diagonally moving black → olive gradient (`MovingGradient`; no shadow): the coach's send and stop buttons and the tab bar's camera (60 px). Sinks to 96 % while
  * pressed.
  */
 export function GradientFab({
@@ -21,13 +19,14 @@ export function GradientFab({
       disabled={disabled}
       style={({ pressed }) => [round, pressed && !disabled && { transform: [{ scale: 0.96 }] }]}
     >
-      <LinearGradient {...PRIMARY_PILL} style={[styles.fill, round]}>
+      <View style={[styles.fill, round]}>
+        <MovingGradient width={size} height={size} />
         {children}
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { alignItems: "center", justifyContent: "center" },
+  fill: { alignItems: "center", justifyContent: "center", overflow: "hidden" },
 });

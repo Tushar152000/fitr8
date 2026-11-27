@@ -12,7 +12,7 @@ import { PillButton, Skeleton, Text } from "@/components/ui";
 import { useMe } from "@/lib/auth";
 import { localYmd, viewableDay } from "@/lib/meal-param";
 import { useReduceMotion } from "@/lib/motion";
-import { dotState, isPersonalBest, streakQuery, streakTip, weekdayLetter } from "@/lib/streak";
+import { atRiskTip, dotState, isPersonalBest, streakAtRisk, streakQuery, streakTip, weekdayLetter } from "@/lib/streak";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { showDay, useViewDay } from "@/lib/view-day";
 import { StreakDrop, StreakFlame } from "./streak-flame";
@@ -35,7 +35,10 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
   const reduce = useReduceMotion();
   const streak = useQuery({ ...streakQuery, enabled: open });
   const s = streak.data;
-  const lit = s ? isPersonalBest(s) : false;
+  // Evening nudge: after 8 pm with nothing logged the fire dies down (still, dimmed).
+  const atRisk = s ? streakAtRisk(s) : false;
+  const best = s && !atRisk ? isPersonalBest(s) : false;
+  const lit = (s?.current ?? 0) > 0 && !atRisk;
   const selected = viewableDay(useViewDay(), undefined, useMe().startedOn) ?? localYmd();
   const [mode, setMode] = useState<Mode>("streak");
   const cal = useCalendarMonth(selected, open && mode === "calendar");
@@ -110,11 +113,15 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
                 <>
                   <View style={styles.card}>
                     <View style={styles.badge}>
-                      <View accessible accessibilityLabel={`Longest streak ${s.longest} days`}>
-                        <StreakDrop lit={lit}>
+                      <View
+                        accessible
+                        accessibilityLabel={`Current streak ${s.current} days`}
+                        style={atRisk ? { opacity: 0.5 } : undefined}
+                      >
+                        <StreakDrop lit={lit} best={best}>
                           <View style={styles.value}>
                             <Text variant="stat" color={c.white} tabular style={{ marginBottom: -3, letterSpacing: 0 }}>
-                              {s.longest}
+                              {s.current}
                             </Text>
                             <Text weight={600} size={10} color={c.white} style={{ letterSpacing: 0.8 }}>
                               DAYS
@@ -123,14 +130,23 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
                         </StreakDrop>
                       </View>
                       <Text variant="captionStrong" color={c.ink2}>
-                        Longest streak
+                        Current streak
                       </Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={{ flex: 1, gap: 14 }}>
-                      <Text variant="heading2" color={c.brandText}>
-                        {s.current}-day streak
-                      </Text>
+                      <View style={{ gap: 2 }}>
+                        <Text variant="heading2" color={c.brandText}>
+                          Best: {s.longest} {s.longest === 1 ? "day" : "days"}
+                        </Text>
+                        <Text variant="caption" color={c.ink2}>
+                          {best
+                            ? "You're on your best streak ever"
+                            : s.longest > s.current
+                              ? `${s.longest - s.current} more to beat it`
+                              : "Start today to build it"}
+                        </Text>
+                      </View>
                       <View style={styles.days}>
                         {s.week.map((d) => (
                           <WeekDot key={d.date} date={d.date} state={d.state} />
@@ -138,10 +154,12 @@ export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => v
                       </View>
                     </View>
                   </View>
-                  <View style={styles.tip}>
-                    <StreakFlame lit={lit} />
+                  <View style={[styles.tip, atRisk && { backgroundColor: c.cautionSoft }]}>
+                    <View style={atRisk ? { opacity: 0.5 } : undefined}>
+                      <StreakFlame lit={lit} best={best} />
+                    </View>
                     <Text variant="labelMedium" color={c.ink} style={{ flex: 1, lineHeight: 18 }}>
-                      {streakTip(s)}
+                      {atRisk ? atRiskTip(s.current) : streakTip(s)}
                     </Text>
                   </View>
                 </>
@@ -248,7 +266,7 @@ const useStyles = makeStyles((c) => ({
     paddingLeft: 14,
     paddingRight: 16,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.brandSoft,
   },
 }));

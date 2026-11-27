@@ -115,7 +115,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             </a>
           )}
           {available.dev && <DevLogin next={next} />}
-          <p className="mt-2 text-center text-xs text-ink-3">
+          <p className="mt-2 text-center text-[10px] text-ink-3">
             By continuing you agree to our{" "}
             <Link href="/terms" className="font-semibold text-fitr8 hover:underline">
               Terms

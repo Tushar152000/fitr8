@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useRef } from "react";
-import { KeyboardAvoidingView, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, type ScrollViewInstance, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AboutYouStep } from "@/components/onboarding/about-you-step";
 import { DetailsStep } from "@/components/onboarding/details-step";
@@ -99,7 +99,7 @@ function OnboardingForm(props: {
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const form = useOnboardingForm({ ...props, scroll });
   const { step, firstStep, draft, set, errors } = form;
   const steps = { current: step + 1 - firstStep, total: LAST_STEP + 2 - firstStep };

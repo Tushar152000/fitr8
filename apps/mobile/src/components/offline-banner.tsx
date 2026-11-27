@@ -3,7 +3,7 @@ import { WifiOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/ui";
 import { StyleSheet, View } from "react-native";
-import { useColors } from "@/lib/theme";
+import { radius, useColors } from "@/lib/theme";
 
 /** "You're offline" strip at the top while the phone has no connection. */
 export function OfflineBanner() {
@@ -23,7 +23,7 @@ export function OfflineBanner() {
         alignItems: "center",
         gap: 8,
         padding: 12,
-        borderRadius: 14,
+        borderRadius: radius.box,
         backgroundColor: c.panel,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: c.panelLine,

@@ -1,9 +1,11 @@
 import type { TrainingDayDto } from "@fitr8/contracts";
 import { router } from "expo-router";
+import { Lock } from "lucide-react-native";
+import { openPremium } from "@/lib/premium";
 import { View } from "react-native";
 import { PressableScale, Text } from "@/components/ui";
 import { loadLabel, setsLabel } from "@/lib/training-copy";
-import { fade, makeStyles, useColors } from "@/lib/theme";
+import { fade, makeStyles, useColors, radius } from "@/lib/theme";
 
 /**
  * Figma "Up next": a heading (eyebrow + session title, the "Coach briefing" link when the week has
@@ -49,7 +51,10 @@ export function SessionList({
       {rows.length > 0 && (
         <View style={styles.list}>
           {rows.map((r, i) => (
-            <View key={`${r.name}-${i}`} style={[styles.row, i < rows.length - 1 && styles.divider]}>
+            <View
+              key={`${r.name}-${i}`}
+              style={[styles.row, (i < rows.length - 1 || day.lockedExercises > 0) && styles.divider]}
+            >
               <View style={styles.badge}>
                 <Text variant="captionStrong" color={fade(c.ink, 0.7)}>
                   {i + 1}
@@ -77,6 +82,25 @@ export function SessionList({
               )}
             </View>
           ))}
+          {/* Free preview: the rest of the session, one tap to unlock. */}
+          {day.lockedExercises > 0 && (
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={`${day.lockedExercises} more exercises. Unlock with Premium`}
+              onPress={() => openPremium("workouts")}
+              style={styles.row}
+            >
+              <View style={[styles.badge, { backgroundColor: c.brandSoft }]}>
+                <Lock size={12} color={c.brandText} strokeWidth={2.4} />
+              </View>
+              <Text variant="bodyStrong" color={c.brandText} style={{ flex: 1 }}>
+                +{day.lockedExercises} more {day.lockedExercises === 1 ? "exercise" : "exercises"}
+              </Text>
+              <Text variant="labelStrong" color={c.brandText}>
+                Unlock
+              </Text>
+            </PressableScale>
+          )}
         </View>
       )}
     </View>
@@ -85,7 +109,13 @@ export function SessionList({
 
 const useStyles = makeStyles((c, shadows) => ({
   head: { flexDirection: "row", alignItems: "flex-end", gap: 12 },
-  list: { paddingHorizontal: 16, paddingVertical: 2, borderRadius: 20, backgroundColor: c.surface, ...shadows.card },
+  list: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    borderRadius: radius.card,
+    backgroundColor: c.surface,
+    ...shadows.card,
+  },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, minHeight: 51 },
   divider: { borderBottomWidth: 1, borderBottomColor: c.line },
   badge: {

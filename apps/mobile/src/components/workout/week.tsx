@@ -1,14 +1,15 @@
 import type { TrainingDayDto, TrainingWeekDto } from "@fitr8/contracts";
 import { router } from "expo-router";
-import { SlidersHorizontal } from "lucide-react-native";
+import { Crown, SlidersHorizontal } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
-import { IconButton, Text } from "@/components/ui";
+import { IconButton, PressableScale, Text } from "@/components/ui";
+import { openPremium } from "@/lib/premium";
 import { track } from "@/lib/analytics";
 import { trainingWeekQuery } from "@/lib/queries";
 import { dayEyebrow, dayTitle } from "@/lib/training-copy";
-import { useColors } from "@/lib/theme";
+import { useColors, radius } from "@/lib/theme";
 import { DayHero } from "./day-hero";
 import { TrainingStrip } from "./training-strip";
 import { SessionList } from "./session-list";
@@ -43,7 +44,8 @@ export function TrainingWeekView({
   // After the week's last session, look into the following week (the API serves up to one week
   // ahead, so not from next week's view). Same query as the week arrows: cached either way.
   const following = shiftDays(week.start, 7);
-  const lookAhead = !inThisWeek && following <= shiftDays(mondayOf(week.today), 7);
+  // The free preview is this week only, so no look into next week.
+  const lookAhead = !week.preview && !inThisWeek && following <= shiftDays(mondayOf(week.today), 7);
   const nextWeek = useQuery({ ...trainingWeekQuery(following), enabled: lookAhead });
   const fromNextWeek = lookAhead ? nextWeek.data?.days.find((d) => d.type !== "rest") : undefined;
   const next = inThisWeek ?? fromNextWeek;
@@ -76,7 +78,14 @@ export function TrainingWeekView({
 
         <TrainingStrip days={week.days} today={week.today} selected={day.date} onSelect={pick} />
 
-        <DayHero day={day} today={week.today} restDay={week.restDay} />
+        <DayHero
+          day={day}
+          today={week.today}
+          restDay={week.restDay}
+          preview={week.preview}
+          sampleDate={week.sampleDate}
+        />
+        {week.preview && <PreviewNote week={week} />}
       </View>
 
       {day.type === "gym" && day.exercises?.length ? (
@@ -87,11 +96,49 @@ export function TrainingWeekView({
         <SessionList
           day={next}
           eyebrow={`Up next · ${next === fromNextWeek ? `Next ${next.weekday}` : next.weekday}`}
-          briefing={hasGym}
+          briefing={hasGym && !week.preview}
         />
       )}
 
-      <WeekSummary week={week} onWeek={onWeek} />
+      {/* Other weeks are Premium: the arrows open the plans on the free preview. */}
+      <WeekSummary week={week} onWeek={week.preview ? () => openPremium("workouts") : onWeek} />
     </>
+  );
+}
+
+/**
+ * Free preview note under the day card: which day is this week's free full session, and one tap to
+ * unlock the whole plan.
+ */
+function PreviewNote({ week }: { week: TrainingWeekDto }) {
+  const c = useColors();
+  const sample = week.days.find((d) => d.date === week.sampleDate);
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel="You're previewing your plan. Unlock the full plan with Premium"
+      onPress={() => openPremium("workouts")}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        padding: 14,
+        borderRadius: radius.box,
+        backgroundColor: c.brandSoft,
+      }}
+    >
+      <Crown size={16} color={c.brandText} strokeWidth={2.2} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="labelStrong" color={c.brandText}>
+          You&apos;re previewing your plan
+        </Text>
+        <Text variant="caption" color={c.ink2}>
+          {sample
+            ? `${sample.weekday}'s ${sample.title.toLowerCase()} is free in full this week.`
+            : "Log any workout for free."}{" "}
+          Unlock every session with Premium.
+        </Text>
+      </View>
+    </PressableScale>
   );
 }

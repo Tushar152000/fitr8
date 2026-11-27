@@ -4,15 +4,15 @@ import { useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Avatar, MenuGroup, MenuRow, PressableScale, Text } from "@/components/ui";
-import { formatPhone } from "@/lib/profile-summary";
+import { formatPhone, monthYear } from "@/lib/profile-summary";
 import { makeStyles, useColors } from "@/lib/theme";
 import type { Me } from "@/lib/types";
 import { canTakePhoto, useProfilePhoto } from "@/lib/use-profile-photo";
 
 /**
  * Figma "Profile header": 64 px avatar with the "Change photo" camera badge (opens take / choose /
- * remove), full name (H1), the phone (Label/Medium; the email when there's no phone) and the pencil
- * → Account.
+ * remove), full name (H1), the phone (Label/Medium; the email when there's no phone), "Member since
+ * Nov 2026" (from `startedOn`, user request 2026-11-28) and the pencil → Account.
  */
 export function ProfileHeader({ me }: { me: Me }) {
   const c = useColors();
@@ -55,6 +55,9 @@ export function ProfileHeader({ me }: { me: Me }) {
             {line}
           </Text>
         ) : null}
+        <Text variant="caption" color={c.ink3} numberOfLines={1}>
+          Member since {monthYear(me.startedOn)}
+        </Text>
       </View>
       <PressableScale
         accessibilityRole="button"

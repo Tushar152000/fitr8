@@ -1,22 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { QueryError } from "@/components/query-error";
 import { WorkoutSkeleton } from "@/components/skeletons";
 import { FadeIn, Screen } from "@/components/ui";
-import { WorkoutLocked } from "@/components/workout/locked";
 import { TrainingSetup } from "@/components/workout/setup";
 import { TrainingWeekView } from "@/components/workout/week";
 import { billingQuery, trainingStateQuery, trainingWeekQuery } from "@/lib/queries";
 import { usePullRefresh } from "@/lib/use-pull-refresh";
 
 /**
- * The Workout tab (spec "Workout unlock"). Free → 16a (locked, with the user's own numbers).
- * Premium without a training setup → 16b once, then 16c (the week, on today). If Premium lapses
- * the tab is locked again; the setup and logs are kept for when they come back.
+ * The Workout tab. Without a training setup → 16b once, then 16c (the week, on today). Premium
+ * sees the full plan; the free plan (2026-11-28, "a taste") sees the same flow as a preview: this
+ * week only, gym days with their first two exercises, one full sample session, free logging (the
+ * API marks the week `preview`). If Premium lapses the tab falls back to the preview; the setup
+ * and logs are kept.
  */
 export default function WorkoutTab() {
-  const params = useLocalSearchParams<{ source?: string }>();
   const billing = useQuery(billingQuery);
 
   if (billing.isPending) return <Loading />;
@@ -26,11 +25,10 @@ export default function WorkoutTab() {
         <QueryError error={billing.error} onRetry={() => billing.refetch()} />
       </Screen>
     );
-  if (!billing.data.limits.workouts) return <WorkoutLocked source={params.source === "banner" ? "banner" : "tab"} />;
-  return <PremiumWorkouts />;
+  return <Workouts />;
 }
 
-function PremiumWorkouts() {
+function Workouts() {
   const state = useQuery(trainingStateQuery);
   const [start, setStart] = useState<string | null>(null);
   const hasProfile = Boolean(state.data?.profile);

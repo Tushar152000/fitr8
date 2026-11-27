@@ -1,13 +1,11 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { ArrowRight } from "lucide-react-native";
 import { View } from "react-native";
-import { PressableScale, Text } from "@/components/ui";
-import { OLIVE_BUTTON } from "@/lib/gradients";
+import { MovingGradient, PressableScale, Text } from "@/components/ui";
 import { makeStyles } from "@/lib/theme";
 
 /**
  * Compact pill CTA for upsell cards (40 px tall, sized to its label; 44 px touch with hitSlop).
- * `tone="glass"` = olive gradient for light cards; `tone="light"` = white pill for dark cards.
+ * `tone="glass"` = the moving olive gradient for light cards; `tone="light"` = white pill for dark cards.
  * Without `onPress` it's a visual only (the whole card is the button).
  */
 export function SmallCta({
@@ -33,9 +31,10 @@ export function SmallCta({
     tone === "light" ? (
       <View style={[styles.pill, styles.light]}>{body}</View>
     ) : (
-      <LinearGradient {...OLIVE_BUTTON} style={styles.pill}>
+      <View style={[styles.pill, styles.clip]}>
+        <MovingGradient />
         {body}
-      </LinearGradient>
+      </View>
     );
   if (!onPress) return pill;
   return (
@@ -56,4 +55,5 @@ const useStyles = makeStyles(() => ({
     borderRadius: 20,
   },
   light: { backgroundColor: "#ffffff" },
+  clip: { overflow: "hidden" },
 }));

@@ -21,6 +21,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Button, Text } from "@/components/ui";
 import { OfflineBanner } from "@/components/offline-banner";
+import { ThemeReveal } from "@/components/theme-reveal";
+import { SessionWatcher } from "@/components/session-bar";
 import { trackScreen } from "@/lib/analytics";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { queryClient, wireQueryLifecycle } from "@/lib/query";
@@ -60,6 +62,8 @@ export default function RootLayout() {
               <AuthProvider>
                 {fontsLoaded && <Routes />}
                 <OfflineBanner />
+                <ThemeReveal />
+                <SessionWatcher />
                 <PremiumLockedSheet />
                 <Toast />
                 <ConfirmDialog />

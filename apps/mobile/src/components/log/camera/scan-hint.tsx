@@ -1,14 +1,30 @@
 import { Crown, ScanBarcode } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { PressableScale, Text } from "@/components/ui";
 import { cam } from "./cam";
 
 /**
  * The pill near the bottom of the viewfinder, still (it doesn't move with the scan line), just above
  * the bottom corner guides (user decision 2026-11-27): what to point at, "Barcode found" (lime)
- * while a code is in view, or (free plan, both scans locked) a tap through to Premium.
+ * while a code is in view, or (free plan, both scans locked) a tap through to Premium. Idle, it
+ * rotates short framing tips every 3 s (2026-11-28): hold above the plate, fit every bowl in, light,
+ * or a barcode.
  */
+const TIPS = [
+  "Hold your phone above the plate",
+  "Fit every bowl in the frame",
+  "Good light reads best · tap ⚡ if dim",
+  "Or point at a barcode",
+];
 export function ScanHint({ locked, seen, onUnlock }: { locked: boolean; seen: string | null; onUnlock: () => void }) {
+  const [tip, setTip] = useState(0);
+  useEffect(() => {
+    if (locked || seen) return;
+    const id = setInterval(() => setTip((i) => (i + 1) % TIPS.length), 3000);
+    return () => clearInterval(id);
+  }, [locked, seen]);
   if (locked) {
     return (
       <PressableScale
@@ -33,9 +49,17 @@ export function ScanHint({ locked, seen, onUnlock }: { locked: boolean; seen: st
       accessibilityLiveRegion="polite"
     >
       {seen && <ScanBarcode size={14} color={cam.ink} strokeWidth={2} absoluteStrokeWidth />}
-      <Text variant={seen ? "labelStrong" : "labelMedium"} color={seen ? cam.ink : cam.white} tabular>
-        {seen ? `Barcode found · opening ${seen}` : "Point at a barcode, or snap your plate"}
-      </Text>
+      {seen ? (
+        <Text variant="labelStrong" color={cam.ink} tabular>
+          {`Barcode found · opening ${seen}`}
+        </Text>
+      ) : (
+        <Animated.View key={tip} entering={FadeIn.duration(250)} exiting={FadeOut.duration(150)}>
+          <Text variant="labelMedium" color={cam.white}>
+            {TIPS[tip]}
+          </Text>
+        </Animated.View>
+      )}
     </View>
   );
 }

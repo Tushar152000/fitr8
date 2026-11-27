@@ -12,7 +12,7 @@ import { MenuGroup, MenuRow, PillButton, Text } from "@/components/ui";
 import { useMe } from "@/lib/auth";
 import { formatMeasure, MEASURE_FIELDS, MEASURE_ROWS, updatedLabel } from "@/lib/measurements";
 import { measurementsQuery } from "@/lib/queries";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 import { usePullRefresh } from "@/lib/use-pull-refresh";
 
 /** Figma row icons: weight trending-down, body fat activity, tape measures ruler. */
@@ -108,7 +108,7 @@ const useStyles = makeStyles((c) => ({
   // Figma: bg/accent-subtle, radius md (16), 14 px (16 right) padding, Label/Medium 18 px lines.
   tip: {
     flexDirection: "row",
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.brandSoft,
     padding: 16,
   },

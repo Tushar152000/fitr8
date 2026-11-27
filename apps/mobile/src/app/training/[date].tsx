@@ -1,17 +1,17 @@
 import type { TrainingDayDto } from "@fitr8/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { Play } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { QueryError } from "@/components/query-error";
 import { WorkoutSkeleton } from "@/components/skeletons";
-import { Button, PageHeader, Screen, Text } from "@/components/ui";
+import { Button, PageHeader, Screen, SlideToStart, Text } from "@/components/ui";
 import { CoachTips } from "@/components/workout/coach-tips";
 import { LogSheet } from "@/components/workout/log-sheet";
 import { LoggedRow } from "@/components/workout/logged-row";
 import { SessionBlocks } from "@/components/workout/session-blocks";
 import { SessionTimer } from "@/components/workout/session-timer";
+import { readSession } from "@/lib/session-store";
 import { Stat } from "@/components/workout/stat";
 import { StepList } from "@/components/workout/step-list";
 import { track } from "@/lib/analytics";
@@ -53,7 +53,8 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
   // Sessions can be done and logged today or on the last 7 days (the API's window).
   const loggable = recentDays().includes(day.date);
   const canStart = Boolean(verbs) && day.date === today && day.blocks.length > 0;
-  const [timerOn, setTimerOn] = useState(autoStart && canStart);
+  // A session left mid-way today reopens straight into its timer.
+  const [timerOn, setTimerOn] = useState(() => canStart && (autoStart || readSession(day.date, day.type) != null));
   const [logOpen, setLogOpen] = useState(false);
 
   useEffect(() => {
@@ -103,9 +104,8 @@ function DayDetail({ day, today, autoStart }: { day: TrainingDayDto; today: stri
       {!timerOn && verbs && (
         <View style={{ gap: 10 }}>
           {canStart && (
-            <Button icon={Play} onPress={() => setTimerOn(true)}>
-              {verbs.start}
-            </Button>
+            // Slide to start, like answering a call (2026-11-28).
+            <SlideToStart label={`Slide to ${verbs.start.toLowerCase()}`} onComplete={() => setTimerOn(true)} />
           )}
           {loggable ? (
             <Button variant="secondary" onPress={() => setLogOpen(true)}>

@@ -1,11 +1,16 @@
 import type { MealSuggestionDto } from "@fitr8/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { router, type Href } from "expo-router";
-import { ChevronRight, Plus, Sparkles } from "lucide-react-native";
-import { createElement } from "react";
+import { Image } from "expo-image";
+import { ChevronRight, Plus, Repeat, Sparkles, Trash2 } from "lucide-react-native";
+import { createElement, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
-import { AnimatedRow, IconTile, PillButton, PressableScale, Text } from "@/components/ui";
-import { api } from "@/lib/api";
+import ReanimatedSwipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+import { AnimatedRow, PressableScale, Text } from "@/components/ui";
+import { api, errorMessage } from "@/lib/api";
+import { confirmAction } from "@/lib/confirm";
+import { refreshDay } from "@/lib/query";
+import { showToast } from "@/lib/toast";
 import { foodIcon } from "@/lib/food-icon";
 import { formatInt, formatPortion, mealTitle, type MealType } from "@/lib/format";
 import { SLOT, slotTime } from "@/lib/meal-slots";
@@ -34,9 +39,13 @@ const STATUS_TEXT: Partial<Record<Meal["status"], string>> = {
  * One meal slot on the Meals tab (Figma "Breakfast" … "Dinner" cards): icon tile, name, time of the
  * first meal and its kcal, "+" to log more, then a row per food (tap → that meal's review). An empty
  * slot shows "Not logged yet · ~N kcal suggested"; only the `current` slot (the meal for the time
- * of day, today) adds the coach's suggestion and Snap / Add food, the others keep the same compact
- * header with "+" as a logged slot (user decision 2026-11-27).
+ * of day, today) adds the coach's suggestion. Every slot has the same compact header with "+"; the
+ * Snap / Add food buttons were removed (2026-11-28: the Quick log "Snap your dinner" hero does it,
+ * and two gradient buttons were too much green). The slot icon is a solid ink tile.
  * `pastDay` = a past day in the logging window; `canLog` false = an older, read-only day.
+ * 2026-11-28: a photo-logged meal shows its photo as the first row's thumbnail (typed meals, the
+ * free plan's way in, keep the food icon); a confirmed meal swipes left for Delete and right for
+ * Log again (POST /api/meals/relog, into today; no AI scan, so every plan). Read-only days: no swipe.
  */
 export function MealSlotCard({
   type,
@@ -66,23 +75,27 @@ export function MealSlotCard({
   const subtitle = empty
     ? `${pastDay ? "Nothing logged" : "Not logged yet"}${canLog && suggestedKcal ? ` · ~${formatInt(Math.round(suggestedKcal / 10) * 10)} kcal suggested` : ""}`
     : `${slotTime(meals[0].createdAt, timezone)} · ${formatInt(kcal)} kcal`;
-  const rows = meals.flatMap((m): { key: string; meal: Meal; item: Meal["items"][number] | null }[] =>
-    m.status === "CONFIRMED" && m.items.length
-      ? m.items.map((item, i) => ({ key: `${m.id}-${i}`, meal: m, item }))
-      : [{ key: m.id, meal: m, item: null }],
-  );
+  // One group per meal (its food rows), so a swipe acts on the whole meal.
+  const groups = meals.map((m) => ({
+    meal: m,
+    rows:
+      m.status === "CONFIRMED" && m.items.length
+        ? m.items.map((item, i) => ({ key: `${m.id}-${i}`, item }))
+        : [{ key: m.id, item: null as Meal["items"][number] | null }],
+  }));
 
   return (
     <AnimatedRow style={styles.card}>
       <View style={styles.header}>
-        <IconTile icon={slot.icon} accent />
+        {/* Solid ink tile (2026-11-28: less green on Meals); flips to light in dark mode. */}
+        <View style={styles.slotIcon}>{createElement(slot.icon, { size: 18, color: c.onStrong, strokeWidth: 2 })}</View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="heading3">{slot.title}</Text>
           <Text variant="labelRegular" color={c.ink2} numberOfLines={1}>
             {subtitle}
           </Text>
         </View>
-        {(!empty || !current) && canLog && (
+        {canLog && (
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={`Add to ${slot.title.toLowerCase()}`}
@@ -98,28 +111,31 @@ export function MealSlotCard({
       {!empty && (
         <>
           <View style={styles.divider} />
-          {rows.map((r, i) => (
-            <FoodRow key={r.key} meal={r.meal} item={r.item} last={i === rows.length - 1} />
-          ))}
+          {groups.map((g, gi) => {
+            const rows = g.rows.map((r, i) => (
+              <FoodRow
+                key={r.key}
+                meal={g.meal}
+                item={r.item}
+                photo={i === 0 ? g.meal.photoUrl : null}
+                last={gi === groups.length - 1 && i === g.rows.length - 1}
+              />
+            ));
+            return canLog && g.meal.status === "CONFIRMED" ? (
+              <SwipeMeal key={g.meal.id} meal={g.meal} pastDay={pastDay}>
+                {rows}
+              </SwipeMeal>
+            ) : (
+              <View key={g.meal.id}>{rows}</View>
+            );
+          })}
         </>
       )}
 
+      {/* The current meal, still empty: the coach's idea for it (the camera is the Snap button above). */}
       {empty && current && canLog && (
         <View style={styles.empty}>
           <Suggestion type={type} date={pastDay} />
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <PillButton
-              label={`Snap ${slot.title.toLowerCase()}`}
-              style={{ flex: 1 }}
-              onPress={() => router.push({ pathname: "/log", params })}
-            />
-            <PillButton
-              variant="soft"
-              label="Add food"
-              style={{ flex: 1 }}
-              onPress={() => router.push({ pathname: "/log/type", params })}
-            />
-          </View>
         </View>
       )}
     </AnimatedRow>
@@ -127,7 +143,18 @@ export function MealSlotCard({
 }
 
 /** Figma "Food Row": icon tile (keyword match on the name), name, amount, kcal. A meal still being read shows its status. */
-function FoodRow({ meal, item, last }: { meal: Meal; item: Meal["items"][number] | null; last: boolean }) {
+function FoodRow({
+  meal,
+  item,
+  photo,
+  last,
+}: {
+  meal: Meal;
+  item: Meal["items"][number] | null;
+  /** The meal's photo (photo logs only), shown in place of the food icon. */
+  photo: string | null;
+  last: boolean;
+}) {
   const c = useColors();
   const styles = useStyles();
   const name =
@@ -149,7 +176,17 @@ function FoodRow({ meal, item, last }: { meal: Meal; item: Meal["items"][number]
       onPress={() => router.push(`/log/${meal.id}` as Href)}
       style={({ pressed }) => [styles.food, pressed && { opacity: 0.7 }]}
     >
-      <View style={styles.foodIcon}>{createElement(foodIcon(name), { size: 18, color: c.ink, strokeWidth: 2 })}</View>
+      {photo ? (
+        <Image
+          source={{ uri: photo, cacheKey: photo.split("?")[0] }}
+          style={styles.photo}
+          contentFit="cover"
+          transition={200}
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={styles.foodIcon}>{createElement(foodIcon(name), { size: 18, color: c.ink, strokeWidth: 2 })}</View>
+      )}
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
         <Text variant="bodyMedium" numberOfLines={1}>
           {name.charAt(0).toUpperCase() + name.slice(1)}
@@ -172,6 +209,81 @@ function FoodRow({ meal, item, last }: { meal: Meal; item: Meal["items"][number]
       )}
       {!last && <View style={styles.rowDivider} />}
     </Pressable>
+  );
+}
+
+/**
+ * A confirmed meal's rows with swipe actions: swipe left → Delete (asks first), swipe right → Log
+ * again into today (same meal slot). Each action is a button revealed by the swipe.
+ */
+function SwipeMeal({ meal, pastDay, children }: { meal: Meal; pastDay: string | null; children: ReactNode }) {
+  const c = useColors();
+  const styles = useStyles();
+  const slot = SLOT[meal.mealType as MealType].title.toLowerCase();
+
+  async function remove(sw: SwipeableMethods) {
+    sw.close();
+    const ok = await confirmAction(
+      "Delete this meal?",
+      `It comes off ${pastDay ? "that day's" : "today's"} totals.`,
+      "Delete",
+    );
+    if (!ok) return;
+    try {
+      await api(`/api/meals/${meal.id}`, { method: "DELETE" });
+      refreshDay();
+    } catch (e) {
+      showToast(errorMessage(e, "Couldn't delete. Try again."), 3000, true);
+    }
+  }
+
+  async function again(sw: SwipeableMethods) {
+    sw.close();
+    try {
+      await api("/api/meals/relog", { json: { mealId: meal.id, mealType: meal.mealType } });
+      refreshDay();
+      showToast(`Logged again to today's ${slot}`);
+    } catch (e) {
+      showToast(errorMessage(e, "Couldn't log it again. Try again."), 3000, true);
+    }
+  }
+
+  return (
+    <ReanimatedSwipeable
+      friction={1.6}
+      overshootLeft={false}
+      overshootRight={false}
+      leftThreshold={40}
+      rightThreshold={40}
+      renderLeftActions={(_p, _t, sw) => (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={`Log ${slot} again today`}
+          onPress={() => void again(sw)}
+          style={[styles.action, { backgroundColor: c.brandSoft }]}
+        >
+          <Repeat size={18} color={c.brandText} strokeWidth={2.2} />
+          <Text variant="captionStrong" color={c.brandText}>
+            Log again
+          </Text>
+        </PressableScale>
+      )}
+      renderRightActions={(_p, _t, sw) => (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Delete this meal"
+          onPress={() => void remove(sw)}
+          style={[styles.action, { backgroundColor: c.danger }]}
+        >
+          <Trash2 size={18} color={c.onDanger} strokeWidth={2.2} />
+          <Text variant="captionStrong" color={c.onDanger}>
+            Delete
+          </Text>
+        </PressableScale>
+      )}
+    >
+      <View style={styles.swipeFront}>{children}</View>
+    </ReanimatedSwipeable>
   );
 }
 
@@ -214,6 +326,14 @@ const useStyles = makeStyles((c, shadows) => ({
     ...shadows.card,
   },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  slotIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.tile,
+    backgroundColor: c.strong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   add: {
     width: 36,
     height: 36,
@@ -233,13 +353,17 @@ const useStyles = makeStyles((c, shadows) => ({
     justifyContent: "center",
   },
   rowDivider: { position: "absolute", left: 48, right: 0, bottom: 0, height: 1, backgroundColor: c.line },
+  photo: { width: 36, height: 36, borderRadius: radius.tile, backgroundColor: c.ground },
+  // Swipe actions sit behind the rows; the rows need the card colour to cover them.
+  swipeFront: { backgroundColor: c.surface },
+  action: { width: 92, alignItems: "center", justifyContent: "center", gap: 4 },
   empty: { gap: 12, paddingTop: 4, paddingBottom: 12 },
   suggestion: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     padding: 12,
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.ground,
   },
 }));

@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import type { CoachCard } from "@fitr8/contracts";
 import { z, type ZodType } from "zod";
 
 /**
@@ -13,6 +14,8 @@ export interface AgentTool<I = unknown> {
   description: string;
   input: ZodType<I>;
   run(input: I): Promise<unknown>;
+  /** Optional: a card for the app built from `run`'s output (e.g. the drafted meal). */
+  card?(output: unknown): CoachCard | null;
 }
 
 export function defineTool<I>(tool: AgentTool<I>): AgentTool<I> {

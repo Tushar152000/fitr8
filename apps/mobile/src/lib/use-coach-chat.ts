@@ -1,4 +1,10 @@
-import type { CoachChatInput, CoachConversationView, CoachMessageView, CoachStreamEvent } from "@fitr8/contracts";
+import type {
+  CoachCard,
+  CoachChatInput,
+  CoachConversationView,
+  CoachMessageView,
+  CoachStreamEvent,
+} from "@fitr8/contracts";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiStream, errorMessage } from "@/lib/api";
@@ -16,6 +22,8 @@ export type CoachMessage = {
   role: CoachMessageView["role"];
   text: string;
   tools: ToolChip[];
+  /** Cards a tool made for this reply (e.g. the drafted meal), live only. */
+  cards?: CoachCard[];
   streaming?: boolean;
   /** The reply stopped before the coach finished (user stop, dropped connection, server error). */
   cut?: boolean;
@@ -141,7 +149,11 @@ export function useCoachChat({ locked }: { locked: boolean }) {
             case "tool":
               gotReply = true;
               if (e.status === "done") usedTools = true;
-              patch((m) => ({ ...m, tools: upsertTool(m.tools, e) }));
+              patch((m) => ({
+                ...m,
+                tools: upsertTool(m.tools, e),
+                ...(e.card ? { cards: [...(m.cards ?? []), e.card] } : {}),
+              }));
               break;
             case "done":
               patch((m) => ({ ...m, streaming: false }));

@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { RestDayCardio, TrainingDayDto } from "@fitr8/contracts";
 import { router } from "expo-router";
 import {
@@ -18,18 +19,20 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { View, StyleSheet } from "react-native";
-import { PillButton, PressableScale, Text } from "@/components/ui";
+import { PillButton, PressableScale, RunIcon, Text, type IconProps } from "@/components/ui";
+import { openPremium } from "@/lib/premium";
+import { readSession } from "@/lib/session-store";
 import { Glow } from "@/components/ui/glow";
 import { DAY_LABEL, kcalText } from "@/lib/training";
 import { cardLabel, restChips, sessionHeadline } from "@/lib/training-copy";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 
 const ON_DARK_BODY = "rgba(255,255,255,0.75)";
 const ON_DARK_SUBTLE = "rgba(255,255,255,0.55)";
 
-const TYPE_ICON: Record<TrainingDayDto["type"], LucideIcon> = {
+const TYPE_ICON: Record<TrainingDayDto["type"], ComponentType<IconProps>> = {
   gym: Dumbbell,
-  run: Activity,
+  run: RunIcon,
   hiit: Activity,
   yoga: Flower2,
   walk: Footprints,
@@ -41,6 +44,12 @@ const REST_ICON = { time: Clock, steps: Footprints, hiit: CircleOff, often: Repe
 
 /** The one action for a day, as before the redesign (gym only on the day, in focus mode). */
 function dayAction(day: TrainingDayDto, isToday: boolean): { label: string; onPress: () => void } | null {
+  // A timed session left mid-way today: go straight back into it.
+  if (isToday && day.type !== "gym" && day.type !== "rest" && readSession(day.date, day.type))
+    return {
+      label: "Resume session",
+      onPress: () => router.push({ pathname: "/training/[date]", params: { date: day.date, start: "1" } }),
+    };
   switch (day.type) {
     case "gym":
       return isToday ? { label: "Start workout", onPress: () => router.push("/workout-session") } : null;
@@ -67,7 +76,20 @@ function dayAction(day: TrainingDayDto, isToday: boolean): { label: string; onPr
  * minutes and effort, chips (kcal, exercises / distance / pace, done), the coach's why and the
  * day's action as a white pill.
  */
-export function DayHero({ day, today, restDay }: { day: TrainingDayDto; today: string; restDay: RestDayCardio }) {
+export function DayHero({
+  day,
+  today,
+  restDay,
+  preview = false,
+  sampleDate = null,
+}: {
+  day: TrainingDayDto;
+  today: string;
+  restDay: RestDayCardio;
+  /** Free preview: gym sessions other than the week's sample open the plans. */
+  preview?: boolean;
+  sampleDate?: string | null;
+}) {
   const c = useColors();
   const styles = useStyles();
   const isToday = day.date === today;
@@ -92,7 +114,15 @@ export function DayHero({ day, today, restDay }: { day: TrainingDayDto; today: s
     );
   }
 
-  const action = dayAction(day, isToday);
+  const sample = preview && day.date === sampleDate;
+  const base = dayAction(day, isToday);
+  // Free preview: the sample session runs in full; other gym sessions unlock with Premium.
+  const action =
+    preview && day.type === "gym" && !sample
+      ? { label: "Unlock this workout", onPress: () => openPremium("workouts") }
+      : base && sample && day.type === "gym"
+        ? { ...base, label: "Start free workout" }
+        : base;
   const logged = day.logs.length > 0;
   const chips: { icon: LucideIcon; text: string }[] = [{ icon: Flame, text: `${kcalText(day.kcal)} kcal` }];
   if (day.gym && day.gym.exercises > 0) chips.push({ icon: ListOrdered, text: `${day.gym.exercises} exercises` });
@@ -103,7 +133,11 @@ export function DayHero({ day, today, restDay }: { day: TrainingDayDto; today: s
   return (
     <View style={styles.card}>
       <Glow tone="lime" opacity={0.7} left={6} bottom={-59} />
-      <Head label={cardLabel(day, isToday)} title={sessionHeadline(day)} icon={Icon} />
+      <Head
+        label={sample ? `${cardLabel(day, isToday)} · Free this week` : cardLabel(day, isToday)}
+        title={sessionHeadline(day)}
+        icon={Icon}
+      />
       <View style={styles.chips}>
         {chips.map((chip) => (
           <Chip key={chip.text} icon={chip.icon} text={chip.text} />
@@ -133,7 +167,7 @@ export function DayHero({ day, today, restDay }: { day: TrainingDayDto; today: s
   );
 }
 
-function Head({ label, title, icon: Icon }: { label: string; title: string; icon: LucideIcon }) {
+function Head({ label, title, icon: Icon }: { label: string; title: string; icon: ComponentType<IconProps> }) {
   const c = useColors();
   const styles = useStyles();
   return (
@@ -172,7 +206,7 @@ const useStyles = makeStyles((c, shadows) => ({
   card: {
     gap: 14,
     padding: 20,
-    borderRadius: 20,
+    borderRadius: radius.card,
     overflow: "hidden",
     backgroundColor: c.panel,
     borderWidth: StyleSheet.hairlineWidth,

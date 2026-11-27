@@ -1,8 +1,7 @@
-import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { ActivityIndicator, View, type StyleProp, type ViewStyle } from "react-native";
-import { PRIMARY_PILL } from "@/lib/gradients";
 import { makeStyles, useColors } from "@/lib/theme";
+import { MovingGradient } from "./moving-gradient";
 import { PressableScale } from "./pressable-scale";
 import { Text } from "./text";
 
@@ -76,9 +75,10 @@ export function PillButton({
       ]}
     >
       {variant === "primary" ? (
-        <LinearGradient {...PRIMARY_PILL} style={[styles.fill, styles.pad]}>
+        <View style={styles.pad}>
+          <MovingGradient />
           {content}
-        </LinearGradient>
+        </View>
       ) : (
         <View style={variant === "link" ? null : styles.pad}>{content}</View>
       )}
@@ -91,7 +91,6 @@ const ON_DARK_INK = "#0e0e0e";
 
 const useStyles = makeStyles(() => ({
   pill: { borderRadius: 100, overflow: "hidden" },
-  fill: { borderRadius: 100 },
   pad: { paddingHorizontal: 24, paddingVertical: 16, alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
 }));

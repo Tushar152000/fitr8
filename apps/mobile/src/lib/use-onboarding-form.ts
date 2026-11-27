@@ -1,7 +1,7 @@
 import type { PhoneCheckDto } from "@fitr8/contracts";
 import { router } from "expo-router";
 import { useState, type RefObject } from "react";
-import { LayoutAnimation, type ScrollView } from "react-native";
+import { LayoutAnimation, type ScrollViewInstance } from "react-native";
 import { track } from "@/lib/analytics";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { emptyDraft, toPayload, validateStep, type DraftErrors, type OnboardingDraft } from "@/lib/onboarding-draft";
@@ -48,7 +48,7 @@ export function useOnboardingForm({
   /** Returning users only: open at this step (and part of "About you"). */
   entry?: EditEntry;
   /** The form's scroll view, sent back to the top on a new step. */
-  scroll: RefObject<ScrollView | null>;
+  scroll: RefObject<ScrollViewInstance | null>;
 }) {
   const firstStep = returning ? 1 : 0;
   const start = returning && entry ? entry : undefined;

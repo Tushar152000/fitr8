@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { View } from "react-native";
 import { PressableScale, Text } from "@/components/ui";
 import { GOAL_LABEL, kcalText, weekOf } from "@/lib/training";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 
 const DAY_MS = 86_400_000;
 const shiftWeek = (start: string, weeks: number) =>
@@ -125,7 +125,7 @@ function Figure({ label, value }: { label: string; value: string }) {
 }
 
 const useStyles = makeStyles((c, shadows) => ({
-  card: { gap: 14, padding: 16, borderRadius: 20, backgroundColor: c.surface, ...shadows.card },
+  card: { gap: 14, padding: 16, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
   nav: { flexDirection: "row", alignItems: "center", gap: 8 },
   arrow: {
     width: 36,

@@ -1,7 +1,7 @@
 import { BellOff } from "lucide-react-native";
 import { Linking, View } from "react-native";
 import { PillButton, Text } from "@/components/ui";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 import type { NotificationStatus } from "@/lib/use-notification-status";
 
 /**
@@ -37,7 +37,7 @@ const useStyles = makeStyles((c) => ({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.cautionSoft,
     padding: 16,
   },

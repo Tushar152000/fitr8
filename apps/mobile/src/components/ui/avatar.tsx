@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
-import { View, type StyleProp, type ViewStyle } from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { PRIMARY_PILL } from "@/lib/gradients";
 import { makeStyles, useColors } from "@/lib/theme";
 import { Text } from "./text";
@@ -34,20 +34,6 @@ export function Avatar({
   const letter = (name?.trim() || "?").charAt(0).toUpperCase();
   const showPhoto = Boolean(image) && failed !== image;
 
-  if (showPhoto)
-    return (
-      <View style={[styles.base, round, style]}>
-        <Image
-          source={{ uri: image!, cacheKey: image!.split("?")[0] }}
-          style={round}
-          contentFit="cover"
-          transition={150}
-          accessibilityIgnoresInvertColors
-          onError={() => setFailed(image!)}
-        />
-      </View>
-    );
-
   const initial = (
     <Text
       variant="heading1"
@@ -57,16 +43,41 @@ export function Avatar({
       {letter}
     </Text>
   );
-  if (variant === "primary")
-    return (
-      <LinearGradient {...PRIMARY_PILL} style={[styles.base, styles.center, round, style]}>
-        {initial}
-      </LinearGradient>
-    );
-  return <View style={[styles.base, styles.center, round, { backgroundColor: c.brandSoft }, style]}>{initial}</View>;
+
+  // Two layers so it's a true circle everywhere: the outer one carries the shadow (a shadow on a
+  // clipping view is cut off on iOS and can draw square on Android), the inner one clips to round.
+  return (
+    <View style={[round, styles.shadow, style]}>
+      <View
+        style={[
+          round,
+          styles.clip,
+          !showPhoto && styles.center,
+          !showPhoto && variant === "soft" && { backgroundColor: c.brandSoft },
+        ]}
+      >
+        {showPhoto ? (
+          <Image
+            source={{ uri: image!, cacheKey: image!.split("?")[0] }}
+            style={round}
+            contentFit="cover"
+            transition={150}
+            accessibilityIgnoresInvertColors
+            onError={() => setFailed(image!)}
+          />
+        ) : (
+          <>
+            {variant === "primary" && <LinearGradient {...PRIMARY_PILL} style={StyleSheet.absoluteFill} />}
+            {initial}
+          </>
+        )}
+      </View>
+    </View>
+  );
 }
 
 const useStyles = makeStyles((c, shadows) => ({
-  base: { overflow: "hidden", backgroundColor: c.track, ...shadows.card },
+  shadow: { backgroundColor: c.track, ...shadows.card },
+  clip: { overflow: "hidden", backgroundColor: c.track },
   center: { alignItems: "center", justifyContent: "center" },
 }));
