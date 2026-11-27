@@ -58,7 +58,7 @@ function UpsellCard() {
       title="Check out Fitr8 Premium"
       line="Unlock the AI coach, photo and barcode scanning, your weekly workout plan and more…"
     >
-      <PillButton variant="secondary" label="Upgrade" onPress={() => openPaywall("profile")} />
+      <PillButton variant="onDark" label="Upgrade" onPress={() => openPaywall("profile")} />
     </Shell>
   );
 }
@@ -97,10 +97,10 @@ function PremiumCard() {
   return (
     <Shell title="Fitr8 Premium" line={line}>
       {b?.store === "TEST" ? (
-        <PillButton variant="secondary" label="End test Premium" loading={ending} onPress={endTest} />
+        <PillButton variant="onDark" label="End test Premium" loading={ending} onPress={endTest} />
       ) : (
         <PillButton
-          variant="secondary"
+          variant="onDark"
           label="Manage subscription"
           accessibilityLabel="Manage subscription in the store"
           onPress={() => void Linking.openURL(manageSubscriptionUrl)}

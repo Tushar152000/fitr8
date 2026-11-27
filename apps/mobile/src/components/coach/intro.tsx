@@ -1,6 +1,6 @@
 import { ArrowUpRight, Crown, Info, Sparkle } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { PremiumBadge } from "@/components/premium/premium-badge";
 import { PillButton, PressableScale, Text } from "@/components/ui";
 import { Glow } from "@/components/ui/glow";
@@ -109,6 +109,10 @@ const useStyles = makeStyles((c, shadows) => ({
     borderRadius: 20,
     overflow: "hidden",
     backgroundColor: c.panel,
+    // Dark mode: the card is near-black on a black page, so a faint edge keeps its shape (panelLine
+    // is transparent in light mode).
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.panelLine,
     ...shadows.card,
   },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },

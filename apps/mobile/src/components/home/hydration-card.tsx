@@ -1,6 +1,6 @@
 import { Pencil } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, StyleSheet } from "react-native";
 import { Sheet } from "@/components/sheet";
 import { Glass } from "./glass";
 import { HydrationGlow } from "./hydration-glow";
@@ -13,7 +13,6 @@ const L = (ml: number) => (Math.round(ml / 100) / 10).toFixed(1);
 
 // The card is always dark (both themes): bg/inverse with the Figma hydration glow along the bottom
 // edge, drawn with gradients (./hydration-glow.tsx), and Figma's soft blue drop shadow.
-const INVERSE = "#0c0c0c";
 
 /**
  * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
@@ -214,7 +213,10 @@ const useStyles = makeStyles((c) => ({
     padding: 20,
     gap: 18,
     overflow: "hidden",
-    backgroundColor: INVERSE,
+    backgroundColor: c.panel,
+    // Dark mode: a lifted dark (#161616) with a faint edge, so it doesn't vanish on the black page.
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.panelLine,
     boxShadow: "0 20px 20px rgba(0, 119, 255, 0.02)",
   },
   head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
@@ -228,7 +230,7 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: 3,
     paddingVertical: 1,
     borderRadius: 6,
-    backgroundColor: INVERSE, // the card, so the count cuts cleanly over the glass outline
+    backgroundColor: c.panel, // the card, so the count cuts cleanly over the glass outline
     pointerEvents: "none",
   },
   // A short row (small target or big glass) sits at the left instead of stretching across.
