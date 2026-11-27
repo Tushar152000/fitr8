@@ -15,6 +15,7 @@ import { Sheet } from "@/components/sheet";
 import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, setGlassMl, useGlassMl } from "@/lib/glass-size";
 import { haptic } from "@/lib/haptics";
+import { useShake } from "@/lib/use-shake";
 import { fade, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
 import { WaterWave } from "./water-wave";
@@ -35,7 +36,7 @@ const LIME = "#C2E04A";
  *   (150 ml … a 750 ml bottle).
  * - "−" beside "+" takes the last glass off (live once the server has the log); after each add a
  *   short "Added 250 ml" confirmation shows for 4 s. The water fills from empty once, on first
- *   appearance; a tap on the card makes it slosh.
+ *   appearance; a tap on the card, or shaking the phone (`useShake`), makes it slosh.
  * - Target reached: "Target reached" and the water glows lime for a moment.
  * White card in light mode, the dark panel in dark mode. Reduce Motion: still water, no ripple.
  */
@@ -53,6 +54,11 @@ export function HydrationCard() {
   // The water fills from empty once, when the card first appears (not on every return to Home);
   // a tap on the card makes it slosh.
   const [slosh, setSlosh] = useState(0);
+  // Shake the phone and the water sloshes too.
+  useShake(() => {
+    haptic.tap();
+    setSlosh((n) => n + 1);
+  }, !reduce);
   const [added, setAdded] = useState<{ ml: number; at: number } | null>(null);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
