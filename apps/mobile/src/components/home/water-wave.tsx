@@ -10,13 +10,14 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 
 /** Height of the wavy top edge strip; the wave's amplitude is half of it. */
 const STRIP = 14;
-/** How far the water body reaches below the card, so a 7° tilt never lifts a corner into view. */
-const SINK = 36;
+/** How far the water body reaches below the card, so an 18° phone tilt never lifts a corner into view. */
+const SINK = 96;
 
 /** A repeating sine edge from x = 0 to `width`, period `period`, filled down to the strip's bottom. */
 function wavePath(width: number, period: number, amp: number) {
@@ -35,7 +36,8 @@ function wavePath(width: number, period: number, amp: number) {
  * when water is added. 2026-11-28: it fills from empty on first render; `replay` (a counter) can
  * refill from empty; `slosh` (a counter: a tap now, a shake once motion sensing is added) tilts the
  * water side to side and swells it, settling like water in a glass; a soft white tide line runs
- * along the front wave's crest. Reduce Motion: still water at the level.
+ * along the front wave's crest; `deviceTilt` leans the water to stay level as the phone tilts.
+ * Reduce Motion: still water at the level.
  */
 export function WaterWave({
   width,
@@ -44,6 +46,7 @@ export function WaterWave({
   bump,
   replay = 0,
   slosh = 0,
+  deviceTilt,
   front,
   back,
 }: {
@@ -55,6 +58,8 @@ export function WaterWave({
   replay?: number;
   /** Change it to make the water slosh (tap / shake). */
   slosh?: number;
+  /** Degrees the water leans to stay level as the phone tilts (`useDeviceTilt`). */
+  deviceTilt?: SharedValue<number>;
   /** Fill of the front wave and the water under it. */
   front: string;
   /** Fill of the back wave (shows only along the edge). */
@@ -128,7 +133,10 @@ export function WaterWave({
   }));
 
   // The water tilts as one body around the bottom middle; it's wider than the card so no edge shows.
-  const tilted = useAnimatedStyle(() => ({ transformOrigin: "50% 100%", transform: [{ rotate: `${tilt.get()}deg` }] }));
+  const tilted = useAnimatedStyle(() => ({
+    transformOrigin: "50% 100%",
+    transform: [{ rotate: `${tilt.get() + (deviceTilt ? deviceTilt.get() : 0)}deg` }],
+  }));
 
   if (width <= 0) return null;
   const stripW = width + period * 2;
@@ -174,5 +182,5 @@ function Layer({
 const styles = StyleSheet.create({
   layer: { position: "absolute", left: 0, bottom: 0 },
   // Wider than the card each side and SINK lower, so a tilt never shows an edge (heights add SINK back).
-  water: { position: "absolute", left: -40, right: -40, top: 0, bottom: -SINK },
+  water: { position: "absolute", left: -90, right: -90, top: 0, bottom: -SINK },
 });

@@ -15,6 +15,7 @@ import { Sheet } from "@/components/sheet";
 import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, setGlassMl, useGlassMl } from "@/lib/glass-size";
 import { haptic } from "@/lib/haptics";
+import { useDeviceTilt } from "@/lib/use-device-tilt";
 import { useShake } from "@/lib/use-shake";
 import { fade, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
@@ -57,6 +58,8 @@ export function HydrationCard() {
   // a tap on the card makes it slosh.
   const [slosh, setSlosh] = useState(0);
   const [leak, setLeak] = useState(0);
+  // Tilt the phone and the water stays level, like water in a glass.
+  const deviceTilt = useDeviceTilt(!reduce);
   // Shake the phone and the water sloshes too.
   useShake(() => {
     haptic.tap();
@@ -116,7 +119,16 @@ export function HydrationCard() {
         }}
         accessibilityHint="Tap to make the water move"
       >
-        <WaterWave width={width} height={HEIGHT} level={level} bump={bump} slosh={slosh} front={front} back={back} />
+        <WaterWave
+          width={width}
+          height={HEIGHT}
+          level={level}
+          bump={bump}
+          slosh={slosh}
+          deviceTilt={deviceTilt}
+          front={front}
+          back={back}
+        />
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: LIME }, glowStyle]} pointerEvents="none" />
 
         <View style={styles.head}>
