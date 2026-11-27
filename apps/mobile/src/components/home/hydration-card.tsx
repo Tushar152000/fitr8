@@ -1,4 +1,4 @@
-import { Pencil, Plus } from "lucide-react-native";
+import { Minus, Pencil, Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
@@ -11,7 +11,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { useIsFocused } from "expo-router";
 import { Sheet } from "@/components/sheet";
 import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, setGlassMl, useGlassMl } from "@/lib/glass-size";
@@ -34,8 +33,9 @@ const LIME = "#C2E04A";
  * - Big litres ("1.25 L of 2.5 L"), glasses under it, the glass size (pencil → change it).
  * - "+" adds one glass (never more than is left, API minimum 50 ml); a long press opens quick sizes
  *   (150 ml … a 750 ml bottle).
- * - Undo is a pill in the card for 4 s after each add ("Added 250 ml · Undo"), live once the server
- *   has the log.
+ * - "−" beside "+" takes the last glass off (live once the server has the log); after each add a
+ *   short "Added 250 ml" confirmation shows for 4 s. The water fills from empty once, on first
+ *   appearance; a tap on the card makes it slosh.
  * - Target reached: "Target reached" and the water glows lime for a moment.
  * White card in light mode, the dark panel in dark mode. Reduce Motion: still water, no ripple.
  */
@@ -50,16 +50,9 @@ export function HydrationCard() {
   const [quick, setQuick] = useState(false);
   const [width, setWidth] = useState(0);
   const [bump, setBump] = useState(0);
-  // Fill again from empty each time Home comes back into view; slosh on a tap of the water.
-  const focused = useIsFocused();
-  const [wasFocused, setWasFocused] = useState(focused);
-  const [replay, setReplay] = useState(0);
+  // The water fills from empty once, when the card first appears (not on every return to Home);
+  // a tap on the card makes it slosh.
   const [slosh, setSlosh] = useState(0);
-  // Derived during render (not in an effect): coming back into view replays the fill.
-  if (focused !== wasFocused) {
-    setWasFocused(focused);
-    if (focused) setReplay((n) => n + 1);
-  }
   const [added, setAdded] = useState<{ ml: number; at: number } | null>(null);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
@@ -112,16 +105,7 @@ export function HydrationCard() {
       }}
       accessibilityHint="Tap to make the water move"
     >
-      <WaterWave
-        width={width}
-        height={HEIGHT}
-        level={level}
-        bump={bump}
-        replay={replay}
-        slosh={slosh}
-        front={front}
-        back={back}
-      />
+      <WaterWave width={width} height={HEIGHT} level={level} bump={bump} slosh={slosh} front={front} back={back} />
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: LIME }, glowStyle]} pointerEvents="none" />
 
       <View style={styles.head}>
@@ -158,7 +142,22 @@ export function HydrationCard() {
           )}
         </View>
 
-        {/* Add a glass; long press for quick sizes. */}
+        {/* Take the last glass off (2026-11-28), then add a glass (long press for quick sizes). */}
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={water.undoable ? `Remove the last ${water.undoable.ml} ml` : "Nothing to remove"}
+          disabled={!water.undoable}
+          onPress={() => {
+            if (!water.undoable) return;
+            water.undo.mutate(water.undoable.id);
+            setAdded(null);
+            setSlosh((n) => n + 1);
+          }}
+          hitSlop={6}
+          style={[styles.minus, !water.undoable && { opacity: 0.35 }]}
+        >
+          <Minus size={18} color={ink} strokeWidth={2.6} />
+        </PressableScale>
         <View style={styles.addWrap}>
           <Animated.View style={[styles.ripple, { borderColor: dark ? "#35cefe" : "#2f97c1" }, rippleStyle]} />
           <PressableScale
@@ -177,24 +176,11 @@ export function HydrationCard() {
 
       <View style={styles.foot}>
         {added ? (
+          // A short confirmation; the "−" button takes it back.
           <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} style={styles.undo}>
             <Text variant="labelMedium" color={ink}>
               Added {added.ml} ml
             </Text>
-            <PressableScale
-              accessibilityRole="button"
-              accessibilityLabel={`Undo, remove ${added.ml} ml`}
-              disabled={!water.undoable}
-              onPress={() => {
-                if (water.undoable) water.undo.mutate(water.undoable.id);
-                setAdded(null);
-              }}
-              hitSlop={10}
-            >
-              <Text variant="labelStrong" color={water.undoable ? (dark ? "#35cefe" : "#2f97c1") : soft}>
-                Undo
-              </Text>
-            </PressableScale>
           </Animated.View>
         ) : (
           <PressableScale
@@ -279,6 +265,17 @@ const useStyles = makeStyles((c, shadows) => ({
   },
   head: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   addWrap: { width: 52, height: 52, alignItems: "center", justifyContent: "center" },
+  minus: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginTop: 8,
+    backgroundColor: fade(c.surface, 0.85),
+    borderWidth: 1,
+    borderColor: c.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   add: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
   ripple: { position: "absolute", width: 52, height: 52, borderRadius: 26, borderWidth: 2 },
   foot: { flexDirection: "row", alignItems: "center", minHeight: 32 },

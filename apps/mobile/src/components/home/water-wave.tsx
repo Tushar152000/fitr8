@@ -32,8 +32,8 @@ function wavePath(width: number, period: number, amp: number) {
  * Water filling a card from the bottom (Home hydration card, 2026-11-28): two layered waves (a
  * slower, lighter one behind) whose level rises with a spring to `level` (0..1 of `height`). The
  * edge drifts sideways on a loop; `bump` (a counter) makes the surface swell once, for a splash
- * when water is added. 2026-11-28: `replay` (a counter, e.g. Home coming into view) fills from empty
- * up to the level; `slosh` (a counter: a tap now, a shake once motion sensing is added) tilts the
+ * when water is added. 2026-11-28: it fills from empty on first render; `replay` (a counter) can
+ * refill from empty; `slosh` (a counter: a tap now, a shake once motion sensing is added) tilts the
  * water side to side and swells it, settling like water in a glass; a soft white tide line runs
  * along the front wave's crest. Reduce Motion: still water at the level.
  */
