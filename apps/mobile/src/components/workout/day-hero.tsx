@@ -17,7 +17,7 @@ import {
   Route,
   type LucideIcon,
 } from "lucide-react-native";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { PillButton, PressableScale, Text } from "@/components/ui";
 import { Glow } from "@/components/ui/glow";
 import { DAY_LABEL, kcalText } from "@/lib/training";
@@ -168,7 +168,17 @@ function Chip({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
 
 const useStyles = makeStyles((c, shadows) => ({
   // Figma "Recovery": inverse surface (always dark), 20 px padding (hero card), 20 radius, card lift.
-  card: { gap: 14, padding: 20, borderRadius: 20, overflow: "hidden", backgroundColor: c.panel, ...shadows.card },
+  // Dark mode: a faint edge (panelLine) so the near-black card keeps its shape on the black page.
+  card: {
+    gap: 14,
+    padding: 20,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: c.panel,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.panelLine,
+    ...shadows.card,
+  },
   icon: {
     width: 40,
     height: 40,
