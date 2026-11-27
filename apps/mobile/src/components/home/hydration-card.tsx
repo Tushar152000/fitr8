@@ -1,6 +1,6 @@
 import { Pencil, Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -11,9 +11,11 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useIsFocused } from "expo-router";
 import { Sheet } from "@/components/sheet";
 import { FieldError, PressableScale, Text } from "@/components/ui";
 import { GLASS_SIZES, setGlassMl, useGlassMl } from "@/lib/glass-size";
+import { haptic } from "@/lib/haptics";
 import { fade, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
 import { WaterWave } from "./water-wave";
@@ -48,6 +50,16 @@ export function HydrationCard() {
   const [quick, setQuick] = useState(false);
   const [width, setWidth] = useState(0);
   const [bump, setBump] = useState(0);
+  // Fill again from empty each time Home comes back into view; slosh on a tap of the water.
+  const focused = useIsFocused();
+  const [wasFocused, setWasFocused] = useState(focused);
+  const [replay, setReplay] = useState(0);
+  const [slosh, setSlosh] = useState(0);
+  // Derived during render (not in an effect): coming back into view replays the fill.
+  if (focused !== wasFocused) {
+    setWasFocused(focused);
+    if (focused) setReplay((n) => n + 1);
+  }
   const [added, setAdded] = useState<{ ml: number; at: number } | null>(null);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
@@ -91,8 +103,25 @@ export function HydrationCard() {
   const back = dark ? fade("#35cefe", 0.25) : fade("#a6dded", 0.45);
 
   return (
-    <View style={styles.card} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      <WaterWave width={width} height={HEIGHT} level={level} bump={bump} front={front} back={back} />
+    <Pressable
+      style={styles.card}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      onPress={() => {
+        haptic.tap();
+        setSlosh((n) => n + 1);
+      }}
+      accessibilityHint="Tap to make the water move"
+    >
+      <WaterWave
+        width={width}
+        height={HEIGHT}
+        level={level}
+        bump={bump}
+        replay={replay}
+        slosh={slosh}
+        front={front}
+        back={back}
+      />
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: LIME }, glowStyle]} pointerEvents="none" />
 
       <View style={styles.head}>
@@ -214,7 +243,7 @@ export function HydrationCard() {
           ))}
         </View>
       </Sheet>
-    </View>
+    </Pressable>
   );
 }
 
