@@ -1,5 +1,5 @@
 import { Minus, Pencil, Plus } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, type ComponentRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -19,7 +19,7 @@ import { useDeviceTilt } from "@/lib/use-device-tilt";
 import { useShake } from "@/lib/use-shake";
 import { fade, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
-import { LeakDrops } from "./leak-drops";
+import { startLeak } from "./leak-overlay";
 import { WaterWave } from "./water-wave";
 
 const L = (ml: number) => (Math.round(ml / 10) / 100).toFixed(2).replace(/0$/, "");
@@ -37,7 +37,7 @@ const LIME = "#C2E04A";
  * - "+" adds one glass (never more than is left, API minimum 50 ml); a long press opens quick sizes
  *   (150 ml … a 750 ml bottle).
  * - "−" beside "+" takes the last glass off (live once the server has the log; a long press drains
- *   it with a leak — drops fall out of the card onto the one below, `LeakDrops`); after each add a
+ *   it with a leak — a stream from the card's bottom-right corner down to the tab bar, `LeakOverlay`); after each add a
  *   short "Added 250 ml" confirmation shows for 4 s. The water fills from empty once, on first
  *   appearance; a tap on the card, or shaking the phone (`useShake`), makes it slosh.
  * - Target reached: "Target reached" and the water glows lime for a moment.
@@ -57,7 +57,7 @@ export function HydrationCard() {
   // The water fills from empty once, when the card first appears (not on every return to Home);
   // a tap on the card makes it slosh.
   const [slosh, setSlosh] = useState(0);
-  const [leak, setLeak] = useState(0);
+  const wrapRef = useRef<ComponentRef<typeof View>>(null);
   // Tilt the phone and the water stays level, like water in a glass.
   const deviceTilt = useDeviceTilt(!reduce);
   // Shake the phone and the water sloshes too.
@@ -109,7 +109,7 @@ export function HydrationCard() {
 
   return (
     // The wrapper lets the leak's drops fall outside the card, over the card below.
-    <View style={styles.wrap}>
+    <View style={styles.wrap} ref={wrapRef} collapsable={false}>
       <Pressable
         style={styles.card}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
@@ -183,7 +183,10 @@ export function HydrationCard() {
               water.undo.mutate(water.undoable.id);
               setAdded(null);
               setSlosh((n) => n + 1);
-              setLeak((n) => n + 1);
+              // The leak runs from the card's bottom-right corner down to the tab bar.
+              wrapRef.current?.measureInWindow((x, y, w, h) =>
+                startLeak({ x: x + w - 26, y: y + h - 2, color: dark ? "#35cefe" : "#2f97c1" }),
+              );
             }}
             accessibilityHint="Long press to drain it with a leak"
             hitSlop={6}
@@ -263,7 +266,6 @@ export function HydrationCard() {
           </View>
         </Sheet>
       </Pressable>
-      <LeakDrops leak={leak} width={width} color={dark ? "#35cefe" : "#2f97c1"} />
     </View>
   );
 }

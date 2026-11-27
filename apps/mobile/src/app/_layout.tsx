@@ -23,6 +23,7 @@ import { Button, Text } from "@/components/ui";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ThemeReveal } from "@/components/theme-reveal";
 import { SessionWatcher } from "@/components/session-bar";
+import { LeakOverlay } from "@/components/home/leak-overlay";
 import { trackScreen } from "@/lib/analytics";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { queryClient, wireQueryLifecycle } from "@/lib/query";
@@ -64,6 +65,7 @@ export default function RootLayout() {
                 <OfflineBanner />
                 <ThemeReveal />
                 <SessionWatcher />
+                <LeakOverlay />
                 <PremiumLockedSheet />
                 <Toast />
                 <ConfirmDialog />
