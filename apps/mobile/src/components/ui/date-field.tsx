@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { TextInput, View } from "react-native";
+import { TextInput, type TextInputInstance, View } from "react-native";
 import { fade, fonts, makeStyles, radius, useColors, INPUT_CARET } from "@/lib/theme";
 import { FieldError } from "./field-error";
 import { Text } from "./text";
@@ -42,8 +42,8 @@ export function DateField({
   const [parts, setParts] = useState(() => split(value));
   // Inside a white card: grey fill, no outline (v2; ./surface).
   const onWhite = useOnSurface();
-  const month = useRef<TextInput>(null);
-  const year = useRef<TextInput>(null);
+  const month = useRef<TextInputInstance>(null);
+  const year = useRef<TextInputInstance>(null);
 
   // Follow outside changes (e.g. a tile picked a date) without fighting the user's typing.
   const [seen, setSeen] = useState(value);
@@ -61,7 +61,7 @@ export function DateField({
     if (key === "m" && digits.length === 2) year.current?.focus();
   };
 
-  const box = (key: "d" | "m" | "y", placeholder: string, flex: number, ref?: React.Ref<TextInput>) => (
+  const box = (key: "d" | "m" | "y", placeholder: string, flex: number, ref?: React.Ref<TextInputInstance>) => (
     <View
       style={[
         styles.box,

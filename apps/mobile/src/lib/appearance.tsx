@@ -2,8 +2,20 @@ import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { Appearance, Platform, StyleSheet, useColorScheme } from "react-native";
+import {
+  Appearance,
+  Platform,
+  StyleSheet,
+  useColorScheme,
+  type ImageStyle,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
+
 import { palettes, shadowsFor, type Colors, type ColorScheme, type Shadows } from "./palette";
+
+/** A style object map, as `StyleSheet.create` takes (React Native 0.88 no longer exports `StyleSheet.NamedStyles`). */
+type NamedStyles<T> = { [P in keyof T]: ViewStyle | TextStyle | ImageStyle };
 
 /** "system" follows the phone; light/dark pin the app regardless of the phone setting. */
 export type AppearancePreference = "system" | "light" | "dark";
@@ -85,8 +97,8 @@ export const useShadows = (): Shadows => shadowsFor(useScheme());
  *   const useStyles = makeStyles((c) => ({ card: { backgroundColor: c.surface } }));
  *   function Card() { const styles = useStyles(); ... }
  */
-export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
-  build: (c: Colors, shadows: Shadows) => T & StyleSheet.NamedStyles<any>,
+export function makeStyles<T extends NamedStyles<T> | NamedStyles<any>>(
+  build: (c: Colors, shadows: Shadows) => T & NamedStyles<any>,
 ): () => T {
   const cache: Partial<Record<ColorScheme, T>> = {};
   return function useStyles() {

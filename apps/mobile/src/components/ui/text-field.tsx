@@ -1,5 +1,5 @@
 import { useState, type Ref } from "react";
-import { TextInput, type TextInputProps } from "react-native";
+import { TextInput, type TextInputInstance, type TextInputProps } from "react-native";
 import { fonts, INPUT_CARET, makeStyles, radius, useColors } from "@/lib/theme";
 import { useOnSurface } from "./surface";
 
@@ -19,7 +19,7 @@ export function TextField({
   ...rest
 }: TextInputProps & {
   invalid?: boolean;
-  ref?: Ref<TextInput>;
+  ref?: Ref<TextInputInstance>;
   /** Inside a white card or sheet: grey fill, no outline until focused (v2). */
   filled?: boolean;
 }) {

@@ -1,6 +1,6 @@
 import { RotateCw } from "lucide-react-native";
 import { useCallback, useRef, useState } from "react";
-import { KeyboardAvoidingView, ScrollView } from "react-native";
+import { KeyboardAvoidingView, ScrollView, type ScrollViewInstance } from "react-native";
 import Animated from "react-native-reanimated";
 import { Bubble, ThreadSkeleton } from "@/components/coach/bubble";
 import { CoachHeader } from "@/components/coach/coach-header";
@@ -23,7 +23,7 @@ export default function CoachScreen() {
   const coachLocked = locked("coach");
   const chat = useCoachChat({ locked: coachLocked });
   const [menu, setMenu] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   // Opening the keyboard keeps the latest message in view, just above the composer.
   const toEnd = useCallback(() => {
