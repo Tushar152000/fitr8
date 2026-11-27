@@ -1,31 +1,52 @@
-import { ArrowUpRight, Crown, Info, Sparkle } from "lucide-react-native";
+import { ArrowUpRight, BookOpen, Brain, Crown, Info, PenLine, Sparkles } from "lucide-react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, View } from "react-native";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { PremiumBadge } from "@/components/premium/premium-badge";
 import { PillButton, PressableScale, Text } from "@/components/ui";
-import { Glow } from "@/components/ui/glow";
-import { PRIMARY_PILL } from "@/lib/gradients";
+import { useMe } from "@/lib/auth";
+import { CoachAvatar } from "./coach-avatar";
+import { useCoachSuggestions } from "@/lib/coach-suggestions";
+import { formatInt } from "@/lib/format";
+import { dayQuery, waterQuery } from "@/lib/queries";
 import { openPremium } from "@/lib/premium";
-import { fade, makeStyles, useColors } from "@/lib/theme";
-
-const SUGGESTIONS = [
-  "How am I doing on protein today?",
-  "What should I eat for dinner?",
-  "How many sets a week to build muscle?",
-  "Help me start running",
-  "Why is my calorie target what it is?",
-];
-
-const ON_DARK_BODY = "rgba(255,255,255,0.75)";
-const ON_DARK_SUBTLE = "rgba(255,255,255,0.55)";
+import { fade, makeStyles, useColors, radius } from "@/lib/theme";
 
 /**
- * An empty chat (Figma "Your coach"): the Premium card (free plan), the dark "Coach intro" card with
- * its lime glow, "Try asking" pills that send at once, and the not-medical-advice note.
+ * An empty chat: the Premium card (free plan), the coach intro (a calm theme card since 2026-11-28),
+ * "Try asking" pills built from today (`useCoachSuggestions`) that send at once, and the
+ * not-medical-advice note.
  */
 export function Intro({ onPick, locked }: { onPick: (text: string) => void; locked: boolean }) {
   const c = useColors();
   const styles = useStyles();
+  const suggestions = useCoachSuggestions();
+  const reduce = useReducedMotion();
+  const first = useMe().name?.trim().split(/\s+/)[0] ?? null;
+  const day = useQuery(dayQuery).data;
+  const water = useQuery(waterQuery).data;
+  const stats: { label: string; value: string }[] = [];
+  if (day?.target) {
+    const kcalLeft = Math.round(day.target.kcal - day.eaten.kcal);
+    stats.push({ label: kcalLeft >= 0 ? "kcal left" : "kcal over", value: formatInt(Math.abs(kcalLeft)) });
+    stats.push({
+      label: "protein to go",
+      value: `${formatInt(Math.max(0, Math.round(day.target.proteinG - day.eaten.proteinG)))} g`,
+    });
+  }
+  if (water && water.targetMl > 0)
+    stats.push({ label: "water", value: `${Math.min(100, Math.round((water.consumedMl / water.targetMl) * 100))}%` });
   return (
     <View style={{ gap: 16 }}>
       {locked && (
@@ -41,36 +62,59 @@ export function Intro({ onPick, locked }: { onPick: (text: string) => void; lock
         </View>
       )}
 
+      {/* Calm intro in the theme colours (2026-11-28 refresh; was the always-dark lime-glow card). */}
       <View style={styles.hero}>
-        <Glow tone="lime" opacity={0.7} left={6} bottom={-59} />
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <LinearGradient {...PRIMARY_PILL} style={styles.avatar}>
-            <Sparkle size={18} color={c.white} strokeWidth={2} absoluteStrokeWidth />
-          </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <Text variant="heading3" color={c.white}>
-              Your fitness &amp; nutrition coach
+        {/* A faint olive tint from the top, so the banner stands apart while staying calm. */}
+        <LinearGradient
+          colors={[fade(c.brand, 0.12), fade(c.brand, 0)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 0.75 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <CoachAvatar />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="heading3">
+              {first ? `Hi ${first}, I've looked at your day` : "Your fitness & nutrition coach"}
             </Text>
-            <Text variant="labelMedium" color={ON_DARK_SUBTLE}>
-              Online · knows your plan
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <PulseDot color={c.brand} />
+              <Text variant="labelMedium" color={c.ink2}>
+                Your coach · knows your plan, meals and workouts
+              </Text>
+            </View>
           </View>
         </View>
-        <Text variant="bodySm" color={ON_DARK_BODY}>
-          I know your goal, targets, meals, workouts and weight — and I remember what you tell me, like injuries or
-          foods you avoid. I can also log water or a weigh-in for you.
-        </Text>
-        <View style={styles.chips}>
-          {["Remembers you", "Science-based", "Logs for you"].map((t) => (
-            <View key={t} style={styles.chip}>
-              <Text
-                variant="captionStrong"
-                color={c.white}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
+        {/* Today at a glance: what the coach sees, to spark a question. */}
+        {stats.length > 0 && (
+          <View style={styles.stats}>
+            {stats.map((st, i) => (
+              <Animated.View
+                key={st.label}
+                entering={reduce ? undefined : FadeInDown.delay(150 + i * 90).duration(320)}
+                style={styles.stat}
               >
-                {t}
+                <Text variant="bodyStrong" tabular>
+                  {st.value}
+                </Text>
+                <Text variant="caption" color={c.ink2}>
+                  {st.label}
+                </Text>
+              </Animated.View>
+            ))}
+          </View>
+        )}
+        <View style={styles.chips}>
+          {[
+            { icon: Brain, text: "Remembers you" },
+            { icon: BookOpen, text: "Science-based" },
+            { icon: PenLine, text: "Logs for you" },
+          ].map(({ icon: Icon, text }) => (
+            <View key={text} style={styles.chip}>
+              <Icon size={12} color={c.brandText} strokeWidth={2.4} />
+              <Text variant="captionStrong" color={c.brandText} numberOfLines={1}>
+                {text}
               </Text>
             </View>
           ))}
@@ -81,11 +125,27 @@ export function Intro({ onPick, locked }: { onPick: (text: string) => void; lock
         <Text variant="labelStrong" color={c.ink2}>
           Try asking
         </Text>
-        {SUGGESTIONS.map((s) => (
-          <PressableScale key={s} accessibilityRole="button" onPress={() => onPick(s)} style={styles.suggestion}>
-            <Text variant="bodyMedium">{s}</Text>
-            <ArrowUpRight size={16} color={c.ink3} strokeWidth={2} absoluteStrokeWidth />
-          </PressableScale>
+        {/* Questions from your own data, sliding in one after another. */}
+        {suggestions.map((s, i) => (
+          <Animated.View
+            key={s}
+            entering={
+              reduce
+                ? undefined
+                : FadeInDown.delay(380 + i * 110)
+                    .duration(360)
+                    .springify()
+                    .damping(16)
+            }
+          >
+            <PressableScale accessibilityRole="button" onPress={() => onPick(s)} style={styles.suggestion}>
+              <Sparkles size={14} color={c.brandText} strokeWidth={2.2} />
+              <Text variant="bodyMedium" style={{ flexShrink: 1 }}>
+                {s}
+              </Text>
+              <ArrowUpRight size={16} color={c.ink3} strokeWidth={2} absoluteStrokeWidth />
+            </PressableScale>
+          </Animated.View>
         ))}
       </View>
 
@@ -100,31 +160,50 @@ export function Intro({ onPick, locked }: { onPick: (text: string) => void; lock
   );
 }
 
+/** The "online" dot, softly breathing. */
+function PulseDot({ color }: { color: string }) {
+  const reduce = useReducedMotion();
+  const t = useSharedValue(0);
+  useEffect(() => {
+    if (reduce) return;
+    t.set(withRepeat(withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) }), -1, true));
+    return () => cancelAnimation(t);
+  }, [reduce, t]);
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.45 + t.get() * 0.55,
+    transform: [{ scale: 0.85 + t.get() * 0.3 }],
+  }));
+  return <Animated.View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }, style]} />;
+}
+
 const useStyles = makeStyles((c, shadows) => ({
-  premium: { gap: 14, padding: 20, borderRadius: 20, backgroundColor: c.surface, ...shadows.card },
-  // Figma "Coach intro": inverse surface, always dark (white text in both themes).
+  premium: { gap: 14, padding: 20, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
   hero: {
     gap: 14,
-    padding: 20,
-    borderRadius: 20,
+    padding: 18,
+    borderRadius: radius.card,
     overflow: "hidden",
-    backgroundColor: c.panel,
-    // Dark mode: the card is near-black on a black page, so a faint edge keeps its shape (panelLine
-    // is transparent in light mode).
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.panelLine,
+    backgroundColor: c.surface,
     ...shadows.card,
   },
-  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  // Always one row (user decision 2026-11-27); a chip shrinks before anything wraps.
-  chips: { flexDirection: "row", gap: 4 },
+  stats: { flexDirection: "row", gap: 8 },
+  stat: {
+    flex: 1,
+    gap: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: radius.box,
+    backgroundColor: c.ground,
+  },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: {
-    flexShrink: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
-    borderRadius: 100,
-    backgroundColor: c.glassStrong,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 100,
+    backgroundColor: c.brandSoft,
   },
   suggestion: {
     alignSelf: "flex-start",

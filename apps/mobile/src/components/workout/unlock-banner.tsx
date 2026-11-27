@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { LinearGradient } from "expo-linear-gradient";
-import { Check, Crown, Dumbbell } from "lucide-react-native";
+import { Crown } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -10,11 +9,11 @@ import { Text } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
-import { COACH_HERO } from "@/lib/gradients";
 import { appear } from "@/lib/motion";
 import { billingQuery } from "@/lib/queries";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import { SmallCta } from "@/components/premium/small-cta";
+import { WeekPreview } from "@/components/premium/week-preview";
 import { NEW_WORKOUT_BANNER, workoutBannerVisible, type WorkoutBannerState } from "@/lib/workout-banner";
 
 const KEY = (userId: string) => `fitr8.workout.banner.${userId}`;
@@ -41,13 +40,11 @@ async function write(userId: string, s: WorkoutBannerState) {
   }
 }
 
-const TICKS = [
-  "AI coach that adapts to what you eat",
-  "Daily workout recommendations",
-  "Workout logs and calories burned",
-];
-
-/** Design 16: under the meals on Today, free users only. The whole card opens the Workout tab (16a). */
+/**
+ * Design 16: on Today, free users only. The whole card opens the Workout tab (16a). Redesigned
+ * 2026-11-28: a plain theme card (was a dark gradient with a list of ticks) with a short title and a
+ * faded sample week (Gym · Run · Rest · Yoga) under a lock pill, so people see what they'd get.
+ */
 export function WorkoutUnlockBanner() {
   const me = useMe();
   const c = useColors();
@@ -83,80 +80,45 @@ export function WorkoutUnlockBanner() {
         }}
         style={({ pressed }) => pressed && { transform: [{ scale: 0.99 }] }}
       >
-        <LinearGradient {...COACH_HERO} style={styles.card}>
+        <View style={styles.card}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text size={12} weight={700} color={c.highlight} style={{ flex: 1 }}>
-              New · Workouts
+            <Text variant="captionStrong" color={c.brandText} style={{ flex: 1 }}>
+              NEW · WORKOUTS
             </Text>
-            <View style={styles.lock}>
-              <Crown size={12} color={c.highlight} />
-              <Text size={12} weight={700} color="#ffffff">
+            <View style={styles.tag}>
+              <Crown size={12} color={c.brandText} strokeWidth={2.2} />
+              <Text variant="captionStrong" color={c.brandText}>
                 Premium
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-            <View style={styles.icon}>
-              <Dumbbell size={20} color={c.highlight} />
-            </View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text weight={700} size={17} color="#ffffff">
-                Your AI workout coach
-              </Text>
-              <Text size={14} color="rgba(255,255,255,0.7)">
-                A weekly plan for gym, running or yoga, built around your calories and goal.
-              </Text>
-            </View>
+          <View style={{ gap: 4 }}>
+            <Text variant="heading2">Your AI workout plan</Text>
+            <Text variant="labelMedium" color={c.ink2} style={{ lineHeight: 18 }}>
+              A week of gym, running or yoga, built around your calories and goal.
+            </Text>
           </View>
-          <View style={{ gap: 8 }}>
-            {TICKS.map((t) => (
-              <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <View style={styles.tick}>
-                  <Check size={12} color="#0e0e0e" strokeWidth={3} />
-                </View>
-                <Text size={14} color="rgba(255,255,255,0.88)">
-                  {t}
-                </Text>
-              </View>
-            ))}
-          </View>
+
+          {/* A preview of a week, softly faded with a lock: you see what you'd get. */}
+          <WeekPreview locked />
+
           {/* Visual only: the whole card is the button. */}
-          <SmallCta label="Unlock workouts" tone="light" />
-        </LinearGradient>
+          <SmallCta label="Unlock workouts" />
+        </View>
       </Pressable>
     </Animated.View>
   );
 }
 
-const useStyles = makeStyles((c) => ({
-  card: { gap: 14, padding: 16, borderRadius: radius.card, overflow: "hidden" },
-  lock: {
+const useStyles = makeStyles((c, shadows) => ({
+  card: { gap: 14, padding: 20, borderRadius: radius.card, backgroundColor: c.surface, ...shadows.card },
+  tag: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     borderRadius: 999,
-    backgroundColor: c.glassStrong,
-    borderWidth: 1,
-    borderColor: "rgba(194,224,74,0.4)", // accent/highlight
+    backgroundColor: c.brandSoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
-  },
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: c.glassStrong,
-    borderWidth: 1,
-    borderColor: "rgba(194,224,74,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tick: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: c.highlight,
-    alignItems: "center",
-    justifyContent: "center",
   },
 }));

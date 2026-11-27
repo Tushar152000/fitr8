@@ -89,10 +89,10 @@ export function SignInSheet({ mode, onClose }: { mode: SignInMode | null; onClos
             style={{ width: "100%", height: 54 }}
           />
         )}
-        <Button variant={showApple ? "secondary" : "primary"} onPress={() => run(signIn)} loading={busy}>
+        <Button variant="primary" onPress={() => run(signIn)} loading={busy}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <GoogleMark />
-            <Text variant="button" color={showApple ? c.ink : c.white}>
+            <Text variant="button" color={c.white}>
               Continue with Google
             </Text>
           </View>

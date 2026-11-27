@@ -180,7 +180,12 @@ export function fade(color: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
-export const radius = { input: 14, button: 16, card: 20, sheet: 28 } as const;
+/**
+ * Corners, one set across the app (user request 2026-11-28): `tile` icon tiles, `box` tinted note
+ * and info boxes (Figma radius md), `card` cards and menu groups, `sheet` bottom sheets. Buttons,
+ * chips and tags are full pills (100); round icon buttons are size / 2.
+ */
+export const radius = { tile: 12, input: 14, button: 16, box: 16, card: 20, sheet: 28 } as const;
 
 /** Screen gutter: 16 on app screens (compact, 2026-11-24), 24 on onboarding. */
 export const gutter = 16;

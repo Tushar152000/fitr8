@@ -7,18 +7,17 @@ import {
 } from "@/lib/premium-banner";
 import { useQuery } from "@tanstack/react-query";
 import * as SecureStore from "expo-secure-store";
-import { Camera, X } from "lucide-react-native";
+import { X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import { Platform, Pressable, View } from "react-native";
 import { Text } from "@/components/ui";
+import { PhotoDemo } from "./photo-demo";
 import { SmallCta } from "./small-cta";
 import { track } from "@/lib/analytics";
 import { useMe } from "@/lib/auth";
 import { localYmd } from "@/lib/meal-param";
 import { LIST_PRICE, openPaywall } from "@/lib/premium";
 import { usageQuery } from "@/lib/queries";
-import { PRIMARY_PILL } from "@/lib/gradients";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 import Animated from "react-native-reanimated";
 import { appear, disappear } from "@/lib/motion";
@@ -48,8 +47,10 @@ async function write(userId: string, d: BannerDismissals) {
 }
 
 /**
- * Design 14: on Today, under the calorie card, for free users only. Personal ("You typed 3 meals
- * today") and easy to dismiss: ✕ hides it for the day; hidden 3 days in a row, it rests for a week.
+ * Design 14: on Today, for free users only. Personal ("You typed 3 meals today") and easy to
+ * dismiss. Redesigned 2026-11-28 (user: "too much"): a title, then the difference side by side
+ * as a looping animation (`PhotoDemo`: typing crawls vs a photo scan finding every food) and one
+ * button "Try photo logging" — no paragraph, no feature chips. Dismiss: ✕ hides it for the day; hidden 3 days in a row, it rests for a week.
  * Never in the first 3 days after sign-up.
  */
 export function PremiumBanner() {
@@ -89,18 +90,10 @@ export function PremiumBanner() {
 
   return (
     <Animated.View entering={appear} exiting={disappear} style={styles.banner}>
-      <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-        <LinearGradient {...PRIMARY_PILL} style={styles.icon}>
-          <Camera size={18} color={c.white} strokeWidth={2} />
-        </LinearGradient>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text variant="heading3">
-            {typed > 0 ? `You typed ${typed} ${typed === 1 ? "meal" : "meals"} today` : "Log meals faster with a photo"}
-          </Text>
-          <Text variant="bodySm" color={c.ink2}>
-            Next time, snap a photo. Premium finds every dish on your plate and fills in calories and macros.
-          </Text>
-        </View>
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+        <Text variant="heading3" style={{ flex: 1 }}>
+          {typed > 0 ? `You typed ${typed} ${typed === 1 ? "meal" : "meals"} today` : "Snap instead of typing"}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Hide Premium banner for today"
@@ -111,21 +104,16 @@ export function PremiumBanner() {
           <X size={18} color={c.ink3} />
         </Pressable>
       </View>
-      <View style={styles.chips}>
-        {["Photo scans", "Barcode", "AI Coach"].map((label) => (
-          <View key={label} style={styles.chip}>
-            <Text variant="captionStrong" color={c.brandText}>
-              {label}
-            </Text>
-          </View>
-        ))}
-      </View>
+
+      {/* The difference, shown not told: typing crawls, a photo finds everything at once. */}
+      <PhotoDemo />
+
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <Text variant="labelMedium" color={c.ink2} tabular style={{ flex: 1 }}>
           From {LIST_PRICE.perMonth} a month
         </Text>
         <SmallCta
-          label="See Premium"
+          label="Try photo logging"
           onPress={() => {
             track("premium_banner_tapped", { meals_typed_today: typed });
             openPaywall("home_banner");
@@ -145,14 +133,5 @@ const useStyles = makeStyles((c, shadows) => ({
     backgroundColor: c.surface,
     ...shadows.card,
   },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   close: { width: 44, height: 44, alignItems: "center", justifyContent: "center", margin: -10 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { backgroundColor: c.brandSoft, borderRadius: 100, paddingHorizontal: 8, paddingVertical: 4 },
 }));

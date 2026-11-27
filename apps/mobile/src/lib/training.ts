@@ -63,14 +63,6 @@ export const TRAINING_CHOICES: { value: TrainingType; label: string; line: strin
   { value: "cycle", label: "Cycling", line: "Rides and spin" },
 ];
 
-export const ACTIVITY_LABEL: Record<string, string> = {
-  SEDENTARY: "Mostly sitting",
-  LIGHT: "Lightly active",
-  MODERATE: "Moderately active",
-  VERY_ACTIVE: "Very active",
-  ATHLETE: "Athlete",
-};
-
 /** "6,240" with Indian grouping off (en-IN groups lakhs, fine for kcal up to 99,999). */
 export const kcalText = (n: number) => `~${new Intl.NumberFormat("en-IN").format(n)}`;
 
@@ -81,13 +73,6 @@ export function weekOf(start: string): string {
 
 /** One-letter weekday (M T W T F S S) for a YYYY-MM-DD. */
 export const weekdayLetter = (ymd: string) => weekdayName(ymd, "narrow");
-
-/** "{days} days of {types}, {minutes} min each, plus active rest days." (16b live summary). */
-export function setupSummary(types: TrainingType[], days: number, minutes: number): string {
-  const names = types.map((t) => TRAINING_CHOICES.find((c) => c.value === t)!.label.toLowerCase());
-  const list = names.length <= 1 ? (names[0] ?? "training") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  return `${days} days of ${list}, ${minutes} min each, plus active rest days.`;
-}
 
 /** Button wording per guided day type (16d); gym and rest days have none. */
 export const SESSION_VERB: Partial<Record<DayType, { start: string; done: string; did: string }>> = {

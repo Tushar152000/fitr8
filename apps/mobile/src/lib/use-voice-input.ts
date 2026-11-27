@@ -1,3 +1,4 @@
+import { isRunningInExpoGo } from "expo";
 import type { ExpoSpeechRecognitionModule as SpeechModule } from "expo-speech-recognition";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -126,7 +127,10 @@ export function useVoiceInput({
       handlers.current.onError(
         Platform.OS === "web"
           ? "Voice works in Chrome, Edge or Safari, and in the FITR8 app. Type your message here."
-          : "Update FITR8 to talk to your coach. For now, type your message.",
+          : isRunningInExpoGo()
+            ? // Development only: Expo Go has no speech module; a development or store build does.
+              "Voice needs the FITR8 app build; it doesn't run in Expo Go. Type your message for now."
+            : "Update FITR8 to talk to your coach. For now, type your message.",
       );
       return;
     }

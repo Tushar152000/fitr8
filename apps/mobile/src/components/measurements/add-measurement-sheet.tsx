@@ -9,7 +9,7 @@ import { api, errorMessage } from "@/lib/api";
 import { EMPTY_DRAFT, MEASURE_FIELDS, readDraft, type EnteredKey, type MeasureDraft } from "@/lib/measurements";
 import { measurementsQuery, planQuery, progressQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
-import { makeStyles, useColors } from "@/lib/theme";
+import { makeStyles, useColors, radius } from "@/lib/theme";
 import { showToast } from "@/lib/toast";
 
 /** Which field to start in; "bodyFat" starts in waist and highlights how body fat is worked out. */
@@ -133,7 +133,7 @@ const useStyles = makeStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderRadius: 16,
+    borderRadius: radius.box,
     backgroundColor: c.ground,
     padding: 16,
   },

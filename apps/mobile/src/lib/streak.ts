@@ -36,6 +36,33 @@ export function streakTip({ current, longest, loggedToday }: Pick<StreakDto, "cu
   return `${reach} You're ${longest - current} away from your best.`;
 }
 
+/** Evening nudge starts at this local hour (20:00) while today isn't logged. */
+export const AT_RISK_HOUR = 20;
+
+/**
+ * A streak at risk: there is one (current > 0), today has no meal yet and it's 8 pm or later. The
+ * flame dims and the tip turns into a nudge (user request 2026-11-28).
+ */
+export function streakAtRisk(s: Pick<StreakDto, "current" | "loggedToday">, now = new Date()): boolean {
+  return s.current > 0 && !s.loggedToday && now.getHours() >= AT_RISK_HOUR;
+}
+
+/** The nudge that replaces the tip while the streak is at risk. */
+export const atRiskTip = (current: number) =>
+  `It's getting late. Log one meal to keep your ${days(current)} streak alive.`;
+
+/** Streak lengths that get a one-time celebration, with the badge's name. */
+export const MILESTONES = [
+  { days: 7, badge: "One week strong" },
+  { days: 30, badge: "A month of momentum" },
+  { days: 100, badge: "The 100 club" },
+] as const;
+
+/** The highest milestone the current streak has reached, if any. */
+export function reachedMilestone(current: number) {
+  return [...MILESTONES].reverse().find((m) => current >= m.days) ?? null;
+}
+
 const WEEKDAY = ["S", "M", "T", "W", "T", "F", "S"];
 
 /** "M", "T", … for a YYYY-MM-DD. */

@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SessionBar } from "@/components/session-bar";
 import { GradientFab, PressableScale, Text } from "@/components/ui";
 import { makeStyles, useColors } from "@/lib/theme";
 import { canLogOn } from "@/lib/meal-param";
@@ -35,9 +36,10 @@ const TABS: Record<string, { label: string; icon: LucideIcon; fill?: boolean }> 
 };
 
 /**
- * v2 tab bar (Figma "Tab Bar"): a white pill with Home · Meals · Workout · Coach, and the round
- * gradient camera beside it. Coach and the camera open full-screen stacks (the chat with its
- * keyboard, the logger).
+ * Tab bar: one full-width white pill, Home · Meals · [camera] · Workout · Coach, with the round
+ * gradient camera raised out of the middle (user choice 2026-11-28; Figma had it beside the pill on
+ * the right). A ring in the page colour cuts it out of the bar. Coach and the camera open
+ * full-screen stacks (the chat with its keyboard, the logger).
  */
 export function TabBar({ state, navigation }: SwipeTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -49,33 +51,59 @@ export function TabBar({ state, navigation }: SwipeTabBarProps) {
   const shownDay = current === "today" || current === "meals" ? viewDay : null;
   // A day older than the logging window is read-only: the camera logs today and shows today again.
   const pastDay = shownDay && canLogOn(shownDay) ? shownDay : null;
-  const tabs = Object.keys(TABS)
-    .map((name) => state.routes.find((r) => r.name === name))
-    .filter((r): r is (typeof state.routes)[number] => Boolean(r));
+  // Every tab, always: with SDK 58's router a tab that hasn't been visited yet isn't in
+  // `state.routes`, so building the bar from the routes hid Meals / Workout until opened.
+  const tabs = Object.keys(TABS).map((name) => ({ name, route: state.routes.find((r) => r.name === name) }));
+  // Home · Meals on the left of the camera, Workout (and Coach) on the right.
+  const before = tabs.slice(0, 2);
+  const after = tabs.slice(2);
+
+  const renderTab = ({ name, route }: (typeof tabs)[number]) => {
+    const tab = TABS[name];
+    const focused = current === name;
+    return (
+      <PressableScale
+        key={name}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: focused }}
+        accessibilityLabel={tab.label}
+        onPress={() => {
+          const event = route
+            ? navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true })
+            : null;
+          if (!focused && !event?.defaultPrevented) navigation.navigate(name);
+        }}
+        style={styles.tab}
+      >
+        <TabItem tab={tab} focused={focused} />
+      </PressableScale>
+    );
+  };
 
   return (
     // 24 px under the bar as drawn (the home indicator sits over that space on iPhone).
     <View style={[styles.wrap, { paddingBottom: Math.max(24, insets.bottom - 10) }]}>
+      {/* A session in progress (walk, run …): live timer, pause, tap back in. */}
+      <SessionBar />
       <View style={styles.pill}>
-        {tabs.map((route) => {
-          const tab = TABS[route.name];
-          const focused = state.routes[state.index]?.key === route.key;
-          return (
-            <PressableScale
-              key={route.key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: focused }}
-              accessibilityLabel={tab.label}
+        {before.map(renderTab)}
+        {/* The camera, raised out of the middle of the bar. */}
+        <View style={styles.centre}>
+          <View style={styles.cutout}>
+            <GradientFab
+              size={60}
+              accessibilityRole="button"
+              accessibilityLabel="Log a meal"
               onPress={() => {
-                const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-                if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+                if (shownDay && !pastDay) showDay(null);
+                router.push(pastDay ? { pathname: "/log/type", params: { date: pastDay } } : "/log");
               }}
-              style={styles.tab}
             >
-              <TabItem tab={tab} focused={focused} />
-            </PressableScale>
-          );
-        })}
+              <Camera size={24} color="#ffffff" strokeWidth={2} absoluteStrokeWidth />
+            </GradientFab>
+          </View>
+        </View>
+        {after.map(renderTab)}
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Ask your coach"
@@ -88,18 +116,6 @@ export function TabBar({ state, navigation }: SwipeTabBarProps) {
           </Text>
         </PressableScale>
       </View>
-
-      <GradientFab
-        size={60}
-        accessibilityRole="button"
-        accessibilityLabel="Log a meal"
-        onPress={() => {
-          if (shownDay && !pastDay) showDay(null);
-          router.push(pastDay ? { pathname: "/log/type", params: { date: pastDay } } : "/log");
-        }}
-      >
-        <Camera size={24} color="#ffffff" strokeWidth={2} absoluteStrokeWidth />
-      </GradientFab>
     </View>
   );
 }
@@ -144,19 +160,15 @@ function TabItem({ tab, focused }: { tab: (typeof TABS)[string]; focused: boolea
 
 const useStyles = makeStyles((c) => ({
   wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
     paddingTop: 8,
     paddingHorizontal: 20,
     backgroundColor: c.ground,
   },
   pill: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 100,
     backgroundColor: c.surface,
@@ -164,6 +176,15 @@ const useStyles = makeStyles((c) => ({
   // 52 wide as drawn; at least 44 tall (24 glyph + 4 + label) with the pill's 8 px makes the 60 px bar.
   tab: { width: 52, minHeight: 44, alignItems: "center", justifyContent: "center", gap: 4 },
   item: { alignItems: "center" },
+  // The camera's slot: as wide as a tab, the 60 px button lifted 26 px above the bar's top edge.
+  centre: { width: 68, height: 44, alignItems: "center" },
+  cutout: {
+    position: "absolute",
+    top: -34,
+    padding: 4,
+    borderRadius: 34,
+    backgroundColor: c.ground,
+  },
   layer: { alignItems: "center", gap: 4 },
   over: { position: "absolute", top: 0, left: -8, right: -8 },
 }));

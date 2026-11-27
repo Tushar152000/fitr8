@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { ChevronRight, HeartPulse, X } from "lucide-react-native";
+import { HeartPulse, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import { PressableScale, Skeleton, Text } from "@/components/ui";
@@ -9,13 +9,17 @@ import { useMe } from "@/lib/auth";
 import { healthAdapter } from "@/lib/health";
 import { healthStatusQuery, healthSummaryQuery } from "@/lib/queries";
 import { makeStyles, radius, useColors } from "@/lib/theme";
-import { HealthMetrics } from "./metrics";
+import { HealthHighlights } from "./highlights";
+import { sampleHealthSummary } from "./sample";
 
 const HIDE_KEY = (userId: string) => `fitr8.health.prompt.hidden.${userId}`;
 
 /**
- * Today's health numbers (steps, heart rate, BMI, SpO2, sleep, recovery) once Apple Health /
- * Health Connect is connected; before that, one small prompt that can be hidden for good.
+ * Home's health card once Apple Health / Health Connect is connected (`HealthHighlights`: recovery,
+ * steps, sleep, resting HR; tap for all six numbers); before that, one small prompt that can be
+ * hidden for good.
+ * Development builds only (`__DEV__`: Expo Go, local runs) show the section with sample numbers and
+ * a "Sample data" tag while nothing is connected, to preview the design (user request 2026-11-28).
  */
 export function HealthTodayCard() {
   const c = useColors();
@@ -41,6 +45,8 @@ export function HealthTodayCard() {
     })();
   }, [me.id]);
 
+  if (__DEV__ && !connected)
+    return <HealthHighlights s={sampleHealthSummary()} source={adapter?.label ?? "Apple Health"} sample />;
   if (!adapter || !status.data) return null;
 
   if (!connected) {
@@ -77,23 +83,10 @@ export function HealthTodayCard() {
     );
   }
 
-  return (
-    <View style={{ gap: 10 }}>
-      <PressableScale
-        accessibilityRole="link"
-        onPress={() => router.push("/health/connect")}
-        style={{ flexDirection: "row", alignItems: "center", minHeight: 44 }}
-      >
-        <Text variant="h2" style={{ flex: 1 }}>
-          Health
-        </Text>
-        <Text size={14} weight={600} color={c.brandText}>
-          {adapter.label}
-        </Text>
-        <ChevronRight size={18} color={c.brandText} />
-      </PressableScale>
-      {summary.data ? <HealthMetrics s={summary.data} /> : <Skeleton height={250} radius={radius.card} />}
-    </View>
+  return summary.data ? (
+    <HealthHighlights s={summary.data} source={adapter.label} />
+  ) : (
+    <Skeleton height={168} radius={radius.card} />
   );
 }
 

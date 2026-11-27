@@ -10,10 +10,11 @@ import { useQuery } from "@tanstack/react-query";
 import { AiLimitSheet } from "@/components/log/ai-limit-sheet";
 import { cam, CAM_SUBTLE } from "@/components/log/camera/cam";
 import { CameraSideButton, CameraTopButton, Shutter } from "@/components/log/camera/camera-buttons";
-import { CameraBusy, CameraError, CameraPermission } from "@/components/log/camera/camera-overlays";
+import { CameraError, CameraPermission } from "@/components/log/camera/camera-overlays";
 import { Corners } from "@/components/log/camera/corners";
 import { ScanGuide } from "@/components/log/camera/scan-guide";
 import { ScanHint } from "@/components/log/camera/scan-hint";
+import { SnapMoment } from "@/components/log/camera/snap-moment";
 import { MealWhen } from "@/components/log/meal-when";
 import { Text } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
@@ -29,12 +30,6 @@ import { haptic } from "@/lib/haptics";
 
 type Phase = "idle" | "checking" | "uploading" | "analysing";
 type Photo = { uri: string; width: number; height: number };
-
-const BUSY_LABEL: Record<Exclude<Phase, "idle">, string> = {
-  checking: "Checking the photo…",
-  uploading: "Uploading your photo…",
-  analysing: "Reading your plate…",
-};
 
 /**
  * Screen 7: one camera, no modes. Point it at a packaged food's barcode and the product opens by
@@ -52,6 +47,8 @@ export default function CameraScreen() {
   // The flash button keeps the torch on while framing (low light); off again when the screen closes.
   const [torch, setTorch] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  // The photo being read, for the snap moment (it shrinks into a card while the AI works).
+  const [shot, setShot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const limit = useScanLimit();
   // A barcode the camera can see right now; a clear read opens its product by itself.
@@ -81,6 +78,7 @@ export default function CameraScreen() {
   /** Barcode in the photo → product; otherwise the AI reads the plate for the chosen meal. */
   async function route(photo: Photo) {
     setError(null);
+    setShot(photo.uri);
     setPhase("checking");
     const code = await barcodeInPhoto(photo.uri);
     if (code) return openProduct(code);
@@ -233,7 +231,7 @@ export default function CameraScreen() {
         </View>
       </View>
 
-      {phase !== "idle" && <CameraBusy label={BUSY_LABEL[phase]} />}
+      {phase !== "idle" && <SnapMoment uri={shot} phase={phase} />}
 
       <AiLimitSheet {...limit.sheet} params={params} />
     </View>

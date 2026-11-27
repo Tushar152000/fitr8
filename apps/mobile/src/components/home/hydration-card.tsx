@@ -1,102 +1,210 @@
-import { Pencil } from "lucide-react-native";
+import { Pencil, Plus } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { Sheet } from "@/components/sheet";
-import { Glass } from "./glass";
-import { HydrationGlow } from "./hydration-glow";
 import { FieldError, PressableScale, Text } from "@/components/ui";
-import { GLASS_SIZES, glassRow, setGlassMl, useGlassMl, type GlassRow } from "@/lib/glass-size";
-import { makeStyles, radius, useColors } from "@/lib/theme";
+import { GLASS_SIZES, setGlassMl, useGlassMl } from "@/lib/glass-size";
+import { fade, makeStyles, radius, useColors, useScheme } from "@/lib/theme";
 import { useWater } from "@/lib/use-water";
+import { WaterWave } from "./water-wave";
 
-const L = (ml: number) => (Math.round(ml / 100) / 10).toFixed(1);
-
-// The card is always dark (both themes): bg/inverse with the Figma hydration glow along the bottom
-// edge, drawn with gradients (./hydration-glow.tsx), and Figma's soft blue drop shadow.
+const L = (ml: number) => (Math.round(ml / 10) / 100).toFixed(2).replace(/0$/, "");
+const HEIGHT = 156;
+const UNDO_MS = 4000;
+/** Quick sizes offered on a long press of "+" (the glass sizes plus a bottle). */
+const QUICK = [150, 250, 330, 500, 750] as const;
+const LIME = "#C2E04A";
 
 /**
- * Home v2 hydration card: litres left, one tap per glass. An empty glass adds a glass, the last
- * full one takes it back off (undo). The pencil changes the glass size (a phone setting). Up to 8
- * glasses show as-is; a bigger target keeps the last glass empty to add more, and each extra glass
- * fills it, then stacks onto the glass before it as "×2", "×3" … (lib/glass-size `glassRow`).
+ * Home hydration card (redesign 2026-11-28, user request; light and dark):
+ * - The card fills with water from the bottom: two layered waves (`WaterWave`) rise with a spring as
+ *   you drink and drift on a loop; adding water swells the surface and sends a ripple from "+".
+ * - Big litres ("1.25 L of 2.5 L"), glasses under it, the glass size (pencil → change it).
+ * - "+" adds one glass (never more than is left, API minimum 50 ml); a long press opens quick sizes
+ *   (150 ml … a 750 ml bottle).
+ * - Undo is a pill in the card for 4 s after each add ("Added 250 ml · Undo"), live once the server
+ *   has the log.
+ * - Target reached: "Target reached" and the water glows lime for a moment.
+ * White card in light mode, the dark panel in dark mode. Reduce Motion: still water, no ripple.
  */
 export function HydrationCard() {
+  const c = useColors();
   const styles = useStyles();
+  const dark = useScheme() === "dark";
+  const reduce = useReducedMotion();
   const water = useWater();
   const glass = useGlassMl();
   const [sizing, setSizing] = useState(false);
+  const [quick, setQuick] = useState(false);
+  const [width, setWidth] = useState(0);
+  const [bump, setBump] = useState(0);
+  const [added, setAdded] = useState<{ ml: number; at: number } | null>(null);
   const d = water.water.data;
   const error = water.add.error ?? water.undo.error;
-  const row = d ? glassRow(d.consumedMl, d.targetMl, glass) : null;
+  const left = d ? Math.max(0, d.targetMl - d.consumedMl) : 0;
+  const done = d ? d.consumedMl >= d.targetMl : false;
+  const level = d && d.targetMl > 0 ? Math.min(1, d.consumedMl / d.targetMl) : 0;
+  const glasses = d ? Math.floor(d.consumedMl / glass) : 0;
+  const glassesTarget = d ? Math.ceil(d.targetMl / glass) : 0;
+
+  // The undo pill hides itself after UNDO_MS.
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded(null), UNDO_MS);
+    return () => clearTimeout(t);
+  }, [added]);
+
+  // Ripple from "+" on each add, and a lime glow when the target is reached.
+  const ripple = useSharedValue(0);
+  const glow = useSharedValue(0);
+  const addWater = (ml: number) => {
+    const amount = Math.max(50, Math.round(ml));
+    const reaches = d ? d.consumedMl < d.targetMl && d.consumedMl + amount >= d.targetMl : false;
+    water.add.mutate(amount);
+    setAdded({ ml: amount, at: Date.now() });
+    setBump((b) => b + 1);
+    if (!reduce) {
+      ripple.set(0);
+      ripple.set(withTiming(1, { duration: 650, easing: Easing.out(Easing.quad) }));
+      if (reaches) glow.set(withSequence(withTiming(1, { duration: 300 }), withTiming(0, { duration: 1400 })));
+    }
+  };
+  const rippleStyle = useAnimatedStyle(() => ({
+    opacity: ripple.get() > 0 && ripple.get() < 1 ? 1 - ripple.get() : 0,
+    transform: [{ scale: 1 + ripple.get() * 2.4 }],
+  }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.get() * 0.35 }));
+
+  const ink = dark ? "#ffffff" : c.ink;
+  const soft = dark ? "rgba(255,255,255,0.65)" : c.ink2;
+  const front = dark ? fade("#2f97c1", 0.55) : fade("#35cefe", 0.32);
+  const back = dark ? fade("#35cefe", 0.25) : fade("#a6dded", 0.45);
 
   return (
-    <View style={styles.card}>
-      <HydrationGlow />
+    <View style={styles.card} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <WaterWave width={width} height={HEIGHT} level={level} bump={bump} front={front} back={back} />
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: LIME }, glowStyle]} pointerEvents="none" />
+
       <View style={styles.head}>
-        <View style={{ flex: 1, gap: 0 }}>
-          <Text variant="labelMedium" color="#ffffff" style={{ letterSpacing: -0.24 }}>
-            Current hydration
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="labelMedium" color={soft}>
+            Hydration
           </Text>
           {d ? (
-            // Always one line, so the card never changes height when the target is reached (a wrap
-            // on a narrow phone pushed everything below down).
             <Text
-              weight={600}
-              size={22}
-              color="#ffffff"
+              weight={700}
+              size={28}
+              color={ink}
               tabular
               accessibilityLiveRegion="polite"
               numberOfLines={1}
-              style={styles.big}
+              style={{ letterSpacing: -0.6 }}
             >
-              {d.consumedMl >= d.targetMl ? "Target reached" : `${L(d.targetMl - d.consumedMl)} L left`}
-              <Text weight={500} size={14} color="rgba(255,255,255,0.65)" tabular style={styles.big}>
-                {d.consumedMl >= d.targetMl ? "" : ` of\u00a0${L(d.targetMl)}\u00a0L`}
-              </Text>
+              {done ? "Target reached" : `${L(d.consumedMl)} L`}
+              {!done && (
+                <Text weight={500} size={15} color={soft} tabular>
+                  {` of ${L(d.targetMl)} L`}
+                </Text>
+              )}
             </Text>
           ) : (
-            <View style={{ height: 27 }} />
+            <View style={{ height: 34 }} />
+          )}
+          {d && (
+            <Text variant="labelMedium" color={soft} tabular>
+              {done
+                ? `${L(d.consumedMl)} L today · nice work`
+                : `${glasses} of ${glassesTarget} glasses · ${L(left)} L left`}
+            </Text>
           )}
         </View>
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel={`Glass size ${glass} ml. Change`}
-          onPress={() => setSizing(true)}
-          hitSlop={10}
-          style={styles.size}
-        >
-          <Glass full still size={15} />
-          <Text variant="labelRegular" color="#ffffff" tabular style={{ letterSpacing: -0.24 }}>
-            = {glass} ml
-          </Text>
-          <Pencil size={13} color="#ffffff" />
-        </PressableScale>
+
+        {/* Add a glass; long press for quick sizes. */}
+        <View style={styles.addWrap}>
+          <Animated.View style={[styles.ripple, { borderColor: dark ? "#35cefe" : "#2f97c1" }, rippleStyle]} />
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={`Add a glass, ${Math.max(50, Math.round(Math.min(glass, left || glass)))} ml`}
+            accessibilityHint="Long press for other sizes"
+            disabled={!d}
+            onPress={() => addWater(Math.min(glass, left || glass))}
+            onLongPress={() => setQuick(true)}
+            style={[styles.add, { backgroundColor: dark ? "#35cefe" : "#2f97c1" }]}
+          >
+            <Plus size={24} color={dark ? "#0c0c0c" : "#ffffff"} strokeWidth={2.6} />
+          </PressableScale>
+        </View>
       </View>
 
-      {d ? (
-        <>
-          <Glasses
-            row={row!}
-            glass={glass}
-            leftMl={Math.max(0, d.targetMl - d.consumedMl)}
-            canUndo={Boolean(water.undoable)}
-            onAdd={(ml) => water.add.mutate(ml)}
-            onUndo={() => {
-              if (water.undoable) water.undo.mutate(water.undoable.id);
-            }}
-          />
-          {error && <FieldError>{error.message || "Couldn't save. Try again."}</FieldError>}
-        </>
-      ) : (
-        <View style={{ height: 44 }} />
-      )}
+      <View style={styles.foot}>
+        {added ? (
+          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} style={styles.undo}>
+            <Text variant="labelMedium" color={ink}>
+              Added {added.ml} ml
+            </Text>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={`Undo, remove ${added.ml} ml`}
+              disabled={!water.undoable}
+              onPress={() => {
+                if (water.undoable) water.undo.mutate(water.undoable.id);
+                setAdded(null);
+              }}
+              hitSlop={10}
+            >
+              <Text variant="labelStrong" color={water.undoable ? (dark ? "#35cefe" : "#2f97c1") : soft}>
+                Undo
+              </Text>
+            </PressableScale>
+          </Animated.View>
+        ) : (
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={`Glass size ${glass} ml. Change`}
+            onPress={() => setSizing(true)}
+            hitSlop={10}
+            style={styles.size}
+          >
+            <Text variant="labelMedium" color={soft} tabular>
+              1 glass = {glass} ml
+            </Text>
+            <Pencil size={12} color={soft} />
+          </PressableScale>
+        )}
+      </View>
+      {error && <FieldError>{error.message || "Couldn't save. Try again."}</FieldError>}
+
+      <Sheet open={quick} onClose={() => setQuick(false)} title="Add water" subtitle="Pick an amount">
+        <View style={styles.sizes}>
+          {QUICK.map((ml) => (
+            <Chip
+              key={ml}
+              label={ml === 750 ? "Bottle · 750 ml" : `${ml} ml`}
+              onPress={() => {
+                setQuick(false);
+                addWater(ml);
+              }}
+            />
+          ))}
+        </View>
+      </Sheet>
 
       <Sheet open={sizing} onClose={() => setSizing(false)} title="Glass size">
         <View style={styles.sizes}>
           {GLASS_SIZES.map((ml) => (
-            <SizeChip
+            <Chip
               key={ml}
-              ml={ml}
+              label={`${ml} ml`}
               selected={ml === glass}
               onPress={() => {
                 setGlassMl(ml);
@@ -110,133 +218,51 @@ export function HydrationCard() {
   );
 }
 
-const GLASS = 34;
-/** The last glass of an uneven target is drawn smaller: capacity 0.6 → 60 % size (never under 40 %). */
-const glassSize = (capacity: number) => Math.round(GLASS * Math.max(0.4, capacity));
-
-function Glasses({
-  row,
-  glass,
-  leftMl,
-  canUndo,
-  onAdd,
-  onUndo,
-}: {
-  row: GlassRow;
-  glass: number;
-  /** Water left to the target: a tap never adds more than this (the final, smaller glass). */
-  leftMl: number;
-  canUndo: boolean;
-  onAdd: (ml: number) => void;
-  onUndo: () => void;
-}) {
-  const styles = useStyles();
-  const { glasses, next, undoAt, stack, stacked } = row;
-  // When a glass stacks, the last glass shows full for a moment, then empties into the ×n glass.
-  const [shownStack, setShownStack] = useState(stack);
-  useEffect(() => {
-    if (stack === shownStack) return;
-    const t = setTimeout(() => setShownStack(stack), stack > shownStack ? 650 : 0);
-    return () => clearTimeout(t);
-  }, [stack, shownStack]);
-  const pouring = stack > shownStack;
-  const lastIndex = glasses.length - 1;
-  // A part-filled glass is both the next to fill and the last with water: undo it with a long press.
-  const undoOnNext = canUndo && undoAt === next;
-
-  return (
-    <View style={[styles.glasses, glasses.length < 6 && styles.glassesShort]}>
-      {glasses.map((g, i) => {
-        // Every glass that isn't full shows a "+": tapping any of them adds one glass (it fills in order).
-        const adds = next !== -1 && (g.level < 0.999 || (stacked && i === lastIndex));
-        const undoes = !adds && i === undoAt && canUndo;
-        // A tap adds one glass of water, or only what's left near the target (API minimum 50 ml).
-        const ml = Math.max(50, Math.round(Math.min(glass, leftMl)));
-        const level = pouring && i === lastIndex ? 1 : g.level;
-        const badge = stacked && i === lastIndex - 1 ? (pouring ? shownStack : stack) : 0;
-        const label = adds
-          ? `Add a glass, ${ml} ml${undoOnNext && i === next ? ". Long press to remove the last one" : ""}`
-          : i === undoAt
-            ? "Remove the last glass"
-            : g.level > 0
-              ? `Glass ${i + 1}, drunk${badge > 1 ? `, ${badge} glasses` : ""}`
-              : `Glass ${i + 1}`;
-        return (
-          <Pressable
-            key={i}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            accessibilityState={{ disabled: !adds && !undoes }}
-            disabled={!adds && !undoes}
-            onPress={adds ? () => onAdd(ml) : onUndo}
-            onLongPress={adds && undoOnNext && i === next ? onUndo : undefined}
-            hitSlop={4}
-            style={({ pressed }) => [styles.glass, pressed && { opacity: 0.6 }]}
-          >
-            <Glass level={level} size={glassSize(g.capacity)} />
-            {badge > 1 && (
-              // A subscript at the glass's lower-right corner: "×7" in aqua, on a cut-out of the card.
-              <View style={styles.badge}>
-                <Text weight={700} size={11} color="#35cefe" tabular style={{ lineHeight: 13 }}>
-                  ×{badge}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function SizeChip({ ml, selected, onPress }: { ml: number; selected: boolean; onPress: () => void }) {
+function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   const c = useColors();
   const styles = useStyles();
   return (
     <PressableScale
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityRole={selected === undefined ? "button" : "radio"}
+      accessibilityState={selected === undefined ? undefined : { selected }}
       onPress={onPress}
       style={[styles.chip, selected && { backgroundColor: c.ink }]}
     >
       <Text weight={600} color={selected ? c.surface : c.ink} tabular>
-        {ml} ml
+        {label}
       </Text>
     </PressableScale>
   );
 }
 
-const useStyles = makeStyles((c) => ({
+const useStyles = makeStyles((c, shadows) => ({
   card: {
-    minHeight: 137,
+    height: HEIGHT,
     borderRadius: radius.card,
     padding: 20,
-    gap: 18,
+    justifyContent: "space-between",
     overflow: "hidden",
-    backgroundColor: c.panel,
-    // Dark mode: a lifted dark (#161616) with a faint edge, so it doesn't vanish on the black page.
+    backgroundColor: c.surface,
+    ...shadows.card,
+    // Dark mode: the lifted panel with a faint edge so it doesn't vanish on the black page.
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.panelLine,
-    boxShadow: "0 20px 20px rgba(0, 119, 255, 0.02)",
   },
-  head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
-  big: { letterSpacing: -0.56 },
-  size: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 15 },
-  glasses: { flexDirection: "row", justifyContent: "space-between", marginVertical: -5 },
-  badge: {
-    position: "absolute",
-    bottom: 1,
-    right: -9,
-    paddingHorizontal: 3,
-    paddingVertical: 1,
-    borderRadius: 6,
-    backgroundColor: c.panel, // the card, so the count cuts cleanly over the glass outline
-    pointerEvents: "none",
+  head: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  addWrap: { width: 52, height: 52, alignItems: "center", justifyContent: "center" },
+  add: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  ripple: { position: "absolute", width: 52, height: 52, borderRadius: 26, borderWidth: 2 },
+  foot: { flexDirection: "row", alignItems: "center", minHeight: 32 },
+  size: { flexDirection: "row", alignItems: "center", gap: 6 },
+  undo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 100,
+    backgroundColor: fade(c.surface, 0.85),
   },
-  // A short row (small target or big glass) sits at the left instead of stretching across.
-  glassesShort: { justifyContent: "flex-start", gap: 14 },
-  glass: { minWidth: 34, minHeight: 44, alignItems: "center", justifyContent: "flex-end", paddingBottom: 5 },
-  // Three equal columns, edge to edge with the sheet's gutter.
   sizes: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     flexGrow: 1,
