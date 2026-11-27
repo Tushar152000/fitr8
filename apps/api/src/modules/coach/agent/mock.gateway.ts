@@ -71,6 +71,8 @@ function pickTool(
     candidates.push({ name: "log_water", input: { ml: Number(ml[1]) } });
   if (kg && /weigh/.test(t))
     candidates.push({ name: "log_weigh_in", input: { weightKg: Number(kg[1]) } });
+  if (/\b(i ate|i had|ate |had )/.test(t))
+    candidates.push({ name: "draft_meal", input: { description: text, mealType: "LUNCH" } });
   if (/^remember /.test(t))
     candidates.push({ name: "remember", input: { fact: text.replace(/^remember /i, "") } });
   if (/protein|creatine|science|study|research|how much|how many/.test(t))

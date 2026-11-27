@@ -8,3 +8,5 @@ export * from "./adjust.js";
 export * from "./fuel.js";
 export * from "./checkin.js";
 export * from "./week.js";
+export * from "./free-preview.js";
+export * from "./setup-defaults.js";

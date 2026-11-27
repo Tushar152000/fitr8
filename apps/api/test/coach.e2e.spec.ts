@@ -42,6 +42,26 @@ describe("coach (agent loop, mock model)", () => {
     await agent.post("/api/coach/chat").send({ message: "" }).expect(400);
   });
 
+  it("drafts a meal and sends a card for the app (not logged yet)", async () => {
+    const { agent } = await onboardedUser();
+    const res = await chat(agent, { message: "I ate 2 roti and dal" }).expect(200);
+    const tools = events(res.body as string).filter((e) => e.type === "tool") as {
+      name: string;
+      status: string;
+      card?: { kind: string; mealId: string; mealType: string; status: string; items: unknown[] };
+    }[];
+    expect(tools.map((e) => e.name)).toEqual(["draft_meal", "draft_meal"]);
+    const done = tools.find((e) => e.status === "done")!;
+    expect(done.card).toMatchObject({ kind: "meal_draft", mealType: "LUNCH" });
+    expect(typeof done.card!.mealId).toBe("string");
+    expect(Array.isArray(done.card!.items)).toBe(true);
+    // The card points at the user's own meal, still waiting for review.
+    const meal = await agent.get(`/api/meals/${done.card!.mealId}`).expect(200);
+    expect(meal.body.status).not.toBe("CONFIRMED");
+    // No card on the "running" event.
+    expect(tools.find((e) => e.status === "running")!.card).toBeUndefined();
+  });
+
   it("streams a turn that uses a tool, and persists a clean transcript", async () => {
     const { agent } = await onboardedUser();
     const res = await chat(agent, { message: "How am I doing today?" }).expect(200);

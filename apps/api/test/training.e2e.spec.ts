@@ -27,23 +27,64 @@ describe("training (Workout tab)", () => {
     await t.http().delete("/api/training/logs/x").expect(401);
   });
 
-  it("is Premium only, on every route (402 pro_required)", async () => {
+  it("gives the free plan a taste: its own week as a preview, logging, no other weeks", async () => {
     const { agent } = await t.signIn();
-    await onboard(agent);
+    await onboard(agent, { experience: "INTERMEDIATE" });
+    // The plan still tells the app the full Workout tab is Premium.
+    expect((await agent.get("/api/billing").expect(200)).body.limits.workouts).toBe(false);
+
+    // Setup works on the free plan.
+    expect((await agent.get("/api/training").expect(200)).body.profile).toBeNull();
+    const week = (await agent.post("/api/training/profile").send(MIX).expect(200)).body;
+    expect(week.preview).toBe(true);
+    expect(week.recovery).toBeNull();
+
+    type Day = {
+      date: string;
+      type: string;
+      exercises: unknown[] | null;
+      lockedExercises: number;
+      gym: { exercises: number } | null;
+      steps: unknown[];
+    };
+    const days = week.days as Day[];
+    const firstSession = days.find((d) => d.type !== "rest")!;
+    expect(week.sampleDate).toBe(firstSession.date);
+
+    const gymDays = days.filter((d) => d.type === "gym");
+    expect(gymDays.length).toBeGreaterThan(1);
+    for (const d of gymDays) {
+      const total = d.gym!.exercises;
+      if (d.date === week.sampleDate) {
+        // The sample session is shown in full.
+        expect(d.exercises).toHaveLength(total);
+        expect(d.lockedExercises).toBe(0);
+      } else {
+        expect(d.exercises).toHaveLength(2);
+        expect(d.lockedExercises).toBe(total - 2);
+        expect(d.steps.length).toBeLessThanOrEqual(2);
+      }
+    }
+    // Titles, minutes and statuses stay visible on every day.
+    for (const d of days)
+      expect(d).toMatchObject({ title: expect.any(String), status: expect.any(String) });
+
+    // This week by date works; any other week is Premium.
+    await agent.get(`/api/training/week?start=${ymd(today())}`).expect(200);
     const locked = {
-      error: "Workouts are part of FITR8 Premium.",
+      error: "Other weeks are part of FITR8 Premium.",
       details: { reason: "pro_required", feature: "workouts" },
     };
-    await agent.get("/api/training").expect(402, locked);
-    await agent.post("/api/training/profile").send(MIX).expect(402, locked);
-    await agent.get("/api/training/week").expect(402, locked);
-    await agent
+    await agent.get(`/api/training/week?start=${ymd(plusDays(monday(), 7))}`).expect(402, locked);
+    await agent.get(`/api/training/week?start=${ymd(plusDays(monday(), -7))}`).expect(402, locked);
+
+    // Logging a session (and undoing it) is free.
+    const log = await agent
       .post("/api/training/logs")
       .send({ date: ymd(today()), type: "run", minutes: 30 })
-      .expect(402, locked);
-    await agent.delete("/api/training/logs/x").expect(402, locked);
-    // The plan tells the app it's locked.
-    expect((await agent.get("/api/billing").expect(200)).body.limits.workouts).toBe(false);
+      .expect(201);
+    await agent.delete(`/api/training/logs/${log.body.id}`).expect(204);
+    await agent.delete("/api/training/logs/x").expect(404);
   });
 
   it("asks for onboarding first", async () => {
@@ -63,12 +104,39 @@ describe("training (Workout tab)", () => {
     expect((await agent.get("/api/billing").expect(200)).body.limits.workouts).toBe(true);
 
     const state = await agent.get("/api/training").expect(200);
+    // Defaults come from onboarding (3 days × 45 min at a full gym, fat loss adds walking).
     expect(state.body).toEqual({
       profile: null,
-      defaults: { types: ["gym"], daysPerWeek: 4, sessionMinutes: 45 },
-      summary: { goal: "lose", weightKg: 82, activityLevel: "LIGHT" },
+      defaults: { types: ["gym", "walk"], daysPerWeek: 3, sessionMinutes: 45 },
+      summary: {
+        goal: "lose",
+        weightKg: 82,
+        activityLevel: "LIGHT",
+        experience: "BEGINNER",
+        equipment: "FULL_GYM",
+        injuries: [],
+        targetWeightKg: 76,
+        targetDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      },
     });
     await agent.get("/api/training/week").expect(404, { error: "Set up your training first" });
+  });
+
+  it("maps onboarding answers onto the setup's choices", async () => {
+    const { agent } = await t.signIn();
+    await onboard(agent, {
+      equipment: "DUMBBELLS",
+      trainingDaysPerWeek: 2,
+      sessionMinutes: 90,
+      goal: { type: "MUSCLE_GAIN", targetWeightKg: 88, targetDate: ymd(plusDays(today(), 180)) },
+    });
+    const state = (await agent.get("/api/training").expect(200)).body;
+    expect(state.defaults).toEqual({ types: ["home"], daysPerWeek: 3, sessionMinutes: 60 });
+    expect(state.summary).toMatchObject({
+      goal: "gain",
+      equipment: "DUMBBELLS",
+      targetWeightKg: 88,
+    });
   });
 
   it("validates the setup", async () => {
@@ -109,6 +177,10 @@ describe("training (Workout tab)", () => {
 
     const res = await agent.post("/api/training/profile").send(MIX).expect(200);
     const week = res.body;
+    // Premium: the full week, no preview cut.
+    expect(week.preview).toBe(false);
+    expect(week.sampleDate).toBeNull();
+    for (const d of week.days as { lockedExercises: number }[]) expect(d.lockedExercises).toBe(0);
     expect(week.start).toBe(ymd(monday()));
     expect(week.today).toBe(ymd(today()));
     expect(week.goal).toBe("lose");
@@ -341,7 +413,7 @@ describe("training (Workout tab)", () => {
     expect(after.days.find((d: { date: string }) => d.date === date).status).toBe("today");
   });
 
-  it("keeps the profile and logs when Premium lapses", async () => {
+  it("keeps the profile and logs when Premium lapses, falling back to the preview", async () => {
     const { userId, agent } = await t.signIn();
     await t.premium(userId);
     await onboard(agent);
@@ -352,12 +424,14 @@ describe("training (Workout tab)", () => {
       .expect(201);
 
     await t.prisma.entitlement.delete({ where: { userId } });
-    await agent.get("/api/training/week").expect(402);
+    expect((await agent.get("/api/training/week").expect(200)).body.preview).toBe(true);
+    await agent.get(`/api/training/week?start=${ymd(plusDays(monday(), 7))}`).expect(402);
     expect(await t.prisma.trainingProfile.count({ where: { userId } })).toBe(1);
     expect(await t.prisma.trainingLog.count({ where: { userId } })).toBe(1);
 
     await t.premium(userId);
     const back = await agent.get("/api/training/week").expect(200);
+    expect(back.body.preview).toBe(false);
     expect(back.body.profile.types).toEqual(["gym", "run", "yoga"]);
   });
 });

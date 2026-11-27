@@ -16,6 +16,7 @@ import { PlanService } from "../../plan/plan.service.js";
 import { PastChatsService } from "../history/past-chats.service.js";
 import { KnowledgeService } from "../knowledge/knowledge.service.js";
 import { CoachMemoryService } from "../memory/memory.service.js";
+import type { CoachCard } from "@fitr8/contracts";
 import { defineTool, type AgentTool } from "../agent/tool.js";
 
 /** Keys the model never needs: internal ids, storage keys, raw model output, signed URLs. */
@@ -44,6 +45,35 @@ export function forModel(value: unknown): unknown {
     );
   }
   return value;
+}
+
+type DraftOutput = {
+  meal?: {
+    id?: string;
+    mealType?: string;
+    status?: string;
+    totalKcal?: number;
+    items?: { name?: string; kcal?: number }[];
+  };
+};
+
+const mealTypeOf = (output: unknown) => (output as DraftOutput)?.meal?.mealType ?? "SNACK";
+
+/** draft_meal's output as the chat card (a queued meal has only its id and status so far). */
+export function mealDraftCard(output: unknown, mealType: string): CoachCard | null {
+  const meal = (output as DraftOutput)?.meal;
+  if (!meal?.id) return null;
+  return {
+    kind: "meal_draft",
+    mealId: meal.id,
+    mealType,
+    status: meal.status ?? "PENDING",
+    kcal: typeof meal.totalKcal === "number" ? Math.round(meal.totalKcal) : null,
+    items: (meal.items ?? []).slice(0, 6).map((i) => ({
+      name: i.name ?? "Food",
+      kcal: typeof i.kcal === "number" ? Math.round(i.kcal) : null,
+    })),
+  };
 }
 
 /**
@@ -188,6 +218,8 @@ export class CoachToolbox {
           const meal = status === 202 ? body : await this.meals.draftView(userId, body.id);
           return forModel({ meal, reviewInApp: true });
         },
+        // The app shows the draft as a card with "Review & log".
+        card: (output) => mealDraftCard(output, mealTypeOf(output)),
       }),
       defineTool({
         name: "get_profile",

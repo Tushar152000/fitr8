@@ -88,13 +88,23 @@ export interface TrainingProfileDto {
 /** GET /api/training: the profile (null until 16b is saved) and what 16b prefills. */
 export interface TrainingStateDto {
   profile: TrainingProfileDto | null;
-  /** 16b defaults: "where you train" from onboarding, 4 days, 45 min (or the profile's values). */
+  /**
+   * 16b defaults: the saved profile, else onboarding mapped onto the setup's choices (domain
+   * `setupDefaults`: days 3–6, minutes 30/45/60, gym or home, + walk for fat loss).
+   */
   defaults: TrainingProfileInput;
-  /** 16b's read-only summary from onboarding. */
+  /** 16b "We already know you": what onboarding told us, shown as chips. */
   summary: {
     goal: TrainingGoal;
     weightKg: number | null;
     activityLevel: string;
+    /** 2026-11-28 setup redesign. */
+    experience: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+    equipment: "FULL_GYM" | "DUMBBELLS" | "BODYWEIGHT";
+    injuries: string[];
+    targetWeightKg: number | null;
+    /** YYYY-MM-DD. */
+    targetDate: string;
   };
 }
 
@@ -142,6 +152,11 @@ export interface TrainingDayDto {
    * days, and on a past gym day without a plan.
    */
   exercises: TrainingExerciseDto[] | null;
+  /**
+   * Free plan preview (2026-11-28): how many more exercises this gym day has beyond the ones in
+   * `exercises` (only the first two are sent; the week's sample day is sent in full). 0 on Premium.
+   */
+  lockedExercises: number;
 }
 
 /** One exercise of a gym day (Workout tab "Up next" list). */
@@ -180,4 +195,11 @@ export interface TrainingWeekDto {
    * `GET /workouts/today` keeps the same advice as one sentence (`cardio`).
    */
   restDay: RestDayCardio;
+  /**
+   * Free plan (2026-11-28): true when this is the preview — current week only, gym days cut to
+   * their first two exercises (see `lockedExercises`), no recovery. False on Premium.
+   */
+  preview: boolean;
+  /** Free plan: the week's one full sample session (first non-rest day), else null. Null on Premium. */
+  sampleDate: string | null;
 }

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { CoachCard } from "@fitr8/contracts";
 import {
   ModelRequestError,
   type BetaMessage,
@@ -9,7 +10,14 @@ import { serializeToolResult, toApiTools, type AgentTool } from "./tool.js";
 
 export type AgentEvent =
   | { type: "text"; delta: string }
-  | { type: "tool"; id: string; name: string; label: string; status: "running" | "done" | "error" };
+  | {
+      type: "tool";
+      id: string;
+      name: string;
+      label: string;
+      status: "running" | "done" | "error";
+      card?: CoachCard;
+    };
 
 /**
  * One persisted unit of the transcript. An assistant turn that calls tools is only ever emitted together
@@ -193,7 +201,21 @@ async function runTool(
   try {
     if (signal.aborted) throw new Error("aborted");
     const output = await (tool as AgentTool).run(parsed.data);
-    onEvent({ type: "tool", id: use.id, name: use.name, label, status: "done" });
+    // A card for the app (never for the model), when the tool makes one.
+    let card: CoachCard | undefined;
+    try {
+      card = tool.card?.(output) ?? undefined;
+    } catch {
+      card = undefined;
+    }
+    onEvent({
+      type: "tool",
+      id: use.id,
+      name: use.name,
+      label,
+      status: "done",
+      ...(card ? { card } : {}),
+    });
     return {
       ok: true,
       label,
