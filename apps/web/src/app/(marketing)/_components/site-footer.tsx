@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT_ADDRESS, CONTACT_EMAIL } from "./contact";
+import { CONTACT_EMAIL } from "./contact";
 
 const COMPANY_LINKS = [
   { label: "Blog", href: "/blog" },
@@ -45,9 +45,6 @@ export function SiteFooter() {
                 <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white hover:underline">
                   Email: {CONTACT_EMAIL}
                 </a>
-              </li>
-              <li>
-                <address className="leading-relaxed not-italic">{CONTACT_ADDRESS}</address>
               </li>
             </ul>
           </div>
