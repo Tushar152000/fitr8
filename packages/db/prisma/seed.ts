@@ -14,6 +14,7 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import { EXERCISES } from "@fitr8/domain/training";
 import type { IndbFood } from "../scripts/indb-convert.js";
 import { parseNote } from "../scripts/knowledge.js";
+import { parseSupportFiles } from "../scripts/support-faq.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -291,6 +292,20 @@ const exercises = EXERCISES.map((e) => ({
   timed: Boolean(e.timed),
 }));
 
+/** The website support bot's FAQ (data/support/*.md). Entries removed from the files are deleted. */
+async function seedSupportFaqs() {
+  const dir = new URL("./data/support/", import.meta.url);
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => ({ name: f, text: readFileSync(new URL(f, dir), "utf8") }));
+  const faqs = parseSupportFiles(files);
+  for (const { slug, ...data } of faqs) {
+    await prisma.supportFaq.upsert({ where: { slug }, create: { slug, ...data }, update: data });
+  }
+  await prisma.supportFaq.deleteMany({ where: { slug: { notIn: faqs.map((f) => f.slug) } } });
+  return faqs.length;
+}
+
 async function main() {
   for (const f of foods) {
     const data = {
@@ -321,8 +336,9 @@ async function main() {
     await prisma.exercise.upsert({ where: { slug: e.slug }, create: e, update: e });
   }
   const notes = await seedKnowledge();
+  const faqs = await seedSupportFaqs();
   console.log(
-    `Seeded ${foods.length} starter foods, ${indb.saved} INDB foods (${indb.skipped} skipped: name taken), ${exercises.length} exercises and ${notes} coach knowledge notes`,
+    `Seeded ${foods.length} starter foods, ${indb.saved} INDB foods (${indb.skipped} skipped: name taken), ${exercises.length} exercises, ${notes} coach knowledge notes and ${faqs} support FAQs`,
   );
 }
 

@@ -21,13 +21,17 @@ const input =
   "w-full rounded-input border border-line-strong bg-surface px-4 text-base outline-none placeholder:text-ink-3/60 focus:border-ink aria-invalid:border-caution";
 
 /**
- * The /contact page body: the address on the left, a short form on the right.
+ * The /contact page body (`initialMessage` comes from /contact?message=…, e.g. the help chat's "Talk to the team"): the address on the left, a short form on the right.
  * Send posts to POST /api/contact, which emails the team (Reply-To = the visitor); on success the
  * form is replaced by a thank-you card.
  */
-export function ContactSection() {
+export function ContactSection({ initialMessage = "" }: { initialMessage?: string }) {
   const id = useId();
-  const [fields, setFields] = useState<ContactFields>({ name: "", email: "", message: "" });
+  const [fields, setFields] = useState<ContactFields>({
+    name: "",
+    email: "",
+    message: initialMessage.slice(0, CONTACT_MESSAGE_MAX),
+  });
   const [errors, setErrors] = useState<ContactErrors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [failure, setFailure] = useState<string | null>(null);

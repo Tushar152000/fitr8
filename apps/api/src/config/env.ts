@@ -119,6 +119,9 @@ export const EnvSchema = z
     /** Premium coach messages per user per local day. */
     COACH_DAILY_LIMIT: z.coerce.number().int().positive().default(40),
 
+    /** Website support bot questions per IP per day (in memory, per process; docs/CHATBOT-FAQ.md). */
+    SUPPORT_DAILY_LIMIT: z.coerce.number().int().positive().default(30),
+
     /** Premium photo scans (meals and labels) per user per local day: fair use (docs/PREMIUM.md). */
     AI_PRO_DAILY_LIMIT: z.coerce.number().int().positive().default(10),
     /** Exact Authorization header value set on the RevenueCat webhook. */

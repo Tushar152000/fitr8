@@ -81,6 +81,12 @@ S3/R2/MinIO client. Presigned PUT 300 s, binds ContentType only (no size limit).
 - `StaffGuard` (`staff.guard.ts:20`, after AuthGuard) + `@Staff()` on every `/admin/**` controller; non-staff 403 "This account isn't on the FITR8 team…". Routes (`admin.controller.ts`): GET `/admin/me`, GET/POST `/admin/staff`, PATCH/DELETE `/admin/staff/:id` (manage-team = ADMIN; last other admin protected). Exports StaffService + StaffGuard (BlogModule imports AdminModule).
 - e2e `test/admin.e2e.spec.ts`.
 
+## Support bot (`modules/support`, docs/CHATBOT.md)
+
+- Public website help chat: `POST /support/chat` (`support.controller.ts`, `@Public`, `@StrictRateLimit`), body `SupportChatSchema` (message ≤ 500, history ≤ 6 turns), reply `{reply, answered, suggestions}`. Owns `support_faqs` (seeded from `packages/db/prisma/data/support/*.md`, parser `packages/db/scripts/support-faq.ts`).
+- `support.service.ts` `chat`: per-IP daily cap `SUPPORT_DAILY_LIMIT` (in memory, 429) → greeting/thanks/`isOffTopic` fixed replies (no model) → `SupportFaqService.search` (Postgres FTS, typo-corrected via `typos.ts` against the FAQ's own vocabulary; new message alone first, previous question added only if no hit) → `SUPPORT_ANSWERER.answer`. `grounding: "all"` (Claude `claude-haiku-5-5` / OpenAI `gpt-6-luna`, `ai/support/*`) gets the whole FAQ in a cached system block and may reply `NO_ANSWER` (→ `answered:false`) or add a `FOLLOW_UPS:` line (kept only if each is a real FAQ question); `"matches"` (mock) uses search matches only and says not-sure on no match. Model failure → 502, `AiCall` `SUPPORT_CHAT` row (no visitor text) either way.
+- Web widget: `apps/web/src/app/(marketing)/_components/support-chat.tsx` (+ `support-chat-lib.ts`), `/contact?message=` prefill. e2e `test/support.e2e.spec.ts`.
+
 ## Blog (`modules/blog`, docs/BLOG.md)
 
 - Public (`blog.controller.ts`, `@Public`, `Cache-Control: public, max-age=60`): GET `/blog/posts?page&category&tag&author&q`, `/blog/posts/:slug` (404 + `details.redirectTo` when moved), `/blog/categories[/:slug]`, `/blog/tags[/:slug]`, `/blog/authors/:slug`, `/blog/sitemap`, `/blog/rss.xml`, `/blog/media/:file` (streams `blog/<uuid>.<ext>`, 1-year immutable, CORP cross-origin; `blog-content.service.ts:227`).

@@ -10,3 +10,10 @@ export {
   type AiUsage,
   type ImageInput,
 } from "./extraction/types.js";
+export {
+  SUPPORT_ANSWERER,
+  type SupportAnswerer,
+  type SupportModelReply,
+  type SupportFact,
+  type SupportTurn,
+} from "./support/types.js";

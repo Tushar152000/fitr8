@@ -7,6 +7,17 @@
  * come from tools. Extraction runs at low effort (perception), the coach at medium.
  */
 export const AI_MODELS = {
-  anthropic: { extraction: "claude-opus-5-5", coach: "claude-opus-5-5", coachEffort: "medium" },
-  openai: { extraction: "gpt-6.1-terra", coach: "gpt-6-luna", coachEffort: "medium" },
+  anthropic: {
+    extraction: "claude-opus-5-5",
+    coach: "claude-opus-5-5",
+    coachEffort: "medium",
+    // The website support bot: short answers from a handful of FAQs, so the smallest model is enough.
+    support: "claude-haiku-5-5",
+  },
+  openai: {
+    extraction: "gpt-6.1-terra",
+    coach: "gpt-6-luna",
+    coachEffort: "medium",
+    support: "gpt-6-luna",
+  },
 } as const;

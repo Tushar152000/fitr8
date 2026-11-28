@@ -9,6 +9,10 @@ import { OpenAiExtractor } from "./extraction/openai.extractor.js";
 import { FOOD_EXTRACTOR } from "./extraction/types.js";
 import { AI_MODELS } from "./models.js";
 import { OPENAI, createOpenAI } from "./openai.client.js";
+import { ClaudeSupportAnswerer } from "./support/claude.answerer.js";
+import { MockSupportAnswerer } from "./support/mock.answerer.js";
+import { OpenAiSupportAnswerer } from "./support/openai.answerer.js";
+import { SUPPORT_ANSWERER } from "./support/types.js";
 
 /**
  * Model access. The only module that knows a vendor SDK exists. AI_PROVIDER picks Claude or OpenAI;
@@ -28,7 +32,16 @@ import { OPENAI, createOpenAI } from "./openai.client.js";
         return new MockExtractor();
       },
     },
+    {
+      provide: SUPPORT_ANSWERER,
+      inject: [ANTHROPIC, OPENAI],
+      useFactory: (anthropic: Anthropic | null, openai: OpenAI | null) => {
+        if (anthropic) return new ClaudeSupportAnswerer(anthropic, AI_MODELS.anthropic.support);
+        if (openai) return new OpenAiSupportAnswerer(openai, AI_MODELS.openai.support);
+        return new MockSupportAnswerer();
+      },
+    },
   ],
-  exports: [ANTHROPIC, OPENAI, FOOD_EXTRACTOR],
+  exports: [ANTHROPIC, OPENAI, FOOD_EXTRACTOR, SUPPORT_ANSWERER],
 })
 export class AiModule {}

@@ -9,12 +9,19 @@ export const metadata: Metadata = {
 };
 
 /** /contact: the contact form (POST /api/contact) and address. Linked from the header and footer. */
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ message?: string | string[] }>;
+}) {
+  // /contact?message=… (the help chat's "Talk to the team") fills the message box.
+  const { message } = await searchParams;
+  const initialMessage = typeof message === "string" ? message : "";
   return (
     <>
       <SiteHeader />
       <main>
-        <ContactSection />
+        <ContactSection initialMessage={initialMessage} />
       </main>
       <SiteFooter />
     </>

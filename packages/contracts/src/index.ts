@@ -7,6 +7,7 @@ export * from "./billing.js";
 export * from "./requests.js";
 export * from "./ai.js";
 export * from "./coach.js";
+export * from "./support.js";
 export * from "./admin.js";
 export * from "./blog.js";
 export * from "./training.js";

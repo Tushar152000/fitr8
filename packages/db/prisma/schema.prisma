@@ -96,6 +96,7 @@ enum AiCallType {
   COACH_CHAT
   LABEL_SCAN
   REMINDER_PARSE
+  SUPPORT_CHAT
 }
 
 // ---------- Identity & auth (users module owns `users`; auth module owns the rest) ----------
@@ -842,6 +843,18 @@ model KnowledgeNote {
   updatedAt DateTime @updatedAt
 
   @@map("knowledge_notes")
+}
+
+/// The website support bot's FAQ answers (prisma/data/support/*.md, loaded by the seed). Owned by `support`.
+model SupportFaq {
+  slug      String   @id
+  section   String
+  question  String
+  answer    String
+  keywords  String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@map("support_faqs")
 }
 
 /// FITR8 Pro access from RevenueCat, one row per user who has ever subscribed. Owned by `billing`.

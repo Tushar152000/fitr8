@@ -25,6 +25,7 @@ import { MeasurementsModule } from "./modules/measurements/measurements.module.j
 import { PlanModule } from "./modules/plan/plan.module.js";
 import { ProgressModule } from "./modules/progress/progress.module.js";
 import { RemindersModule } from "./modules/reminders/reminders.module.js";
+import { SupportModule } from "./modules/support/support.module.js";
 import { UsersModule } from "./modules/users/users.module.js";
 import { WaterModule } from "./modules/water/water.module.js";
 import { WorkoutsModule } from "./modules/workouts/workouts.module.js";
@@ -92,6 +93,7 @@ import { WorkoutsModule } from "./modules/workouts/workouts.module.js";
     RemindersModule,
     CoachModule,
     ContactModule,
+    SupportModule,
     AdminModule,
     BlogModule,
     FeedbackModule,

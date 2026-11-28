@@ -15,6 +15,7 @@ pnpm + Turborepo monorepo: `apps/api` (NestJS, the only backend), `apps/web` (Ne
 - **Admin:** `docs/ADMIN.md` (one staff admin at `/admin`: Google sign-in, app-wide roles, how to add a section).
 - **Blog:** `docs/BLOG.md` (public `/blog` for SEO; admin section `/admin/blog`: Tiptap editor, revisions, redirects).
 - **Health apps:** `docs/HEALTH.md` (Apple Health / Health Connect: what's read and stored, the six shown metrics, store declarations).
+- **Support chatbot:** `docs/CHATBOT.md` (public website help bot "Ask FITR8": FAQ in `packages/db/prisma/data/support`, how to add the AI keys, how to edit answers).
 - **Analytics:** `docs/ANALYTICS.md` (Google Analytics: web gtag after consent, app Firebase; event list in `packages/contracts/src/analytics.ts`; never send health values).
 - **Workflows:** use the `fitr8-feature` skill for any feature/endpoint/table/screen, and `fitr8-coach-tool` for the AI coach. Run multi-step work through `fitr8-loop` (read → plan → make → verify until done).
 - **Knowledge base:** `.claude/context/` (start at `README.md`) holds verified, code-first notes per area plus `risks.md` and `decisions.md`. Read the relevant section before exploring; hooks flag stale sections and ask for a refresh after you change code.
