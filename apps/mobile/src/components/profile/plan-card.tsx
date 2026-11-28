@@ -10,6 +10,7 @@ import { threeLetterMonths } from "@/lib/profile-summary";
 import { manageSubscriptionUrl } from "@/lib/purchases";
 import { billingQuery, usageQuery } from "@/lib/queries";
 import { queryClient } from "@/lib/query";
+import { showToast } from "@/lib/toast";
 import { makeStyles, radius, useColors } from "@/lib/theme";
 
 /**
@@ -64,9 +65,11 @@ function PremiumCard() {
   const billing = useQuery(billingQuery);
   const usage = useQuery(usageQuery);
   const [ending, setEnding] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const b = billing.data;
   const u = usage.data;
   const test = b?.store === "TEST";
+  const razorpay = b?.store === "RAZORPAY";
   const until = b?.proUntil ? threeLetterMonths(DAY.format(new Date(b.proUntil))) : null;
 
   const plan = b?.lifetime
@@ -78,7 +81,11 @@ function PremiumCard() {
         : test
           ? "Test plan"
           : "Premium";
-  const renewal = b?.lifetime ? null : until ? { label: b?.willRenew ? "Renews" : "Active until", value: until } : null;
+  const renewal = b?.lifetime
+    ? null
+    : until
+      ? { label: b?.trial ? "Free trial ends" : b?.willRenew ? "Renews" : "Active until", value: until }
+      : null;
 
   /** A test purchase (store billing not connected yet): back to Free, to try the free plan again. */
   async function endTest() {
@@ -89,6 +96,31 @@ function PremiumCard() {
       await queryClient.invalidateQueries();
     } finally {
       setEnding(false);
+    }
+  }
+
+  /**
+   * Razorpay: stop renewing. A paid plan keeps Premium to the end of the period; a free trial ends
+   * at once (nothing was charged), and the dialog says which.
+   */
+  async function cancelRazorpay() {
+    const trial = b?.trial === true;
+    const ok = await confirmAction(
+      trial ? "End your free trial?" : "Cancel Premium?",
+      trial
+        ? "You won't be charged, and Premium ends now."
+        : `You keep Premium until ${until ?? "the end of this period"}, then go back to Free.`,
+      trial ? "End trial" : "Cancel subscription",
+    );
+    if (!ok) return;
+    setCancelling(true);
+    try {
+      await api("/api/billing/razorpay/cancel", { method: "POST" });
+      await queryClient.invalidateQueries();
+    } catch {
+      showToast("Couldn't cancel. Try again in a moment.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -125,6 +157,20 @@ function PremiumCard() {
 
       {test ? (
         <PillButton variant="soft" label="End test Premium" loading={ending} onPress={endTest} style={styles.action} />
+      ) : razorpay ? (
+        b?.willRenew ? (
+          <PillButton
+            variant="soft"
+            label={b.trial ? "End free trial" : "Cancel subscription"}
+            loading={cancelling}
+            onPress={cancelRazorpay}
+            style={styles.action}
+          />
+        ) : (
+          <Text variant="labelRegular" color={c.ink2} center>
+            {"Won't renew. You can subscribe again when it ends."}
+          </Text>
+        )
       ) : (
         <PillButton
           variant="soft"

@@ -7,6 +7,7 @@ import { applyTestEnv } from "./env.js";
 import { FakeApple } from "./fake-apple.js";
 import { FakeGoogle } from "./fake-google.js";
 import { FakeMailer } from "./fake-mailer.js";
+import { FakeRazorpay } from "./fake-razorpay.js";
 import { FakeRevenueCat } from "./fake-revenuecat.js";
 
 applyTestEnv();
@@ -15,6 +16,7 @@ const { PrismaService } = await import("../../src/infra/prisma/prisma.service.js
 const { GOOGLE_OIDC } = await import("../../src/modules/auth/google/oidc.js");
 const { APPLE_ID } = await import("../../src/modules/auth/apple/apple-id.js");
 const { REVENUECAT } = await import("../../src/modules/billing/revenuecat.js");
+const { RAZORPAY } = await import("../../src/modules/billing/razorpay.js");
 const { MAILER } = await import("../../src/infra/mail/mailer.js");
 
 export interface TestApp {
@@ -29,6 +31,8 @@ export interface TestApp {
   apple: FakeApple;
   /** RevenueCat's REST API, as far as the API can tell. */
   revenueCat: FakeRevenueCat;
+  /** Razorpay's REST API, as far as the API can tell. */
+  razorpay: FakeRazorpay;
   /** Outgoing email (the contact form), as far as the API can tell. */
   mail: FakeMailer;
   /** A fresh signed-in user. Requests made through the returned agent carry the session cookie. */
@@ -52,6 +56,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   const google = new FakeGoogle();
   const apple = new FakeApple();
   const revenueCat = new FakeRevenueCat();
+  const razorpay = new FakeRazorpay();
   const mail = new FakeMailer();
   const saved = { ...process.env };
   Object.assign(process.env, options.env);
@@ -64,13 +69,15 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
       .useValue(apple)
       .overrideProvider(REVENUECAT)
       .useValue(revenueCat)
+      .overrideProvider(RAZORPAY)
+      .useValue(razorpay)
       .overrideProvider(MAILER)
       .useValue(mail)
       .compile();
   } finally {
     process.env = saved;
   }
-  const app = moduleRef.createNestApplication({ logger: false });
+  const app = moduleRef.createNestApplication({ logger: false, rawBody: true });
   app.setGlobalPrefix("api");
   app.use(cookieParser());
   await app.init();
@@ -94,6 +101,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
     google,
     apple,
     revenueCat,
+    razorpay,
     mail,
     async signIn(name = "Test User") {
       const agent = request.agent(server);

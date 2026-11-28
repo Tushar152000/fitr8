@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessFromEvent, dailyLimits, isPro, planOf } from "./index.js";
+import { accessFromEvent, accessFromRazorpay, dailyLimits, isPro, planOf } from "./index.js";
 
 const now = new Date("2026-10-14T10:00:00Z");
 const ms = (iso: string) => new Date(iso).getTime();
@@ -108,5 +108,55 @@ describe("accessFromEvent", () => {
         "pro",
       ),
     ).toBeNull();
+  });
+});
+
+describe("accessFromRazorpay", () => {
+  const now = new Date("2026-12-01T00:00:00Z");
+  const sec = (iso: string) => Math.floor(Date.parse(iso) / 1000);
+
+  it("gives nothing before the customer authorises a payment", () => {
+    expect(accessFromRazorpay({ status: "created", start_at: sec("2026-12-08T00:00:00Z") }, now)).toBeNull();
+  });
+
+  it("runs a trial until the first charge once the mandate is authorised", () => {
+    const access = accessFromRazorpay(
+      { status: "authenticated", start_at: sec("2026-12-08T00:00:00Z"), paid_count: 0 },
+      now,
+    );
+    expect(access).toMatchObject({ proUntil: new Date("2026-12-08T00:00:00Z"), trial: true, willRenew: true });
+  });
+
+  it("gives no access when the trial's first charge is due but not yet paid", () => {
+    expect(accessFromRazorpay({ status: "authenticated", start_at: sec("2026-11-30T00:00:00Z") }, now)).toBeNull();
+  });
+
+  it("gives access until the paid period ends while active, and renews", () => {
+    const access = accessFromRazorpay(
+      { status: "active", current_end: sec("2027-01-01T00:00:00Z"), paid_count: 1 },
+      now,
+    );
+    expect(access).toMatchObject({ proUntil: new Date("2027-01-01T00:00:00Z"), trial: false, willRenew: true });
+  });
+
+  it("stops renewing but keeps paid time when a cancel is scheduled", () => {
+    const access = accessFromRazorpay(
+      { status: "active", current_end: sec("2027-01-01T00:00:00Z"), has_scheduled_changes: true },
+      now,
+    );
+    expect(access).toMatchObject({ proUntil: new Date("2027-01-01T00:00:00Z"), willRenew: false });
+  });
+
+  it("honours the paid period after cancelled, halted, completed and paused, without renewing", () => {
+    for (const status of ["cancelled", "halted", "completed", "expired", "paused", "pending"]) {
+      expect(accessFromRazorpay({ status, current_end: sec("2026-12-15T00:00:00Z") }, now)).toMatchObject({
+        proUntil: new Date("2026-12-15T00:00:00Z"),
+        willRenew: false,
+      });
+    }
+  });
+
+  it("gives nothing for a cancelled trial that was never charged", () => {
+    expect(accessFromRazorpay({ status: "cancelled", start_at: sec("2026-12-08T00:00:00Z") }, now)).toBeNull();
   });
 });

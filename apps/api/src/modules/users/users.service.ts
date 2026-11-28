@@ -456,6 +456,8 @@ export class UsersService {
       select: { createdAt: true },
     });
     if (!user) throw notFound("User");
+    // First: an open Razorpay subscription must not keep charging a deleted account.
+    await this.billing.stopRenewals(userId);
     const said = reasons.length > 0 || Boolean(feedback);
     await this.prisma.$transaction([
       ...(said

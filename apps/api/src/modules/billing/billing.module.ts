@@ -2,6 +2,8 @@ import { Global, Module } from "@nestjs/common";
 import { ENV, type Env } from "../../config/config.module.js";
 import { BillingController } from "./billing.controller.js";
 import { BillingService } from "./billing.service.js";
+import { RAZORPAY, RazorpayClient } from "./razorpay.js";
+import { RazorpayService } from "./razorpay.service.js";
 import { REVENUECAT, RevenueCatClient } from "./revenuecat.js";
 
 /**
@@ -13,6 +15,18 @@ import { REVENUECAT, RevenueCatClient } from "./revenuecat.js";
   controllers: [BillingController],
   providers: [
     BillingService,
+    RazorpayService,
+    {
+      provide: RAZORPAY,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        new RazorpayClient({
+          keyId: env.RAZORPAY_KEY_ID,
+          keySecret: env.RAZORPAY_KEY_SECRET,
+          planMonthly: env.RAZORPAY_PLAN_MONTHLY,
+          planYearly: env.RAZORPAY_PLAN_YEARLY,
+        }),
+    },
     {
       provide: REVENUECAT,
       inject: [ENV],

@@ -206,6 +206,18 @@ if secret_exists REVENUECAT_SECRET_KEY && ! secret_exists REVENUECAT_WEBHOOK_AUT
   echo "  gcloud secrets versions access latest --secret=REVENUECAT_WEBHOOK_AUTH --project=$PROJECT_ID"
 fi
 
+step "Razorpay / FITR8 Premium (optional)"
+ask_optional_secret RAZORPAY_KEY_ID "Razorpay key id (rzp_live_...)"
+ask_optional_secret RAZORPAY_KEY_SECRET "Razorpay key secret"
+ask_optional_secret RAZORPAY_PLAN_MONTHLY "Razorpay plan id of the 149 INR monthly plan (plan_...)"
+ask_optional_secret RAZORPAY_PLAN_YEARLY "Razorpay plan id of the 1,499 INR yearly plan (plan_...)"
+if secret_exists RAZORPAY_KEY_ID && ! secret_exists RAZORPAY_WEBHOOK_SECRET; then
+  # Typed into Razorpay once: Dashboard → Webhooks → secret, URL https://<API domain>/api/billing/razorpay.
+  put_secret RAZORPAY_WEBHOOK_SECRET "$(openssl rand -hex 32)"
+  echo "  Razorpay → Webhooks → Secret: read it with"
+  echo "  gcloud secrets versions access latest --secret=RAZORPAY_WEBHOOK_SECRET --project=$PROJECT_ID"
+fi
+
 step "Website contact form email (optional)"
 ask_optional_secret SMTP_PASS "Gmail app password for the contact form (set repo variable SMTP_USER too)"
 
@@ -213,10 +225,15 @@ APPLE_ON=false
 secret_exists APPLE_TEAM_ID && secret_exists APPLE_KEY_ID && secret_exists APPLE_PRIVATE_KEY && APPLE_ON=true
 REVENUECAT_ON=false
 secret_exists REVENUECAT_SECRET_KEY && secret_exists REVENUECAT_WEBHOOK_AUTH && REVENUECAT_ON=true
+RAZORPAY_ON=true
+for s in RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_PLAN_MONTHLY RAZORPAY_PLAN_YEARLY RAZORPAY_WEBHOOK_SECRET; do
+  secret_exists "$s" || RAZORPAY_ON=false
+done
 
 step "IAM"
 SECRETS=(DATABASE_URL AUTH_SECRET AUTH_GOOGLE_ID AUTH_GOOGLE_SECRET "$AI_KEY" S3_ENDPOINT S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY)
-OPTIONAL_SECRETS=(APPLE_TEAM_ID APPLE_KEY_ID APPLE_PRIVATE_KEY REVENUECAT_SECRET_KEY REVENUECAT_WEBHOOK_AUTH SMTP_PASS)
+OPTIONAL_SECRETS=(APPLE_TEAM_ID APPLE_KEY_ID APPLE_PRIVATE_KEY REVENUECAT_SECRET_KEY REVENUECAT_WEBHOOK_AUTH
+  RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_PLAN_MONTHLY RAZORPAY_PLAN_YEARLY RAZORPAY_WEBHOOK_SECRET SMTP_PASS)
 for s in "${SECRETS[@]}" "${OPTIONAL_SECRETS[@]}"; do
   secret_exists "$s" || continue
   gcloud secrets add-iam-policy-binding "$s" --member="serviceAccount:$RUNTIME_SA" \
@@ -265,6 +282,7 @@ VARS=(
   "API_MIN_INSTANCES=$API_MIN_INSTANCES"
   "APPLE_CLIENT_ID=$([ "$APPLE_ON" = true ] && echo com.fitr8.app)"
   "REVENUECAT_ENABLED=$REVENUECAT_ON"
+  "RAZORPAY_ENABLED=$RAZORPAY_ON"
 )
 # Variables need admin on the repository; without it, print them for a repo admin (infra/owner-setup.sh
 # sets the web/API ones) instead of stopping halfway.

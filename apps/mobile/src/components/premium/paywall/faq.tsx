@@ -5,7 +5,7 @@ import { PaywallGroup } from "./group";
 import { useListStyles } from "./list-styles";
 
 /** Design 14c "Questions": the short paywall FAQ, every answer shown, on one white card. */
-export function Faq({ storeSettings }: { storeSettings: string }) {
+export function Faq({ storeSettings, razorpay }: { storeSettings: string; razorpay: boolean }) {
   const c = useColors();
   const list = useListStyles();
   return (
@@ -17,7 +17,12 @@ export function Faq({ storeSettings }: { storeSettings: string }) {
               "What happens after 10 photos in a day?",
               "You can still scan barcodes and type meals. Photo scans reset at midnight.",
             ],
-            ["Can I switch between monthly and yearly?", `Yes, any time from ${storeSettings}.`],
+            [
+              "Can I switch between monthly and yearly?",
+              razorpay
+                ? "Cancel in Profile, keep Premium until the period ends, then pick the other plan."
+                : `Yes, any time from ${storeSettings}.`,
+            ],
             ["Is my Free data safe if I upgrade?", "Yes. Your meals, targets and streak carry over as they are."],
           ] as const
         ).map(([q, a], i) => (

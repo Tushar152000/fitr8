@@ -19,6 +19,8 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
     busy,
     error,
     hasStorePlan,
+    razorpay,
+    waiting,
     testMode,
     loadingPrices,
     canBuy,
@@ -33,8 +35,12 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
   const period = picked === "year" ? "year" : "month";
 
   const label =
-    busy === "buy"
-      ? "Processing…"
+    busy === "buy" || busy === "check"
+      ? busy === "check"
+        ? "Checking payment…"
+        : "Processing…"
+      : waiting
+        ? "I've paid · check again"
       : !canBuy && !loadingPrices
         ? "Coming soon"
         : trialDays
@@ -43,6 +49,10 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
 
   const terms = testMode
     ? "Test purchase · no money is charged"
+    : razorpay
+      ? trialDays
+        ? `Then ${chosenPrice}/${period} · UPI AutoPay or card · cancel anytime in Profile`
+        : `${chosenPrice}/${period} · UPI AutoPay or card · cancel anytime in Profile`
     : trialDays
       ? `Then ${chosenPrice}/${period} · cancel anytime`
       : picked === "year"
@@ -64,7 +74,7 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
 
   return (
     <View style={{ gap: 8 }}>
-      <Button height={50} onPress={buy} loading={busy === "buy"} disabled={!canBuy || busy !== null || loadingPrices}>
+      <Button height={50} onPress={buy} loading={busy === "buy" || busy === "check"} disabled={!canBuy || busy !== null || loadingPrices}>
         {label}
       </Button>
       {error && <FieldError>{error}</FieldError>}
@@ -73,7 +83,7 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
         color={c.ink2}
         center
         tabular
-        accessibilityLabel={hasStorePlan ? `${terms}. Cancel in ${storeSettings}.` : terms}
+        accessibilityLabel={hasStorePlan && !razorpay ? `${terms}. Cancel in ${storeSettings}.` : terms}
       >
         {terms}
       </Text>
@@ -81,7 +91,7 @@ export function PaywallFooter({ paywall }: { paywall: Paywall }) {
         {purchasesAvailable && link(busy === "restore" ? "Restoring…" : "Restore", restore, busy !== null)}
         {link("Terms", () => openLegal("terms"))}
         {link("Privacy", () => openLegal("privacy"))}
-        {link("Not now", close, busy === "buy")}
+        {link("Not now", close, busy === "buy" || busy === "check")}
       </View>
     </View>
   );

@@ -77,8 +77,14 @@ export default function ProScreen() {
         }}
       />
       <CompareTable />
-      <BillingNotes testMode={paywall.testMode} storeName={paywall.storeName} storeSettings={paywall.storeSettings} />
-      <Faq storeSettings={paywall.storeSettings} />
+      <BillingNotes
+        testMode={paywall.testMode}
+        razorpay={paywall.razorpay}
+        trial={paywall.trialDays !== null}
+        storeName={paywall.storeName}
+        storeSettings={paywall.storeSettings}
+      />
+      <Faq storeSettings={paywall.storeSettings} razorpay={paywall.razorpay} />
     </Screen>
   );
 }

@@ -138,6 +138,7 @@ model User {
   coachChats        CoachConversation[]
   coachMemories     CoachMemory[]
   entitlement       Entitlement?
+  razorpaySubs      RazorpaySubscription[]
   savedMeals        SavedMeal[]
   reminders         Reminder[]
   staffMember       StaffMember?
@@ -868,7 +869,38 @@ model Entitlement {
   @@map("entitlements")
 }
 
-/// RevenueCat webhook deliveries already handled (retries reuse the event id). Owned by `billing`.
+/// Razorpay subscriptions started by a user (FITR8 Premium). The webhook finds the user here, and a
+/// past row means the 7-day trial is used. Status is a cache of Razorpay's; the entitlement is what
+/// grants Premium. Owned by `billing`.
+model RazorpaySubscription {
+  /// Razorpay's subscription id (sub_…).
+  id              String   @id
+  userId          String
+  /// month or year
+  period          String
+  planId          String
+  /// Last status seen at Razorpay: created, authenticated, active, pending, halted, cancelled, completed…
+  status          String
+  /// Started with a free trial (first charge delayed by the trial days).
+  trial           Boolean
+  /// The user asked to cancel (at the end of the paid period, or at once before any charge).
+  cancelRequested Boolean  @default(false)
+  /// Premium this subscription gives until (paid period, or trial end), null = none. Computed from
+  /// Razorpay's state at the last sync; the user's entitlement is the latest of their rows.
+  proUntil        DateTime?
+  willRenew       Boolean  @default(false)
+  /// proUntil is the end of the free trial (nothing charged yet).
+  inTrial         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("razorpay_subscriptions")
+}
+
+/// Webhook deliveries already handled (RevenueCat event id; Razorpay "rzp_" + event id) (retries reuse the event id). Owned by `billing`.
 model BillingEvent {
   /// RevenueCat's event id.
   id         String   @id

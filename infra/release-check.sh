@@ -65,7 +65,7 @@ if [ "$HAVE_GH" = 1 ]; then
     value="$(var "$v")"
     if [ -n "$value" ]; then ok "$v = $value"; else bad "$v is not set"; fi
   done
-  for v in AI_PROVIDER API_MIN_INSTANCES APPLE_CLIENT_ID REVENUECAT_ENABLED; do
+  for v in AI_PROVIDER API_MIN_INSTANCES APPLE_CLIENT_ID REVENUECAT_ENABLED RAZORPAY_ENABLED; do
     value="$(var "$v")"
     if [ -n "$value" ]; then ok "$v = $value"; else warn "$v not set (default applies)"; fi
   done
@@ -86,6 +86,7 @@ PUBLIC_URL="${PUBLIC_URL:-$(var PUBLIC_URL)}"
 API_PUBLIC_URL="${API_PUBLIC_URL:-$(var API_PUBLIC_URL)}"
 APPLE_CLIENT_ID="$(var APPLE_CLIENT_ID)"
 REVENUECAT_ENABLED="$(var REVENUECAT_ENABLED)"
+RAZORPAY_ENABLED="$(var RAZORPAY_ENABLED)"
 SMTP_USER="$(var SMTP_USER)"
 AI_PROVIDER="$(var AI_PROVIDER)"
 AI_PROVIDER="${AI_PROVIDER:-openai}"
@@ -97,6 +98,8 @@ required=(DATABASE_URL AUTH_SECRET AUTH_GOOGLE_ID AUTH_GOOGLE_SECRET S3_ENDPOINT
 if [ "$AI_PROVIDER" = anthropic ]; then required+=(ANTHROPIC_API_KEY); else required+=(OPENAI_API_KEY); fi
 [ -n "$APPLE_CLIENT_ID" ] && required+=(APPLE_TEAM_ID APPLE_KEY_ID APPLE_PRIVATE_KEY)
 [ "$REVENUECAT_ENABLED" = true ] && required+=(REVENUECAT_SECRET_KEY REVENUECAT_WEBHOOK_AUTH)
+[ "$RAZORPAY_ENABLED" = true ] &&
+  required+=(RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_PLAN_MONTHLY RAZORPAY_PLAN_YEARLY RAZORPAY_WEBHOOK_SECRET)
 [ -n "$SMTP_USER" ] && required+=(SMTP_PASS)
 for s in "${required[@]}"; do
   if [ -z "$(g secrets versions list "$s" --filter=state=ENABLED --limit=1 --format='value(name)')" ]; then
@@ -108,8 +111,8 @@ for s in "${required[@]}"; do
   fi
 done
 [ -z "$APPLE_CLIENT_ID" ] && warn "Sign in with Apple off (APPLE_CLIENT_ID unset): needed before an iOS App Store release"
-[ "$REVENUECAT_ENABLED" != true ] &&
-  warn "Store billing off (REVENUECAT_ENABLED unset): Premium is a free one-tap test purchase for everyone"
+[ "$REVENUECAT_ENABLED" != true ] && [ "$RAZORPAY_ENABLED" != true ] &&
+  bad "Billing off (RAZORPAY_ENABLED and REVENUECAT_ENABLED unset): Premium is a free one-tap test purchase for everyone"
 
 # ---------- Cloud SQL ----------
 section "Cloud SQL"
@@ -218,6 +221,7 @@ section "Can't be checked from here (docs/RELEASE.md)"
 echo "  • Google OAuth client lists $API_PUBLIC_URL/api/auth/callback/google"
 echo "  • Vercel project env NEXT_PUBLIC_API_URL=$API_PUBLIC_URL (Production)"
 echo "  • EAS environment variables per profile (EXPO_PUBLIC_REVENUECAT_IOS_KEY / _ANDROID_KEY)"
+echo "  • Razorpay webhook → $API_PUBLIC_URL/api/billing/razorpay (events subscription.*) with the RAZORPAY_WEBHOOK_SECRET value"
 echo "  • RevenueCat webhook → $API_PUBLIC_URL/api/billing/revenuecat with the REVENUECAT_WEBHOOK_AUTH value"
 echo "  • eas.json submit.production (App Store Connect app id, Play service account) before store submits"
 

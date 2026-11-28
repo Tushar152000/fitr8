@@ -71,6 +71,20 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...base, UPCITEMDB_ENABLED: "false" }).UPCITEMDB_ENABLED).toBe(false);
   });
 
+  it("takes Razorpay's five settings together or not at all", () => {
+    const all = {
+      RAZORPAY_KEY_ID: "rzp_test_abc",
+      RAZORPAY_KEY_SECRET: "secret",
+      RAZORPAY_PLAN_MONTHLY: "plan_m",
+      RAZORPAY_PLAN_YEARLY: "plan_y",
+      RAZORPAY_WEBHOOK_SECRET: "whsec",
+    };
+    expect(parseEnv({ ...base, ...all }).RAZORPAY_PLAN_YEARLY).toBe("plan_y");
+    expect(parseEnv(base).RAZORPAY_KEY_ID).toBeUndefined();
+    expect(() => parseEnv({ ...base, RAZORPAY_KEY_ID: "rzp_test_abc" })).toThrow(/RAZORPAY_KEY_ID/);
+    expect(() => parseEnv({ ...base, ...all, RAZORPAY_WEBHOOK_SECRET: "" })).toThrow(/together/);
+  });
+
   it("lets a developer turn dev sign-in off locally", () => {
     expect(parseEnv({ ...base, AUTH_DEV_LOGIN: "false" }).AUTH_DEV_LOGIN).toBe(false);
   });

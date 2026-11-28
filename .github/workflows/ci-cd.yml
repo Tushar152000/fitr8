@@ -296,6 +296,7 @@ jobs:
           AI_PROVIDER: ${{ vars.AI_PROVIDER || 'openai' }}
           APPLE_CLIENT_ID: ${{ vars.APPLE_CLIENT_ID }}
           REVENUECAT: ${{ vars.REVENUECAT_ENABLED }}
+          RAZORPAY: ${{ vars.RAZORPAY_ENABLED }}
           SMTP_USER: ${{ vars.SMTP_USER }}
           SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
           # A repository variable, or a secret of the same name (either works).
@@ -323,6 +324,12 @@ jobs:
           if [ "$REVENUECAT" = true ]; then
             secrets+=",REVENUECAT_WEBHOOK_AUTH=REVENUECAT_WEBHOOK_AUTH:latest"
             secrets+=",REVENUECAT_SECRET_KEY=REVENUECAT_SECRET_KEY:latest"
+          fi
+          # FITR8 Premium through Razorpay (docs/PREMIUM.md): all five secrets, or the API won't boot.
+          if [ "$RAZORPAY" = true ]; then
+            for s in RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_PLAN_MONTHLY RAZORPAY_PLAN_YEARLY RAZORPAY_WEBHOOK_SECRET; do
+              secrets+=",$s=$s:latest"
+            done
           fi
           # Website contact form email (Gmail SMTP with an app password).
           if [ -n "$SMTP_USER" ]; then

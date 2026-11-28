@@ -141,3 +141,44 @@ export function accessFromEvent(
       return null;
   }
 }
+
+// ── Razorpay subscriptions ─────────────────────────────────────────────────
+
+/** Free days before the first charge, once per person (docs/PREMIUM.md). */
+export const TRIAL_DAYS = 7;
+
+/** The fields of a Razorpay subscription entity this logic reads (Unix seconds). */
+export interface RazorpaySubscriptionState {
+  status: string;
+  /** First charge date: in the future while a trial runs. */
+  start_at?: number | null;
+  /** End of the period already paid for. */
+  current_end?: number | null;
+  paid_count?: number | null;
+  /** Razorpay has a change queued (our cancel at the end of the cycle). */
+  has_scheduled_changes?: boolean | null;
+}
+
+/**
+ * How a Razorpay subscription decides Premium. Paid time is always honoured (`current_end`); a
+ * trial runs until its `start_at` once the mandate is authorised; nothing is granted before the
+ * customer has authorised a payment (`created`) or after the paid period ends, whatever the status
+ * (cancelled, halted after failed retries, completed, expired, paused).
+ */
+export function accessFromRazorpay(
+  sub: RazorpaySubscriptionState,
+  now = new Date(),
+): (AccessChange & { trial: boolean }) | null {
+  const at = (s: number | null | undefined) => (typeof s === "number" && s > 0 ? new Date(s * 1000) : null);
+  const paidUntil = at(sub.current_end);
+  const trialUntil = at(sub.start_at);
+  const live = sub.status === "authenticated" || sub.status === "active";
+  const ending = Boolean(sub.has_scheduled_changes);
+  const trial = sub.status === "authenticated" && !paidUntil && trialUntil !== null && trialUntil > now;
+
+  let proUntil: Date | null = paidUntil;
+  if (trial) proUntil = trialUntil;
+  if (sub.status === "created") proUntil = null;
+  if (!proUntil) return null;
+  return { proUntil, lifetime: false, willRenew: live && !ending, trial };
+}

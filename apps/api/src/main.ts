@@ -12,7 +12,10 @@ loadDotenv();
 
 /** HTTP entrypoint (APP_ROLE=api|all). The same image runs `dist/worker.js` for APP_ROLE=worker. */
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    rawBody: true, // Razorpay signs the exact bytes of its webhook (billing/razorpay.ts)
+  });
   const env = app.get<Env>(ENV);
 
   app.useLogger(app.get(Logger));

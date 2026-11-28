@@ -43,11 +43,20 @@ export interface BillingDto {
    * POST /api/billing/test-purchase, no money involved. False: real App Store / Google Play purchases.
    */
   testPurchases: boolean;
+  /**
+   * True when Razorpay is connected: "Get Premium" calls POST /api/billing/razorpay/subscription and
+   * opens the returned checkout page. Test purchases are then off.
+   */
+  razorpay: boolean;
+  /** Razorpay: this user hasn't had a trial yet, so the 7-day free trial applies to their first plan. */
+  trialEligible: boolean;
   /** ISO; when Pro access ends (renews before then unless `willRenew` is false). */
   proUntil: string | null;
   lifetime: boolean;
   willRenew: boolean;
-  /** Store the subscription was bought in (APP_STORE, PLAY_STORE, TEST…), for "manage subscription". */
+  /** Premium is a free trial that hasn't been charged yet (`proUntil` is when it ends). */
+  trial: boolean;
+  /** Where the subscription was bought (APP_STORE, PLAY_STORE, RAZORPAY, TEST…), for "manage subscription". */
   store: string | null;
   /** Yearly or monthly Premium, from the product bought; null on Free or when unknown. */
   period: "year" | "month" | null;
@@ -68,6 +77,39 @@ export interface BillingDto {
 /** POST /api/billing/test-purchase — Premium without the store, while store billing isn't connected. */
 export const TestPurchaseSchema = z.object({ period: z.enum(["month", "year"]) });
 export type TestPurchaseInput = z.infer<typeof TestPurchaseSchema>;
+
+/** POST /api/billing/razorpay/subscription — start paying for Premium through Razorpay checkout. */
+export const RazorpaySubscribeSchema = z.object({ period: z.enum(["month", "year"]) });
+export type RazorpaySubscribeInput = z.infer<typeof RazorpaySubscribeSchema>;
+
+/** Razorpay's hosted checkout for one subscription: open `checkoutUrl`, then POST /api/billing/refresh. */
+export interface RazorpayCheckoutDto {
+  subscriptionId: string;
+  /** Razorpay-hosted payment page (UPI AutoPay, cards, netbanking mandates). */
+  checkoutUrl: string;
+  period: "month" | "year";
+  /** Free days before the first charge; 0 when this user has already had a trial. */
+  trialDays: number;
+}
+
+/**
+ * POST /api/billing/razorpay — Razorpay's webhook body. Only the fields we read are listed;
+ * Razorpay adds fields without notice, so unknown keys pass through.
+ */
+export const RazorpayWebhookSchema = z.object({
+  event: z.string().min(1).max(64),
+  created_at: z.number().int().nonnegative().optional(),
+  payload: z
+    .object({
+      subscription: z
+        .object({
+          entity: z.object({ id: z.string().min(1).max(64) }).passthrough(),
+        })
+        .optional(),
+    })
+    .passthrough(),
+});
+export type RazorpayWebhook = z.infer<typeof RazorpayWebhookSchema>;
 
 /** Premium features (docs/PREMIUM.md); the app opens the Premium screen for each. */
 export type PremiumFeature =

@@ -9,6 +9,7 @@ import { Prisma } from "@fitr8/db";
 import {
   accessFromEvent,
   dailyLimits,
+  isPro,
   planOf,
   TEST_PURCHASE_DAYS,
   type AccessChange,
@@ -17,6 +18,7 @@ import { safeEqual } from "../../common/crypto.js";
 import { AppError } from "../../common/errors.js";
 import { InjectEnv, type Env } from "../../config/config.module.js";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
+import { RazorpayService } from "./razorpay.service.js";
 import { InjectRevenueCat, type RevenueCatApi } from "./revenuecat.js";
 
 type Meta = {
@@ -53,20 +55,28 @@ export class BillingService {
     private readonly prisma: PrismaService,
     @InjectRevenueCat() private readonly revenueCat: RevenueCatApi,
     @InjectEnv() private readonly env: Env,
+    private readonly razorpay: RazorpayService,
   ) {}
 
   /**
-   * One-click test purchases (docs/PREMIUM.md "Buying"): on until store billing is connected
-   * (REVENUECAT_SECRET_KEY set), then real App Store / Google Play purchases take over.
+   * One-click test purchases (docs/PREMIUM.md "Buying"): on until real billing is connected
+   * (Razorpay's keys or REVENUECAT_SECRET_KEY set), then real payments take over.
    */
   get testPurchases(): boolean {
-    return !this.revenueCat.enabled;
+    return !this.revenueCat.enabled && !this.razorpay.enabled;
   }
 
   private async entitlement(userId: string) {
     return this.prisma.entitlement.findUnique({
       where: { userId },
-      select: { proUntil: true, lifetime: true, willRenew: true, store: true, productId: true },
+      select: {
+        proUntil: true,
+        lifetime: true,
+        willRenew: true,
+        store: true,
+        productId: true,
+        periodType: true,
+      },
     });
   }
 
@@ -91,16 +101,22 @@ export class BillingService {
 
   /** GET /billing: one entitlement read gives the plan, renewal and limits. */
   async billing(userId: string): Promise<BillingDto> {
-    const row = await this.entitlement(userId);
+    const [row, trialEligible] = await Promise.all([
+      this.entitlement(userId),
+      this.razorpay.trialEligible(userId),
+    ]);
     const { plan, scans, coach, labelScans, barcode, reminders, workouts } = this.limitsFor(
       planOf(row),
     );
     return {
       plan,
       testPurchases: this.testPurchases,
+      razorpay: this.razorpay.enabled,
+      trialEligible,
       proUntil: row?.proUntil?.toISOString() ?? null,
       lifetime: row?.lifetime ?? false,
       willRenew: plan === "PRO" && (row?.willRenew ?? false),
+      trial: plan === "PRO" && row?.periodType === "TRIAL",
       store: row?.store ?? null,
       period: plan === "PRO" ? periodOf(row?.productId) : null,
       limits: { scans, coach, labelScans, barcode, reminders, workouts },
@@ -112,7 +128,7 @@ export class BillingService {
    * (404 after). Gives 30 or 365 days, like the plan picked; buying again extends from today.
    */
   async testPurchase(userId: string, { period }: TestPurchaseInput): Promise<BillingDto> {
-    if (!this.testPurchases) throw new AppError(404, "Buy FITR8 Premium in the app store.");
+    if (!this.testPurchases) throw new AppError(404, "Buy FITR8 Premium in the app.");
     const now = new Date();
     const proUntil = new Date(now.getTime() + TEST_PURCHASE_DAYS[period] * 86_400_000);
     const data = {
@@ -136,15 +152,21 @@ export class BillingService {
 
   /** DELETE /billing/test-purchase: end a test purchase (back to Free). Store purchases are untouched. */
   async endTestPurchase(userId: string): Promise<BillingDto> {
-    if (!this.testPurchases) throw new AppError(404, "Manage FITR8 Premium in the app store.");
+    if (!this.testPurchases) throw new AppError(404, "Manage FITR8 Premium in the app.");
     await this.prisma.entitlement.deleteMany({ where: { userId, store: "TEST" } });
     return this.billing(userId);
   }
 
-  /** After a purchase or "Restore purchases" in the app: read RevenueCat now, don't wait for the webhook. */
+  /** After a purchase or "Restore purchases" in the app: read the payment provider now, don't wait for the webhook. */
   async refresh(userId: string): Promise<BillingDto> {
+    if (this.razorpay.enabled) await this.razorpay.refresh(userId);
     if (this.revenueCat.enabled) await this.syncFromRevenueCat(userId);
     return this.billing(userId);
+  }
+
+  /** Before an account is deleted: stop any payment-provider subscription from charging again. */
+  stopRenewals(userId: string): Promise<void> {
+    return this.razorpay.cancelAllForDeletion(userId);
   }
 
   // ── Webhook ────────────────────────────────────────────────────────────
@@ -215,9 +237,10 @@ export class BillingService {
       const { productId, store, periodType, environment, ...change } = access;
       await this.apply(userId, change, now, { productId, store, periodType, environment });
     } else {
-      // No Pro at RevenueCat: end any access we stored (refund, expiry, transfer away).
+      // No Pro at RevenueCat: end any access we stored (refund, expiry, transfer away), but never a
+      // Razorpay subscription's: RevenueCat knows nothing of it.
       await this.prisma.entitlement.updateMany({
-        where: { userId },
+        where: { userId, OR: [{ store: null }, { store: { not: "RAZORPAY" } }] },
         data: { proUntil: null, lifetime: false, willRenew: false, syncedAt: now },
       });
     }
@@ -227,6 +250,17 @@ export class BillingService {
   private async apply(userId: string, change: AccessChange, at: Date, meta: Meta) {
     const current = await this.prisma.entitlement.findUnique({ where: { userId } });
     if (current && current.syncedAt > at) return;
+    // A Razorpay subscription that grants Premium for longer than this store event isn't undone by it.
+    if (
+      current &&
+      current.store === "RAZORPAY" &&
+      meta.store !== "RAZORPAY" &&
+      isPro(current, at) &&
+      !change.lifetime &&
+      (change.proUntil?.getTime() ?? 0) <= (current.proUntil?.getTime() ?? 0)
+    ) {
+      return;
+    }
     const data = {
       proUntil: change.proUntil,
       lifetime: change.lifetime,

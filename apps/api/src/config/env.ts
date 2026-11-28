@@ -129,6 +129,18 @@ export const EnvSchema = z
     REVENUECAT_ENTITLEMENT: z.string().default("pro"),
 
     /**
+     * Razorpay Subscriptions for FITR8 Premium (docs/PREMIUM.md). Key id + secret (Dashboard → Account
+     * & Settings → API keys: `rzp_test_…` while testing, `rzp_live_…` in production) and the two plan
+     * ids (Dashboard → Subscriptions → Plans: ₹149 monthly, ₹1,499 yearly). All four, or none: unset
+     * leaves Razorpay off. The webhook secret is the one typed in Dashboard → Webhooks.
+     */
+    RAZORPAY_KEY_ID: optional,
+    RAZORPAY_KEY_SECRET: optional,
+    RAZORPAY_PLAN_MONTHLY: optional,
+    RAZORPAY_PLAN_YEARLY: optional,
+    RAZORPAY_WEBHOOK_SECRET: optional,
+
+    /**
      * FITR8 admin (/admin): Google accounts (comma, semicolon or space separated) that are always
      * ADMIN staff. In production it comes from the GitHub repo variable ADMIN_EMAILS. They add
      * the rest of the team (editors, authors) in /admin/team.
@@ -216,6 +228,21 @@ export const EnvSchema = z
         code: "custom",
         path: ["SMTP_HOST"],
         message: "set SMTP_HOST, SMTP_USER and SMTP_PASS together (or none)",
+      });
+    }
+    const razorpay = [
+      env.RAZORPAY_KEY_ID,
+      env.RAZORPAY_KEY_SECRET,
+      env.RAZORPAY_PLAN_MONTHLY,
+      env.RAZORPAY_PLAN_YEARLY,
+      env.RAZORPAY_WEBHOOK_SECRET,
+    ];
+    if (razorpay.some(Boolean) && !razorpay.every(Boolean)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["RAZORPAY_KEY_ID"],
+        message:
+          "set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_PLAN_MONTHLY, RAZORPAY_PLAN_YEARLY and RAZORPAY_WEBHOOK_SECRET together (or none)",
       });
     }
     if (isDeployed(env)) {
